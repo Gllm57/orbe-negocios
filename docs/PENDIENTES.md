@@ -3,12 +3,13 @@
 Revisión de la muestra funcional (27 oct 2026). Ordenado por importancia.
 
 ## 1. Imprescindible antes de tener clientes reales
+_Tanda 1 lista (27 oct 2026): todo menos Supabase, que va al final._
 - [ ] **Cuentas y nube (Supabase):** registro e inicio de sesión, datos sincronizados entre aparatos, cada empleado entra desde su propio teléfono y la cola sin conexión sube sola. Hoy todo vive en un solo aparato: si se pierde o se borra el navegador, se pierde todo (salvo la copia descargada).
-- [ ] **Restaurar una copia:** hoy se puede descargar, pero no volver a cargarla.
-- [ ] **Anular o devolver una venta** (con permiso y registro de quién lo hizo), y **editar o borrar** gastos, clientes y productos.
-- [ ] **Cambiar los datos del negocio** después de crearlo: nombre, razón social, número fiscal, país y moneda.
-- [ ] **Tasa manual en Venezuela** cuando no hay internet o se quiere otra tasa; dólar blue o MEP en Argentina.
-- [ ] **Guardar en IndexedDB** en vez de localStorage: con muchos meses de ventas se llena (hoy ~400 KB por mes de ejemplo).
+- [x] **Restaurar una copia:** hoy se puede descargar, pero no volver a cargarla.
+- [x] **Anular o devolver una venta** (con permiso y registro de quién lo hizo), y **editar o borrar** gastos, clientes y productos.
+- [x] **Cambiar los datos del negocio** después de crearlo: nombre, razón social, número fiscal, país y moneda.
+- [x] **Tasa manual en Venezuela** cuando no hay internet o se quiere otra tasa; dólar blue o MEP en Argentina.
+- [x] **Guardar en IndexedDB** en vez de localStorage: con muchos meses de ventas se llena (hoy ~400 KB por mes de ejemplo).
 
 ## 2. Para vender mejor
 - [ ] Descuentos por producto o por venta (con permiso).
