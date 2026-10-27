@@ -96,12 +96,20 @@ export function Hoy() {
         <div class="tarjeta cifra entra" style=${{ '--i': i + 1 }}><span class="sub">${k[0]}</span><${Monto} v=${k[1]} f=${D.m} clase="v" /><span class="sub faint">${k[2]}</span></div>`)}
     </div>
     <div class="dos-uno">
-      <section class="tarjeta entra" style="--i:4">
+      <section class="tarjeta entra llena" style="--i:4">
         <div class="tarjeta-tit">Ventas de los últimos ${E && !suc ? '14' : '30'} días<span class="sub">Total ${D.m((E && !suc ? mes.slice(-14) : mes).reduce((a, d) => a + d.total, 0))}</span></div>
         ${E && !suc
-          ? html`<${Barras} datos=${mes.slice(-14).map((d, i) => ({ l: i % 2 ? '' : String(new Date(d.t).getDate()), v: d.total, tip: fechaCorta(d.t) + ' · ' + D.m(d.total), segs: S.negocio.sucursales.map((s, j) => ({ v: d.porSuc[s] || 0, c: color(j) })) }))} alto=${220} hueco=${8} />
+          ? html`<${Barras} datos=${mes.slice(-14).map((d, i) => ({ l: i % 2 ? '' : String(new Date(d.t).getDate()), v: d.total, tip: fechaCorta(d.t) + ' · ' + D.m(d.total), segs: S.negocio.sucursales.map((s, j) => ({ v: d.porSuc[s] || 0, c: color(j) })) }))} alto=${200} hueco=${8} llenar />
             <div class="chips" style="margin-top:10px">${S.negocio.sucursales.map((s, j) => html`<span class="fila sub" style="gap:6px"><i style=${{ width: '10px', height: '10px', borderRadius: '3px', background: color(j) }}></i>${s}</span>`)}</div>`
-          : html`<${Linea} datos=${mes.map(d => ({ l: fechaCorta(d.t), v: d.total, tip: D.m(d.total) }))} alto=${230} id="mes" />`}
+          : html`<${Linea} datos=${mes.map(d => ({ l: fechaCorta(d.t), v: d.total, tip: D.m(d.total) }))} alto=${200} id="mes" llenar />`}
+        ${(() => { const dias = E && !suc ? mes.slice(-14) : mes, n = dias.length, tot = dias.reduce((a, d) => a + d.total, 0);
+          const mejor = dias.reduce((a, d) => d.total > a.total ? d : a, dias[0]), antes = resumen(hoy0 - (2 * n - 1) * DIA, hoy0 - (n - 1) * DIA, suc).total;
+          const q = antes ? Math.round((tot / antes - 1) * 100) : 0;
+          return html`<div class="resumen-gr">
+            <div><span class="sub">Mejor día</span><b class="num">${D.m(mejor.total)}</b><span class="sub faint">${new Date(mejor.t).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
+            <div><span class="sub">Promedio por día</span><b class="num">${D.m(tot / n)}</b><span class="sub faint">${Math.round(dias.reduce((a, d) => a + d.n, 0) / n)} ventas al día</span></div>
+            <div><span class="sub">Contra los ${n} días anteriores</span><b class="num" style=${{ color: q >= 0 ? 'var(--in)' : 'var(--out)' }}>${q > 0 ? '▲ ' : q < 0 ? '▼ ' : '= '}${Math.abs(q)} %</b><span class="sub faint">antes: ${D.m(antes)}</span></div>
+          </div>`; })()}
       </section>
       <section class="tarjeta entra" style="--i:5">
         <div class="tarjeta-tit">${E && !suc ? 'Por sucursal hoy' : 'Formas de pago hoy'}</div>

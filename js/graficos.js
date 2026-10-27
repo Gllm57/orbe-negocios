@@ -21,8 +21,26 @@ export function Monto({ v, f, clase }) {
   return html`<span class=${'num ' + (clase || '')}>${f(mostrado)}</span>`;
 }
 
+// Mide la altura libre de un contenedor (para que el gráfico llene su tarjeta sin dejar espacio vacío).
+function useAltoLibre(activo, minimo) {
+  const ref = useRef(null);
+  const [alto, setAlto] = useState(minimo);
+  useEffect(() => {
+    if (!activo || !ref.current || !window.ResizeObserver) return;
+    const ro = new ResizeObserver(([e]) => { const h = Math.floor(e.contentRect.height); if (h > 0) setAlto(Math.max(minimo, h)); });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, [activo, minimo]);
+  return [ref, alto];
+}
+const Llena = ({ activo, refCaja, minimo, children }) => activo
+  ? html`<div class="gr-llena" ref=${refCaja} style=${{ minHeight: minimo + 'px' }}><div class="gr-llena-dentro">${children}</div></div>`
+  : children;
+
 // Barras verticales, simples o apiladas. datos: [{ l, v, segs?: [{ v, c }], tip }]
-export function Barras({ datos, alto = 160, colorBase = 'var(--c1)', resaltar = -1, hueco = 6 }) {
+export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resaltar = -1, hueco = 6, llenar = false }) {
+  const [refLibre, libre] = useAltoLibre(llenar, alto0);
+  const alto = llenar ? libre - 4 : alto0;
   const [sel, setSel] = useState(-1);
   const max = Math.max(1e-9, ...datos.map(d => d.v));
   const caja = useRef(null);
@@ -34,7 +52,7 @@ export function Barras({ datos, alto = 160, colorBase = 'var(--c1)', resaltar = 
     setGlobo({ x: b.left - r.left + b.width / 2, y: alto - 18 - h - 6, txt: datos[i].tip || String(datos[i].v) });
   };
   const quitar = () => { setSel(-1); setGlobo(null); };
-  return html`<div class="gr" ref=${caja} onMouseLeave=${quitar}>
+  return html`<${Llena} activo=${llenar} refCaja=${refLibre} minimo=${alto0}><div class="gr" ref=${caja} onMouseLeave=${quitar}>
     <div class=${'gr-barras' + (sel >= 0 ? ' atenua' : '')} style=${{ height: alto + 'px', '--hueco': hueco + 'px' }} role="img" aria-label=${datos.map(d => d.l + ': ' + (d.tip || d.v)).join(', ')}>
       ${datos.map((d, i) => {
         const h = d.v > 0 ? Math.max(3, d.v / max * (alto - 20)) : 2;
@@ -49,11 +67,13 @@ export function Barras({ datos, alto = 160, colorBase = 'var(--c1)', resaltar = 
       })}
     </div>
     ${globo && html`<div class="gr-globo" style=${{ left: globo.x + 'px', top: globo.y + 'px' }}>${globo.txt}</div>`}
-  </div>`;
+  </div></${Llena}>`;
 }
 
 // Línea con área. datos: [{ l, v, tip }]
-export function Linea({ datos, alto = 200, c = 'var(--c1)', etiquetas = 6, id = 'ln' }) {
+export function Linea({ datos, alto: alto0 = 200, c = 'var(--c1)', etiquetas = 6, id = 'ln', llenar = false }) {
+  const [refLibre, libre] = useAltoLibre(llenar, alto0);
+  const alto = llenar ? libre - 18 : alto0;
   const ancho = 600, pad = 8;
   const max = Math.max(1e-9, ...datos.map(d => d.v)) * 1.1;
   const pts = datos.map((d, i) => [pad + i * (ancho - 2 * pad) / Math.max(1, datos.length - 1), alto - 24 - d.v / max * (alto - 40)]);
@@ -61,12 +81,10 @@ export function Linea({ datos, alto = 200, c = 'var(--c1)', etiquetas = 6, id = 
     if (!i) return 'M' + p[0] + ',' + p[1];
     const a = pts[i - 1], cx = (a[0] + p[0]) / 2;
     return 'C' + cx + ',' + a[1] + ' ' + cx + ',' + p[1] + ' ' + p[0] + ',' + p[1];
-  }).join(' '), [datos]);
+  }).join(' '), [datos, alto]);
   const area = linea + ' L' + pts[pts.length - 1][0] + ',' + (alto - 24) + ' L' + pts[0][0] + ',' + (alto - 24) + ' Z';
-  const ref = useRef(null), caja = useRef(null);
-  const [largo, setLargo] = useState(2000);
+  const caja = useRef(null);
   const [sel, setSel] = useState(-1);
-  useEffect(() => { if (ref.current && ref.current.getTotalLength) setLargo(Math.ceil(ref.current.getTotalLength())); }, [linea]);
   const mover = e => {
     const r = caja.current.getBoundingClientRect();
     const x = ((e.touches ? e.touches[0].clientX : e.clientX) - r.left) / r.width * ancho;
@@ -75,12 +93,12 @@ export function Linea({ datos, alto = 200, c = 'var(--c1)', etiquetas = 6, id = 
   };
   const cada = Math.max(1, Math.round(datos.length / etiquetas));
   const p = sel >= 0 ? pts[sel] : null;
-  return html`<div class="gr gr-linea" ref=${caja} onMouseMove=${mover} onMouseLeave=${() => setSel(-1)} onTouchStart=${mover} onTouchMove=${mover}>
-    <svg viewBox=${'0 0 ' + ancho + ' ' + alto} width="100%" height=${alto} preserveAspectRatio="none" role="img" aria-label=${'Gráfico: ' + datos.map(d => d.l + ' ' + (d.tip || d.v)).join(', ')}>
+  return html`<${Llena} activo=${llenar} refCaja=${refLibre} minimo=${alto0}><div class="gr gr-linea" ref=${caja} onMouseMove=${mover} onMouseLeave=${() => setSel(-1)} onTouchStart=${mover} onTouchMove=${mover}>
+    <svg key=${'s' + datos.length + id} class="revela" viewBox=${'0 0 ' + ancho + ' ' + alto} width="100%" height=${alto} preserveAspectRatio="none" role="img" aria-label=${'Gráfico: ' + datos.map(d => d.l + ' ' + (d.tip || d.v)).join(', ')}>
       <defs><linearGradient id=${'g' + id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color=${c} stop-opacity="0.32"></stop><stop offset="100%" stop-color=${c} stop-opacity="0"></stop></linearGradient></defs>
       ${[0.25, 0.5, 0.75].map(k => html`<line x1="0" x2=${ancho} y1=${(alto - 24) - k * (alto - 40)} y2=${(alto - 24) - k * (alto - 40)} stroke="var(--line)" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"></line>`)}
-      <path key=${'a' + datos.length} class="area" d=${area} fill=${'url(#g' + id + ')'}></path>
-      <path key=${'t' + datos.length} ref=${ref} class="trazo" d=${linea} stroke=${c} vector-effect="non-scaling-stroke" style=${{ '--largo': largo }}></path>
+      <path class="area" d=${area} fill=${'url(#g' + id + ')'}></path>
+      <path class="trazo" d=${linea} stroke=${c} vector-effect="non-scaling-stroke"></path>
       ${p && html`<line x1=${p[0]} x2=${p[0]} y1="8" y2=${alto - 24} stroke="var(--line)" vector-effect="non-scaling-stroke"></line>`}
     </svg>
     ${p && html`<span style=${{ position: 'absolute', left: (p[0] / ancho * 100) + '%', top: p[1] + 'px', width: '12px', height: '12px', margin: '-6px 0 0 -6px', borderRadius: '50%', background: c, border: '3px solid var(--surface)', pointerEvents: 'none' }}></span>
@@ -88,7 +106,7 @@ export function Linea({ datos, alto = 200, c = 'var(--c1)', etiquetas = 6, id = 
     <div style=${{ display: 'flex', justifyContent: 'space-between', marginTop: '-18px', fontSize: '10px', color: 'var(--faint)', padding: '0 2px' }}>
       ${datos.map((d, i) => i % cada === 0 || i === datos.length - 1 ? html`<span>${d.l}</span>` : null)}
     </div>
-  </div>`;
+  </div></${Llena}>`;
 }
 
 // Orbes: anillos concéntricos, como en Orbe personal (ringsSvg). items: [{ p (0 a 1), c }], el primero va afuera.

@@ -61,10 +61,10 @@ export function Reportes() {
   const Cifras = [['Ventas', r.total, fv[0], 'var(--ink)', fv[1], 'sube'], ['Ganancia bruta', r.ganancia, fg[0] || (r.total ? Math.round(r.ganancia / r.total * 100) + ' % de lo vendido' : ''), 'var(--in)', fg[1], 'dinero'], ['Gastos', gastos, fgs[0] || 'alquiler, sueldos, servicios…', 'var(--out)', fgs[1], 'rayo'], ['Ganancia real', real, fr[0] || 'lo que de verdad te queda', real >= 0 ? 'var(--in)' : 'var(--out)', fr[1], 'check']];
 
   const bloques = {
-    linea: html`<section class="tarjeta entra" style="--i:4"><div class="tarjeta-tit">Ventas por día<span class="sub">${r.n} ventas · ticket ${D.m(r.ticket)}</span></div>
-      <${Linea} key=${dias + suc} datos=${serie.map(d => ({ l: fechaCorta(d.t), v: d.total, tip: D.m(d.total) }))} alto=${tel ? 170 : 240} id=${'rep' + dias} etiquetas=${tel ? 4 : 7} /></section>`,
-    resultado: html`<section class="tarjeta entra" style="--i:5"><div class="tarjeta-tit">De lo que vendes, te queda<b class="num in" style="font-size:14px">${r.total ? Math.round(real / r.total * 100) : 0} %</b></div>
-      <${Barras} key=${'res' + dias + suc} datos=${resultado} alto=${tel ? 150 : 200} hueco=${tel ? 14 : 22} /></section>`,
+    linea: html`<section class="tarjeta entra llena" style="--i:4"><div class="tarjeta-tit">Ventas por día<span class="sub">${r.n} ventas · ticket ${D.m(r.ticket)}</span></div>
+      <${Linea} key=${dias + suc} datos=${serie.map(d => ({ l: fechaCorta(d.t), v: d.total, tip: D.m(d.total) }))} alto=${tel ? 170 : 220} id=${'rep' + dias} etiquetas=${tel ? 4 : 7} llenar=${!tel} /></section>`,
+    resultado: html`<section class="tarjeta entra llena" style="--i:5"><div class="tarjeta-tit">De lo que vendes, te queda<b class="num in" style="font-size:14px">${r.total ? Math.round(real / r.total * 100) : 0} %</b></div>
+      <${Barras} key=${'res' + dias + suc} datos=${resultado} alto=${tel ? 150 : 200} hueco=${tel ? 14 : 22} llenar=${!tel} /></section>`,
     pagos: html`<section class="tarjeta entra" style="--i:6"><div class="tarjeta-tit">Formas de pago</div>
       ${pagos.length ? html`<${Reparto} key=${'pg' + dias + suc} segs=${pagos} f=${D.m} titulo=${'Vendido en ' + (per === 'mes' ? 'el mes' : dias + ' días')} />` : html`<p class="vacio">Sin ventas.</p>`}</section>`,
     productos: html`<section class="tarjeta entra" style="--i:7"><div class="tarjeta-tit">Lo que más vendes<span class="sub">por ventas</span></div>
