@@ -2,7 +2,8 @@
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { Icono, avisar, TONOS, hora } from '../ui.js';
-import { resumen, inicioDia } from '../datos.js';
+import { resumen, inicioDia, listaProductos, sigNumero } from '../datos.js';
+import { FilaVenta } from './hojas.js';
 import { Reparto, Monto, color } from '../graficos.js';
 
 export function totales(items, neg, P) {
@@ -20,7 +21,7 @@ export function Vender() {
   const setCart = c => { carritoGuardado = c; setCartRaw(c); };
   const [q, setQ] = useState('');
   const lector = useRef(null);
-  const prods = S.productos;
+  const prods = listaProductos();
   const items = prods.filter(p => cart[p.id]).map(p => ({ pid: p.id, n: p.n, q: cart[p.id], p: p.p, c: p.c }));
   const n = items.reduce((a, it) => a + it.q, 0);
   const tt = totales(items, S.negocio, P);
@@ -98,9 +99,7 @@ export function Vender() {
         ${pagos.length ? html`<${Reparto} segs=${pagos} f=${D.m} titulo="Cómo te pagaron" tam=${104} grosor=${9} hueco=${3} />` : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
       </section>
       <section class="tarjeta entra" style="--i:4;padding-bottom:6px"><div class="tarjeta-tit">Últimas ventas<span class="sub">toca para ver el recibo</span></div>
-        <div class="lista">${ultimas.length ? ultimas.map((v, i) => html`<button type="button" key=${v.id} class="item toca entra" style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('recibo', { venta: v })}>
-          <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px;font-weight:600">#${v.n} · ${v.items.map(it => it.q + ' × ' + it.n).join(', ')}</b><span class="sub faint">${hora(v.t)} · ${v.pagos.map(p => p.m).join(' + ')}</span></span>
-          <b class=${'num' + (v.fiado ? ' amber' : '')}>${D.m(v.total)}</b></button>`) : html`<p class="vacio">Aquí aparecen las ventas de hoy.</p>`}</div>
+        <div class="lista">${ultimas.length ? ultimas.map((v, i) => html`<${FilaVenta} key=${v.id} v=${v} i=${i} />`) : html`<p class="vacio">Aquí aparecen las ventas de hoy.</p>`}</div>
       </section>
     </div>`;
   }
@@ -117,7 +116,7 @@ export function Vender() {
       <div class="chips sub">${[['F1', 'Buscar'], ['Enter', 'Agregar'], ['F12', 'Cobrar'], ['Esc', 'Vaciar']].map(k => html`<span class="fila" style="gap:6px"><span class="tecla">${k[0]}</span>${k[1]}</span>`)}</div>
     </div>
     <div class="tarjeta pila ticket">
-      <div class="tarjeta-tit" style="margin:0">Venta #${(S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1}<span class="sub">${S.negocio.escala === 'empresa' ? 'Caja 1' : ''}</span></div>
+      <div class="tarjeta-tit" style="margin:0">Venta #${sigNumero()}<span class="sub">${S.negocio.escala === 'empresa' ? 'Caja 1' : ''}</span></div>
       ${Lineas}
       <div style="border-top:1px solid var(--line);padding-top:12px">${Total}</div>
       ${Boton}

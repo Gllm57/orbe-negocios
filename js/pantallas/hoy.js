@@ -1,9 +1,11 @@
 // Hoy (teléfono) y Panel (computadora): cómo va el día, con gráficos en vivo.
 import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, cierreDeHoy, leer } from '../datos.js';
+import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, cierreDeHoy, leer, diaClave } from '../datos.js';
 import { Barras, Linea, Reparto, Monto, Anillo, color } from '../graficos.js';
 import { Icono, LogoOrbe, iniciales, hora, fechaCorta } from '../ui.js';
+import { nombreTasa } from '../paises.js';
+import { FilaVenta } from './hojas.js';
 
 const DIA = 86400000;
 
@@ -27,7 +29,7 @@ export function Hoy() {
   if (deben.length) pendientes.push({ i: 'campana', t: 't-amb', txt: deben.length + (deben.length === 1 ? ' cliente te debe ' : ' clientes te deben ') + D.m(debenTot), sub: 'Mándales el recordatorio por WhatsApp', go: () => ir('clientes') });
   if (bajos.length) pendientes.push({ i: 'caja', t: 't-azu', txt: bajos.length + (bajos.length === 1 ? ' producto por debajo del mínimo' : ' productos por debajo del mínimo'), sub: bajos.slice(0, 2).map(p => p.n).join(', '), go: () => ir('inventario') });
   if (pp.length && puede('gastos')) pendientes.push({ i: 'calendario', t: 't-ros', txt: pp[0].n + ': ' + D.m(pp[0].v), sub: venceTxt(pp[0].vence), go: () => ir(tel ? 'mas' : 'gastos') });
-  if (P.id === 'VE') pendientes.push({ i: 'sube', t: 't-vio', txt: 'Tasa BCV: Bs ' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(S.tasaVE || 875.68), sub: S.tasaVE ? 'Leída hoy de internet' : 'Sin internet: se usa la última guardada', go: null });
+  if (D.dual) pendientes.push({ i: 'sube', t: 't-vio', txt: nombreTasa(P, S.tasa) + ': ' + (P.id === 'VE' ? 'Bs ' : '$ ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa), sub: S.tasa.modo === 'manual' ? 'Escrita a mano' : S.tasa.valor && S.tasa.fecha === diaClave(Date.now()) ? 'Leída hoy de internet' : 'Sin internet: se usa la última guardada', go: puede('ajustes') ? () => abrir('tasa') : null });
   if (puede('cierre')) pendientes.push(cierre ? { i: 'check', t: 't-ver', txt: 'Día cerrado', sub: 'Cerraste a las ' + hora(cierre.t), go: null } : { i: 'candado', t: 't-ver', txt: 'Cierre del día', sub: 'Cuenta la caja cuando cierres', go: () => abrir('cierre') });
 
   const recientes = leer().ventas.filter(v => !suc || v.suc === suc).slice(-6).reverse();
@@ -43,10 +45,7 @@ export function Hoy() {
 
   const Recientes = html`<div class="tarjeta" style="padding-bottom:6px">
     <div class="tarjeta-tit">Últimas ventas<span class="sub">${r.n} hoy</span></div>
-    <div class="lista">${recientes.map((v, k) => html`<button type="button" class="item toca entra" style=${{ '--i': k, color: 'var(--ink)' }} onClick=${() => abrir('recibo', { venta: v })}>
-      <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px;font-weight:600">#${v.n} · ${v.items.map(it => it.q + ' × ' + it.n).join(', ')}</b><span class="sub faint">${fechaCorta(v.t)} ${hora(v.t)} · ${v.pagos.map(p => p.m).join(' + ')}${E ? ' · ' + v.suc : ''}</span></span>
-      <b class=${'num' + (v.fiado ? ' amber' : '')} style="font-size:14px">${D.m(v.total)}</b>
-    </button>`)}</div>
+    <div class="lista">${recientes.map((v, k) => html`<${FilaVenta} key=${v.id} v=${v} i=${k} fecha />`)}</div>
   </div>`;
 
   if (tel) return html`

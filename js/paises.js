@@ -42,13 +42,15 @@ export const TIPOS = [
 export const pais = id => PAISES.find(p => p.id === id) || PAISES[PAISES.length - 1];
 export const tipo = id => TIPOS.find(t => t.id === id) || TIPOS[0];
 
-// Tasa del día. En Venezuela se intenta leer la tasa oficial; si no hay internet se usa la última guardada.
+// Tasa del día. Venezuela: dólar oficial del BCV. Argentina: oficial, blue o MEP.
+// Si no hay internet se usa la última guardada; también se puede escribir a mano.
 export const TASA_VE_RESPALDO = 875.68;
-export async function leerTasaVE() {
-  const fuentes = [
+export const FUENTES_AR = [{ v: 'oficial', n: 'Oficial' }, { v: 'blue', n: 'Blue' }, { v: 'bolsa', n: 'MEP' }];
+export async function leerTasa(paisId, fuente) {
+  const fuentes = paisId === 'VE' ? [
     ['https://ve.dolarapi.com/v1/dolares/oficial', j => j.promedio],
     ['https://pydolarve.org/api/v2/dollar?page=bcv&monitor=usd', j => j.price]
-  ];
+  ] : paisId === 'AR' ? [['https://dolarapi.com/v1/dolares/' + (fuente || 'oficial'), j => j.venta]] : [];
   for (const [url, saca] of fuentes) {
     try {
       const r = await fetch(url, { cache: 'no-store' });
@@ -59,10 +61,11 @@ export async function leerTasaVE() {
   }
   return 0;
 }
+export const nombreTasa = (P, t) => P.id === 'VE' ? 'Tasa BCV' : 'Dólar ' + ((FUENTES_AR.find(f => f.v === (t && t.fuente)) || FUENTES_AR[0]).n).toLowerCase();
 
 // Formato de dinero según el país. Los montos se guardan en la moneda principal del negocio
 // (en Venezuela, dólares; la segunda moneda se calcula con la tasa).
-export function dinero(P, tasaVE) {
+export function dinero(P, tasa) {
   const ve = P.id === 'VE', ar = P.id === 'AR', dec = P.r >= 100 ? 0 : 2;
   const nf = new Intl.NumberFormat(P.loc, { minimumFractionDigits: dec, maximumFractionDigits: dec });
   const nfc = new Intl.NumberFormat(P.loc, { notation: 'compact', maximumFractionDigits: 1 });
@@ -73,7 +76,8 @@ export function dinero(P, tasaVE) {
     dec, dual: ve || ar,
     m,
     corto: v => P.eur ? nfc.format(v) + ' €' : sim + nfc.format(v),
-    s: v => ve ? 'Bs ' + nf2.format(v * (tasaVE || TASA_VE_RESPALDO)) : ar ? 'US$ ' + nf2.format(v / P.r) : '',
+    s: v => ve ? 'Bs ' + nf2.format(v * (tasa || TASA_VE_RESPALDO)) : ar ? 'US$ ' + nf2.format(v / (tasa || P.r)) : '',
+    tasa: tasa || (ve ? TASA_VE_RESPALDO : P.r),
     redondo: v => dec ? Math.round(v * 100) / 100 : Math.round(v),
     // Pasa un precio de referencia en dólares a un precio "bonito" en la moneda del país.
     precio: usd => {

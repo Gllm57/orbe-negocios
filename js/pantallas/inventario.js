@@ -1,7 +1,7 @@
 // Inventario (tienda, comida, venta en línea) o Servicios (citas, independientes).
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { bajoMinimo, resumen, inicioDia } from '../datos.js';
+import { bajoMinimo, resumen, inicioDia, listaProductos } from '../datos.js';
 import { BarrasH, Reparto, color } from '../graficos.js';
 import { Chips, Icono, TONOS, avisar } from '../ui.js';
 
@@ -15,7 +15,7 @@ export function Inventario() {
   const top = Object.keys(mes.porProd).map(k => Object.assign({ id: k }, mes.porProd[k])).sort((a, b) => b.v - a.v);
 
   if (!T.inv) {
-    const Lista = html`<div class="pila">${S.productos.map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
+    const Lista = html`<div class="pila">${listaProductos().map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
       <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
         <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${p.n}</b><span class="sub">${p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min'} · ${x.q} este mes</span></span>
@@ -28,7 +28,7 @@ export function Inventario() {
     return html`<div class="dos-uno"><div class="pila"><div class="fila"><span class="sub crece">La agenda de citas llega en la Fase 2.</span>${pp && html`<button type="button" class="btn2 lleno toca" onClick=${() => editarP({})}>+ Servicio</button>`}</div>${Lista}</div>${Graf}</div>`;
   }
 
-  const conStock = S.productos.filter(p => p.q != null);
+  const conStock = listaProductos().filter(p => p.q != null);
   const bajos = bajoMinimo();
   const valor = conStock.reduce((a, p) => a + p.q * p.c, 0);
   const margen = conStock.length ? conStock.reduce((a, p) => a + (p.p > 0 ? (p.p - p.c) / p.p : 0), 0) / conStock.length : 0;

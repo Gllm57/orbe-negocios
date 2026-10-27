@@ -6,47 +6,147 @@ import { ROLES_BASE } from './permisos.js';
 
 const CLAVE = 'orbe-negocios';
 const subs = new Set();
-let S = cargar();
+let S = vacio();
 
-function vacio() { return { v: 1, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), ajustes: { tema: 'auto', perfil: '' }, tasaVE: 0, tasaFecha: '' }; }
-// Datos guardados antes de que existieran los perfiles: el negocio pasa a tener un perfil de dueño.
+function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' } }; }
+// Datos guardados con versiones anteriores: se completan sin perder nada.
 function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
+  // El permiso de anular llegó después: administrador y encargado lo tienen de entrada.
+  d.roles = d.roles.map(r => r.p && r.p.anular === undefined && (r.id === 'admin' || r.id === 'encargado') ? Object.assign({}, r, { p: Object.assign({}, r.p, { anular: true }) }) : r);
   if (d.negocio && (!Array.isArray(d.perfiles) || !d.perfiles.length)) { d.perfiles = [{ id: 'u0', n: 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }]; d.ajustes = Object.assign({}, d.ajustes, { perfil: 'u0' }); }
+  if (!Array.isArray(d.registro)) d.registro = [];
+  if (!d.tasa || typeof d.tasa !== 'object' || (d.tasaVE && !d.tasa.valor)) d.tasa = { modo: 'auto', valor: d.tasaVE || 0, fuente: 'oficial', fecha: d.tasaFecha || '' };
+  delete d.tasaVE; delete d.tasaFecha;
+  d.v = 2;
   return d;
 }
 
-function valido(d) { return d && typeof d === 'object' && Array.isArray(d.ventas) && Array.isArray(d.productos) && Array.isArray(d.clientes); }
+export function valido(d) { return !!d && typeof d === 'object' && Array.isArray(d.ventas) && Array.isArray(d.productos) && Array.isArray(d.clientes); }
+const preparar = d => migrar(Object.assign(vacio(), JSON.parse(JSON.stringify(d))));
 
-function cargar() {
+// ---------- guardado: IndexedDB (mucho espacio) y, si el navegador no lo deja, localStorage ----------
+let db = null;
+function abrirDB() {
+  return new Promise((ok, mal) => {
+    try {
+      const r = indexedDB.open(CLAVE, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => mal(r.error);
+      r.onblocked = () => mal(new Error('bloqueada'));
+    } catch (e) { mal(e); }
+  });
+}
+function idb(modo, fn) {
+  return new Promise((ok, mal) => {
+    const tx = db.transaction('kv', modo), r = fn(tx.objectStore('kv'));
+    tx.oncomplete = () => ok(r ? r.result : undefined);
+    tx.onerror = () => mal(tx.error); tx.onabort = () => mal(tx.error);
+  });
+}
+const idbLeer = k => idb('readonly', st => st.get(k));
+const idbPoner = (k, v) => idb('readwrite', st => st.put(v, k));
+
+function leerLS() {
   let crudo = null;
-  try { crudo = localStorage.getItem(CLAVE); } catch (e) { return vacio(); }
-  if (!crudo) return vacio();
-  try {
-    const d = JSON.parse(crudo);
-    if (valido(d)) return migrar(Object.assign(vacio(), d));
-    throw new Error('forma inválida');
-  } catch (e) {
-    try { localStorage.setItem(CLAVE + '-rescate-' + Date.now(), crudo); } catch (e2) { /* sin espacio */ }
-    return vacio();
-  }
+  try { crudo = localStorage.getItem(CLAVE); } catch (e) { return null; }
+  if (!crudo) return null;
+  try { const d = JSON.parse(crudo); if (valido(d)) return d; throw new Error('forma inválida'); }
+  catch (e) { try { localStorage.setItem(CLAVE + '-rescate-' + Date.now(), crudo); } catch (e2) { /* sin espacio */ } return null; }
+}
+// Lo mínimo para la pantalla de carga (tema y nombre), que se lee antes que todo lo demás.
+function guardarMini() { try { localStorage.setItem(CLAVE + '-mini', JSON.stringify({ tema: S.ajustes.tema, nombre: S.negocio ? S.negocio.nombre : '' })); } catch (e) { /* sin espacio */ } }
+
+// Arranque: lee de IndexedDB; la primera vez trae lo que había en localStorage (y lo deja apartado, nunca lo borra).
+export async function iniciarDatos() {
+  try { db = await abrirDB(); } catch (e) { db = null; }
+  let d = null;
+  if (db) {
+    try { d = await idbLeer('datos'); } catch (e) { d = null; }
+    if (d && !valido(d)) { try { await idbPoner('rescate-' + Date.now(), d); } catch (e) { /* nada */ } d = null; }
+    if (!d) {
+      d = leerLS();
+      if (d) {
+        try {
+          await idbPoner('datos', d);
+          localStorage.setItem(CLAVE + '-antes-de-indexeddb', localStorage.getItem(CLAVE));
+          localStorage.removeItem(CLAVE);
+        } catch (e) { /* si falla, se sigue usando localStorage la próxima vez */ }
+      }
+    }
+  } else d = leerLS();
+  S = d ? preparar(d) : vacio();
+  // Si venía de una versión anterior, se guarda ya completado.
+  if (d && d.v !== S.v) guardarYa(); else guardarMini();
+  await copiaDelDia();
 }
 
 let tGuardar = 0;
 function guardar() {
   clearTimeout(tGuardar);
-  tGuardar = setTimeout(() => {
-    try {
-      const txt = JSON.stringify(S);
-      localStorage.setItem(CLAVE, txt);
-      // Una copia por día, por si acaso.
-      const hoyK = diaClave(Date.now());
-      if (localStorage.getItem(CLAVE + '-copia-dia') !== hoyK) {
-        localStorage.setItem(CLAVE + '-copia', txt);
-        localStorage.setItem(CLAVE + '-copia-dia', hoyK);
+  tGuardar = setTimeout(guardarYa, 120);
+}
+async function guardarYa() {
+  guardarMini();
+  try {
+    if (db) await idbPoner('datos', S);
+    else localStorage.setItem(CLAVE, JSON.stringify(S));
+  } catch (e) { console.warn('No se pudo guardar', e); }
+  copiaDelDia();
+}
+// Guardar antes de cerrar la pestaña, por si quedó algo pendiente.
+window.addEventListener('pagehide', () => { if (tGuardar) { clearTimeout(tGuardar); guardarYa(); } });
+
+// ---------- copias automáticas: una por día, se guardan las últimas 7 ----------
+const DIAS_COPIA = 7;
+let diaCopiado = '';
+async function copiaDelDia() {
+  const hoyK = diaClave(Date.now());
+  if (diaCopiado === hoyK || !S.negocio) return;
+  diaCopiado = hoyK;
+  try {
+    if (!db) { localStorage.setItem(CLAVE + '-copia', JSON.stringify(S)); localStorage.setItem(CLAVE + '-copia-dia', hoyK); return; }
+    if (await idbLeer('copia-' + hoyK)) return;
+    await idbPoner('copia-' + hoyK, { t: Date.now(), datos: S });
+    const ks = (await idb('readonly', st => st.getAllKeys())).filter(k => /^copia-\d/.test(k)).sort();
+    const sobran = ks.slice(0, Math.max(0, ks.length - DIAS_COPIA));
+    if (sobran.length) await idb('readwrite', st => { sobran.forEach(k => st.delete(k)); });
+  } catch (e) { console.warn('No se pudo hacer la copia del día', e); }
+}
+// Lista de copias guardadas en este aparato (las automáticas y las que se hicieron antes de borrar o restaurar).
+export async function listarCopias() {
+  const out = [];
+  const ficha = (k, nombre, t, d) => valido(d) && out.push({ k, nombre, t, ventas: d.ventas.length, negocio: d.negocio ? d.negocio.nombre : '' });
+  try {
+    if (db) {
+      const ks = await idb('readonly', st => st.getAllKeys());
+      for (const k of ks.filter(k => /^(copia|antes)-/.test(k)).sort().reverse()) {
+        const x = await idbLeer(k);
+        if (x) ficha(k, /^antes-de-restaurar/.test(k) ? 'Antes de restaurar' : /^antes-de-borrar/.test(k) ? 'Antes de empezar de nuevo' : 'Copia automática', x.t, x.datos);
       }
-    } catch (e) { console.warn('No se pudo guardar', e); }
-  }, 120);
+    }
+    const ls = localStorage.getItem(CLAVE + '-copia');
+    if (ls) ficha('ls-copia', 'Copia anterior', 0, JSON.parse(ls));
+  } catch (e) { /* sin copias legibles */ }
+  return out;
+}
+export async function leerCopia(k) {
+  if (k === 'ls-copia') return JSON.parse(localStorage.getItem(CLAVE + '-copia'));
+  const x = await idbLeer(k); return x ? x.datos : null;
+}
+async function apartar(nombre) {
+  try { if (db) await idbPoner(nombre + '-' + Date.now(), { t: Date.now(), datos: S }); else localStorage.setItem(CLAVE + '-' + nombre, JSON.stringify(S)); } catch (e) { /* sin espacio */ }
+}
+// Restaurar: lo de ahora se aparta primero, así también se puede deshacer.
+export async function restaurar(d) {
+  if (!valido(d)) return false;
+  await apartar('antes-de-restaurar');
+  const nuevo = preparar(d), quien = S.ajustes.perfil;
+  nuevo.ajustes = Object.assign({}, nuevo.ajustes, { tema: S.ajustes.tema, perfil: nuevo.perfiles.some(p => p.id === quien) ? quien : '' });
+  diaCopiado = diaClave(Date.now());
+  S = nuevo; memo.clear(); guardarYa(); subs.forEach(f => f());
+  return true;
 }
 
 export const leer = () => S;
@@ -92,7 +192,7 @@ export function crearNegocio(cfg, conEjemplo) {
   if (conEjemplo) perfiles.push(
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
     { id: 'u2', n: 'Luis Pino', rol: 'cajero', pin: '2222', sucs: sucursales.length > 1 ? [sucursales[0]] : [], creado: Date.now() });
-  const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
+  const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
   if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D, perfiles));
   cambiar(() => base);
 }
@@ -155,22 +255,68 @@ function ejemplo(neg, productos, D, perfiles) {
 }
 
 // ---------- acciones ----------
-export function vender({ items, pagos, cli, suc, fiado }) {
-  const total = items.reduce((a, it) => a + it.q * it.p, 0);
-  const n = (S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1;
-  const venta = { id: id(), n, t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado, por: S.ajustes.perfil || '' };
-  cambiar(s => ({
-    ventas: s.ventas.concat([venta]),
-    productos: s.productos.map(p => { const it = items.find(x => x.pid === p.id); return it && p.q != null ? Object.assign({}, p, { q: Math.max(0, p.q - it.q) }) : p; })
-  }));
+export const sigNumero = () => (S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1;
+const stockMas = (productos, lineas, signo) => productos.map(p => { const q = lineas[p.id]; return q && p.q != null ? Object.assign({}, p, { q: Math.max(0, p.q + signo * q) }) : p; });
+const porLinea = items => items.reduce((o, it) => (o[it.pid] = (o[it.pid] || 0) + it.q, o), {});
+// Registro de cambios: quién hizo qué y cuándo (anulaciones, devoluciones, borrados, cambios del negocio).
+const nota = (s, que) => ({ registro: (s.registro || []).concat([{ t: Date.now(), por: s.ajustes.perfil || '', que }]).slice(-500) });
+
+export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto }) {
+  // Si el impuesto va aparte, el total cobrado es mayor que la suma de los productos.
+  const total = conImpuesto || items.reduce((a, it) => a + it.q * it.p, 0);
+  const venta = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 };
+  cambiar(s => ({ ventas: s.ventas.concat([venta]), productos: stockMas(s.productos, porLinea(items), -1) }));
   return venta;
+}
+// Anular: la venta queda en el historial marcada, deja de contar y lo vendido vuelve al inventario.
+export function anularVenta(vid, motivo) {
+  const v = S.ventas.find(x => x.id === vid);
+  if (!v || v.anulada || v.dev) return false;
+  const quedan = {}; v.items.forEach(it => { const q = it.q - ((v.devuelto || {})[it.pid] || 0); if (q > 0) quedan[it.pid] = (quedan[it.pid] || 0) + q; });
+  cambiar(s => Object.assign({
+    ventas: s.ventas.map(x => x.id === vid ? Object.assign({}, x, { anulada: { t: Date.now(), por: s.ajustes.perfil || '', motivo } }) : x),
+    productos: stockMas(s.productos, quedan, 1)
+  }, nota(s, 'Anuló la venta #' + v.n + ' (' + motivo + ')')));
+  return true;
+}
+// Devolución: un movimiento nuevo en negativo (cuenta el día que se devuelve) y lo devuelto vuelve al inventario.
+// Si la venta fue fiada, lo devuelto se descuenta de lo que debe el cliente.
+export function devolver(vid, lineas, m, motivo, monto) {
+  const v = S.ventas.find(x => x.id === vid);
+  if (!v || v.anulada || v.dev) return null;
+  const items = v.items.filter(it => lineas[it.pid] > 0).map(it => ({ pid: it.pid, n: it.n, q: -lineas[it.pid], p: it.p, c: it.c }));
+  if (!items.length) return null;
+  const total = monto ? -monto : items.reduce((a, it) => a + it.q * it.p, 0);
+  const dev = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos: [{ m: v.fiado ? 'Fiado' : m, v: total }], cli: v.cli, suc: v.suc, fiado: v.fiado, por: S.ajustes.perfil || '', dev: v.n, motivo };
+  const devuelto = Object.assign({}, v.devuelto); Object.keys(lineas).forEach(k => { if (lineas[k] > 0) devuelto[k] = (devuelto[k] || 0) + lineas[k]; });
+  cambiar(s => Object.assign({
+    ventas: s.ventas.map(x => x.id === vid ? Object.assign({}, x, { devuelto }) : x).concat([dev]),
+    productos: stockMas(s.productos, lineas, 1)
+  }, nota(s, 'Devolución de la venta #' + v.n + ' (' + motivo + ')')));
+  return dev;
 }
 export function abonar(cli, v, m) { cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m, por: s.ajustes.perfil || '' }]) })); }
 export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '' }, g)]) })); }
+export function editarGasto(gid, g) { cambiar(s => ({ gastos: s.gastos.map(x => x.id === gid ? Object.assign({}, x, g) : x) })); }
+export function borrarGasto(gid) {
+  const g = S.gastos.find(x => x.id === gid); if (!g) return;
+  cambiar(s => Object.assign({ gastos: s.gastos.filter(x => x.id !== gid) }, nota(s, 'Borró el gasto «' + g.n + '»')));
+}
 export function pagarGasto(gid) { cambiar(s => ({ gastos: s.gastos.map(g => g.id === gid ? Object.assign({}, g, { pagado: true, t: Date.now() }) : g) })); }
 export function guardarProducto(p) { cambiar(s => ({ productos: p.id && s.productos.some(x => x.id === p.id) ? s.productos.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.productos.concat([Object.assign({ id: 'p' + id(), cod: '' }, p)]) })); }
+// Borrar producto o cliente: se ocultan, pero su historial de ventas se queda.
+export function borrarProducto(pid) {
+  const p = S.productos.find(x => x.id === pid); if (!p) return;
+  cambiar(s => Object.assign({ productos: s.productos.map(x => x.id === pid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró el producto «' + p.n + '»')));
+}
 export function reponer(pid, cuanto) { cambiar(s => ({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }) : p) })); }
 export function nuevoCliente(c) { const nuevo = Object.assign({ id: 'c' + id(), tipo: 'persona', limite: 0, tel: '' }, c); cambiar(s => ({ clientes: s.clientes.concat([nuevo]) })); return nuevo; }
+export function editarCliente(cid, c) { cambiar(s => ({ clientes: s.clientes.map(x => x.id === cid ? Object.assign({}, x, c) : x) })); }
+export function borrarCliente(cid) {
+  const c = S.clientes.find(x => x.id === cid); if (!c || deudaDe(cid) > 0.004) return false;
+  cambiar(s => Object.assign({ clientes: s.clientes.map(x => x.id === cid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró al cliente «' + c.n + '»')));
+  return true;
+}
 export function cerrarDia(contado, resumen) { cambiar(s => ({ cierres: s.cierres.concat([{ id: id(), t: Date.now(), dia: diaClave(Date.now()), contado, resumen }]) })); }
 // ---------- perfiles y permisos ----------
 export const perfilActual = () => (S.perfiles || []).find(p => p.id === S.ajustes.perfil && !p.inactivo) || null;
@@ -182,7 +328,7 @@ export function guardarPerfil(p) {
 export function cambiarPermiso(rolId, k, v) { cambiar(s => ({ roles: s.roles.map(r => r.id === rolId && !r.fijo ? Object.assign({}, r, { p: Object.assign({}, r.p, { [k]: v }) }) : r) })); }
 export function nuevoRol(n) { const r = { id: 'r' + id(), n, p: { vender: true } }; cambiar(s => ({ roles: s.roles.concat([r]) })); return r; }
 export function cambiarAjustes(a) { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, a) })); }
-export function cambiarNegocio(n) { cambiar(s => ({ negocio: Object.assign({}, s.negocio, n) })); }
+export function cambiarNegocio(n, que) { cambiar(s => Object.assign({ negocio: Object.assign({}, s.negocio, n) }, que ? nota(s, que) : {})); }
 // Agregar o renombrar locales. Al renombrar, las ventas y gastos pasan al nombre nuevo.
 export function guardarSucursales(nombres, renombres) {
   const ren = renombres || {};
@@ -192,10 +338,11 @@ export function guardarSucursales(nombres, renombres) {
     gastos: Object.keys(ren).length ? s.gastos.map(g => ren[g.suc] ? Object.assign({}, g, { suc: ren[g.suc] }) : g) : s.gastos
   }));
 }
-export function guardarTasa(v) { cambiar(() => ({ tasaVE: v, tasaFecha: diaClave(Date.now()) })); }
-export function empezarDeNuevo() {
-  try { localStorage.setItem(CLAVE + '-copia-antes-de-borrar', JSON.stringify(S)); } catch (e) { /* sin espacio */ }
-  cambiar(() => Object.assign(vacio(), { ajustes: S.ajustes }));
+// Tasa: automática (se lee de internet una vez al día) o escrita a mano. En Argentina se elige oficial, blue o MEP.
+export function guardarTasa(t) { cambiar(s => ({ tasa: Object.assign({}, s.tasa, t, t.valor ? { fecha: diaClave(Date.now()) } : {}) })); }
+export async function empezarDeNuevo() {
+  await apartar('antes-de-borrar');
+  cambiar(() => Object.assign(vacio(), { ajustes: Object.assign({}, S.ajustes, { perfil: '' }) }));
 }
 export function exportar() { return JSON.stringify(S, null, 1); }
 
@@ -204,7 +351,11 @@ const memo = new Map();
 function m(clave, fn) { if (!memo.has(clave)) memo.set(clave, fn()); return memo.get(clave); }
 
 const delSuc = suc => v => !suc || v.suc === suc;
-export function ventasEntre(desde, hasta, suc) { return m('ve' + desde + hasta + suc, () => S.ventas.filter(v => v.t >= desde && v.t < hasta && delSuc(suc)(v))); }
+// Las ventas anuladas no cuentan en ningún cálculo; las devoluciones sí (restan).
+export const vigentes = () => m('vig', () => S.ventas.filter(v => !v.anulada));
+export const listaProductos = () => m('prods', () => S.productos.filter(p => !p.borrado));
+export const listaClientes = () => m('clis', () => S.clientes.filter(c => !c.borrado));
+export function ventasEntre(desde, hasta, suc) { return m('ve' + desde + hasta + suc, () => vigentes().filter(v => v.t >= desde && v.t < hasta && delSuc(suc)(v))); }
 const costo = v => v.items.reduce((a, it) => a + it.q * it.c, 0);
 
 export function resumen(desde, hasta, suc) {
@@ -221,7 +372,8 @@ export function resumen(desde, hasta, suc) {
       porPersona[v.por || ''] = (porPersona[v.por || ''] || 0) + v.total;
       v.items.forEach(it => { const x = porProd[it.pid] || (porProd[it.pid] = { n: it.n, q: 0, v: 0, g: 0 }); x.q += it.q; x.v += it.q * it.p; x.g += it.q * (it.p - it.c); });
     });
-    return { n: vs.length, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: vs.length ? total / vs.length : 0 };
+    const n = vs.filter(v => !v.dev).length;
+    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0 };
   });
 }
 
@@ -237,18 +389,19 @@ export function serieDias(dias, suc) {
 }
 
 export function deudaDe(cid) {
-  return m('de' + cid, () => S.ventas.filter(v => v.fiado && v.cli === cid).reduce((a, v) => a + v.total, 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0));
+  return m('de' + cid, () => vigentes().filter(v => v.fiado && v.cli === cid).reduce((a, v) => a + v.total, 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0));
 }
 export function deudores() {
-  return m('deudores', () => S.clientes.map(c => {
-    const fiados = S.ventas.filter(v => v.fiado && v.cli === c.id);
+  return m('deudores', () => listaClientes().map(c => {
+    const fiados = vigentes().filter(v => v.fiado && v.cli === c.id && !v.dev);
     const deuda = deudaDe(c.id);
     const desde = fiados.length ? fiados[0].t : 0;
-    const ultima = S.ventas.filter(v => v.cli === c.id).reduce((a, v) => Math.max(a, v.t), 0);
-    return Object.assign({}, c, { deuda: Math.max(0, deuda), desde, ultima, compras: S.ventas.filter(v => v.cli === c.id).length });
+    const suyas = vigentes().filter(v => v.cli === c.id && !v.dev);
+    const ultima = suyas.reduce((a, v) => Math.max(a, v.t), 0);
+    return Object.assign({}, c, { deuda: Math.max(0, deuda), desde, ultima, compras: suyas.length });
   }).sort((a, b) => b.deuda - a.deuda));
 }
 export function porPagar() { return m('pp', () => S.gastos.filter(g => !g.pagado).sort((a, b) => a.vence - b.vence)); }
 export function gastosEntre(desde, hasta) { return m('ge' + desde + hasta, () => S.gastos.filter(g => g.pagado && g.t >= desde && g.t < hasta)); }
-export function bajoMinimo() { return m('bm', () => S.productos.filter(p => p.q != null && p.min > 0 && p.q < p.min)); }
+export function bajoMinimo() { return m('bm', () => listaProductos().filter(p => p.q != null && p.min > 0 && p.q < p.min)); }
 export function cierreDeHoy() { const k = diaClave(Date.now()); return S.cierres.find(c => c.dia === k) || null; }

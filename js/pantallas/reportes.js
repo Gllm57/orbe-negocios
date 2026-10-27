@@ -18,10 +18,10 @@ export function descargar(nombre, texto, tipo) {
 }
 export function ventasCSV(desde, hasta) {
   const S = leer(), fila = c => c.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(';');
-  const filas = [fila(['Número', 'Fecha', 'Hora', 'Sucursal', 'Productos', 'Total', 'Forma de pago', 'Cliente', 'Fiado'])];
+  const filas = [fila(['Número', 'Fecha', 'Hora', 'Sucursal', 'Productos', 'Total', 'Forma de pago', 'Cliente', 'Fiado', 'Estado'])];
   S.ventas.filter(v => v.t >= desde && v.t < hasta).forEach(v => {
     const d = new Date(v.t), cli = S.clientes.find(c => c.id === v.cli);
-    filas.push(fila([v.n, d.toLocaleDateString('es'), d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }), v.suc, v.items.map(it => it.q + ' x ' + it.n).join(', '), String(v.total.toFixed(2)).replace('.', ','), v.pagos.map(p => p.m).join(' + '), cli ? cli.n : '', v.fiado ? 'Sí' : 'No']));
+    filas.push(fila([v.n, d.toLocaleDateString('es'), d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }), v.suc, v.items.map(it => it.q + ' x ' + it.n).join(', '), String(v.total.toFixed(2)).replace('.', ','), v.pagos.map(p => p.m).join(' + '), cli ? cli.n : '', v.fiado ? 'Sí' : 'No', v.anulada ? 'Anulada: ' + v.anulada.motivo : v.dev ? 'Devolución de #' + v.dev : '']));
   });
   return '﻿' + filas.join('\n');
 }

@@ -3,12 +3,13 @@ import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { cambiarAjustes, cambiarNegocio, exportar, resumen, gastosEntre, inicioDia, salir } from '../datos.js';
 import { Monto } from '../graficos.js';
-import { Icono, Interruptor, Chips, avisar, iniciales, TONOS } from '../ui.js';
+import { Icono, Interruptor, Chips, avisar, iniciales, TONOS, hace } from '../ui.js';
+import { nombreTasa } from '../paises.js';
 import { BloqueGastos, inicioMes } from './gastos.js';
 import { descargar, ventasCSV } from './reportes.js';
 
 function Ajustes() {
-  const { S, P, T, abrir, tel, puede, yo, rol, ir } = useApp();
+  const { S, P, T, D, abrir, tel, puede, yo, rol, ir } = useApp();
   const n = S.negocio;
   const Tarjeta = (titulo, icono, hijos, i) => html`<section class="tarjeta entra" style=${{ '--i': i }}>
     <div class="fila" style="gap:10px;margin-bottom:6px"><span class="ic t-vio" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${icono} t=${16} g=${2.2} /></span><b style="font-size:15px">${titulo}</b></div>${hijos}</section>`;
@@ -16,22 +17,28 @@ function Ajustes() {
   const tarjetas = [
     Tarjeta(n.escala === 'empresa' ? 'Empresa' : 'Negocio', n.escala === 'empresa' ? 'edificio' : T.id, html`
       ${Dato('Nombre', n.nombre)}${n.razon ? Dato('Razón social', n.razon) : null}${n.fiscal ? Dato(P.fiscal[0], n.fiscal) : null}
-      ${Dato('Tipo', T.n)}`, 0),
+      ${Dato('Tipo', T.n)}${Dato('Tamaño', n.escala === 'empresa' ? 'Empresa' : 'Negocio')}
+      <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('negocio')}><${Icono} n="lapiz" t=${14} />Cambiar datos</button></div>`, 0),
     Tarjeta(n.sucursales.length > 1 ? 'Locales y sucursales' : 'Tu local', 'edificio', html`
       ${n.sucursales.length > 1 ? n.sucursales.map((x, k) => Dato('Local ' + (k + 1), x)) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Tienes un solo local, así que Orbe no te muestra sucursales. Si abres otro, agrégalo aquí.</p>`}
       <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('locales')}>${n.sucursales.length > 1 ? 'Cambiar o agregar' : '+ Agregar otro local'}</button></div>`, 1),
-    Tarjeta('País y moneda', 'mundo', html`${Dato('País', P.f + ' ' + P.n)}${Dato('Moneda', P.id === 'VE' ? 'Dólares y bolívares' : P.id === 'AR' ? 'Pesos y dólares' : P.cur)}${P.id === 'VE' ? Dato('Tasa BCV', S.tasaVE ? 'Bs ' + S.tasaVE.toFixed(2).replace('.', ',') + ' · ' + S.tasaFecha : 'Se lee sola cuando hay internet') : null}`, 1),
+    Tarjeta('País y moneda', 'mundo', html`${Dato('País', P.f + ' ' + P.n)}${Dato('Moneda', P.id === 'VE' ? 'Dólares y bolívares' : P.id === 'AR' ? 'Pesos y dólares' : P.cur)}
+      ${D.dual ? html`${Dato(nombreTasa(P, S.tasa), (P.id === 'VE' ? 'Bs ' : '$ ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa) + ' · ' + (S.tasa.modo === 'manual' ? 'a mano' : S.tasa.fecha || 'sin leer'))}
+        <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('tasa')}>${S.tasa.modo === 'manual' ? 'Cambiar la tasa' : 'Tasa automática · cambiar'}</button></div>` : null}`, 1),
     Tarjeta('Formas de pago', 'tarjeta', html`<div class="chips" style="margin-top:6px">${P.pays.map(x => { const on = n.pays.includes(x); return html`<button type="button" class=${'chip chico toca' + (on ? ' on' : '')} aria-pressed=${on ? 'true' : 'false'} onClick=${() => { if (on && n.pays.length === 1) return; cambiarNegocio({ pays: on ? n.pays.filter(y => y !== x) : P.pays.filter(y => y === x || n.pays.includes(y)) }); }}>${x}</button>`; })}</div>`, 2),
     Tarjeta('Impuesto', 'porciento', html`
       <${Interruptor} on=${n.taxOn && P.tax[1] > 0} onCambio=${v => P.tax[1] ? cambiarNegocio({ taxOn: v }) : avisar('En tu país varía según la zona')} titulo=${'Cobrar ' + P.tax[0] + (P.tax[1] ? ' ' + P.tax[1] + ' %' : '')} sub="Sale en el recibo" />
       ${n.taxOn && P.tax[1] > 0 && html`<div class="segmento" style="width:100%">${[[true, 'Incluido en el precio'], [false, 'Aparte']].map(o => html`<button type="button" style="flex:1" class=${n.taxIncl === o[0] ? 'on' : ''} onClick=${() => cambiarNegocio({ taxIncl: o[0] })}>${o[1]}</button>`)}</div>`}`, 3),
     Tarjeta('Apariencia', 'sol', html`<div style="margin-top:6px"><${Chips} opciones=${[{ v: 'auto', n: 'Automático' }, { v: 'claro', n: 'Claro' }, { v: 'oscuro', n: 'Oscuro' }]} valor=${S.ajustes.tema || 'auto'} onCambio=${v => cambiarAjustes({ tema: v })} chico /></div>`, 4),
     Tarjeta('Copias y sin conexión', 'guardar', html`
-      ${Dato('Dónde se guarda', 'En este aparato')}${Dato('Sin internet', 'Sigue funcionando')}
+      ${Dato('Dónde se guarda', 'En este aparato')}${Dato('Copias automáticas', 'Una por día · las últimas 7')}${Dato('Sin internet', 'Sigue funcionando')}
       <div class="chips" style="margin-top:8px">
+        <button type="button" class="btn2 chico acento toca" onClick=${() => abrir('copias')}><${Icono} n="deshacer" t=${15} />Restaurar copia</button>
         <button type="button" class="btn2 chico toca" onClick=${() => { descargar('orbe-negocios-copia-' + new Date().toISOString().slice(0, 10) + '.json', exportar(), 'application/json'); avisar('Copia descargada'); }}><${Icono} n="descarga" t=${15} />Descargar copia</button>
         <button type="button" class="btn2 chico toca" onClick=${() => { descargar('orbe-ventas.csv', ventasCSV(0, Date.now() + 1), 'text/csv;charset=utf-8'); avisar('Excel descargado'); }}><${Icono} n="doc" t=${15} />Ventas en Excel</button>
       </div>`, 5),
+    Tarjeta('Registro de cambios', 'lista', html`${(S.registro || []).length ? (S.registro || []).slice(-3).reverse().map(x => Dato(x.que, hace(x.t))) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Aquí queda anotado quién anula ventas, hace devoluciones o borra algo.</p>`}
+      <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico toca" onClick=${() => abrir('registro')}>Ver todo</button></div>`, 6),
     Tarjeta('Empezar de nuevo', 'basura', html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Borra este negocio de este aparato para probar otro país o tipo. Antes se guarda una copia.</p><button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('borrar')}>Empezar de nuevo</button>`, 6)
   ];
   // Tu perfil va primero; los ajustes del negocio solo con permiso. La apariencia es de cada quien.

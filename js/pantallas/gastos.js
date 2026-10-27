@@ -21,7 +21,7 @@ export function BloqueGastos({ compacto }) {
   const PorPagar = html`<section class="tarjeta entra" style="padding-bottom:6px">
     <div class="tarjeta-tit">Por pagar<b class="num amber" style="font-size:14px">${D.m(pp.reduce((a, g) => a + g.v, 0))}</b></div>
     <div class="lista">${pp.length ? pp.map((g, i) => { const d = Math.round((inicioDia(g.vence) - inicioDia(Date.now())) / 86400000); return html`<div class="item entra" key=${g.id} style=${{ '--i': i }}>
-      <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${g.n}</b><span class="sub" style=${{ color: d <= 1 ? 'var(--out)' : 'var(--amber)' }}>${venceTxt(g.vence)}</span></span>
+      <button type="button" class="crece toca" style="display:flex;flex-direction:column;gap:2px;border:0;background:none;padding:0;text-align:left;color:var(--ink);min-width:0" aria-label=${'Editar ' + g.n} onClick=${() => abrir('gasto', { gid: g.id })}><b style="font-size:14px;font-weight:600">${g.n}</b><span class="sub" style=${{ color: d <= 1 ? 'var(--out)' : 'var(--amber)' }}>${venceTxt(g.vence)}</span></button>
       <b class="num" style="font-size:14px">${D.m(g.v)}</b>
       <button type="button" class="btn2 chico verde toca" onClick=${() => pagar(g)}>Pagado</button>
     </div>`; }) : html`<p class="vacio" style="padding:12px 0">No debes nada a nadie.</p>`}</div>
@@ -34,11 +34,11 @@ export function BloqueGastos({ compacto }) {
 
   const Recientes = html`<section class="tarjeta entra" style="--i:2;padding-bottom:6px">
     <div class="tarjeta-tit">Gastos recientes<button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('gasto')}>+ Gasto</button></div>
-    <div class="lista">${gm.slice().sort((a, b) => b.t - a.t).slice(0, compacto ? 4 : 12).map((g, i) => html`<div class="item entra" key=${g.id} style=${{ '--i': i }}>
+    <div class="lista">${gm.slice().sort((a, b) => b.t - a.t).slice(0, compacto ? 4 : 12).map((g, i) => html`<button type="button" class="item toca entra" key=${g.id} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('gasto', { gid: g.id })}>
       <span class="simb-c" style=${{ '--c': COLOR_CAT[g.cat] || 'var(--c4)', width: '32px', height: '32px' }}><${Icono} n=${simbolo(g.cat)} t=${16} /></span>
       <span class="crece" style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">${g.n}</span><span class="sub faint">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
       <b class="num out" style="font-size:14px">−${D.m(g.v)}</b>
-    </div>`)}</div>
+    </button>`)}</div>
   </section>`;
 
   return { PorPagar, Mes, Recientes };

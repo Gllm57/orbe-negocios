@@ -38,11 +38,11 @@
 <script>
 // Pantalla de carga: tema y nombre del negocio desde el primer instante; se va cuando la app está lista.
 (function () {
-  var d = null; try { d = JSON.parse(localStorage.getItem('orbe-negocios') || 'null'); } catch (e) {}
-  var tema = d && d.ajustes && d.ajustes.tema;
+  var d = null; try { d = JSON.parse(localStorage.getItem('orbe-negocios-mini') || 'null'); } catch (e) {}
+  var tema = d && d.tema;
   if (tema === 'claro') document.documentElement.setAttribute('data-theme', 'light');
   if (tema === 'oscuro') document.documentElement.setAttribute('data-theme', 'dark');
-  if (d && d.negocio && d.negocio.nombre) { var n = document.getElementById('sp-negocio'); n.textContent = d.negocio.nombre; n.hidden = false; }
+  if (d && d.nombre) { var n = document.getElementById('sp-negocio'); n.textContent = d.nombre; n.hidden = false; }
   var el = document.getElementById('splash'), t0 = Date.now(), listo = false;
   var rapido = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.__listo = function () {

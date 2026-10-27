@@ -1,9 +1,9 @@
 // Orbe Negocios · arranque. Decide si es teléfono o computadora, y arma la navegación.
 import { html, render, useState, useEffect } from './lib/preact-htm.js';
 import { Ctx } from './ctx.js';
-import { useDatos, leer, guardarTasa, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir } from './datos.js';
+import { iniciarDatos, useDatos, leer, guardarTasa, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir } from './datos.js';
 import { puede, rolDe } from './permisos.js';
-import { pais, tipo, dinero, leerTasaVE } from './paises.js';
+import { pais, tipo, dinero, leerTasa } from './paises.js';
 import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS } from './ui.js';
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
@@ -65,10 +65,11 @@ function App() {
   }, []);
   useEffect(() => { document.documentElement.classList.toggle('pc', !tel); document.documentElement.classList.toggle('tel', tel); }, [tel]);
   useEffect(() => { aplicarTema(S.ajustes.tema); }, [S.ajustes.tema]);
-  // Tasa del día en Venezuela: una vez al día, si hay internet.
+  // Tasa del día (Venezuela y Argentina): si es automática, una vez al día y cuando vuelve el internet.
+  const pid = S.negocio && S.negocio.pais;
   useEffect(() => {
-    if (S.negocio && S.negocio.pais === 'VE' && S.tasaFecha !== diaClave(Date.now())) leerTasaVE().then(v => { if (v) guardarTasa(v); });
-  }, [S.negocio && S.negocio.pais]);
+    if ((pid === 'VE' || pid === 'AR') && S.tasa.modo !== 'manual' && enLinea && S.tasa.fecha !== diaClave(Date.now())) leerTasa(pid, S.tasa.fuente).then(v => { if (v) guardarTasa({ valor: v }); });
+  }, [pid, S.tasa.modo, S.tasa.fuente, enLinea]);
 
   if (!S.negocio) return html`<${Inicio} tel=${tel} /><${Avisos} />`;
   const yo = perfilActual();
@@ -76,7 +77,7 @@ function App() {
   const pd = k => puede(S, yo, k);
   const permitida = s => SECCIONES[s] && (!PERMISO_SEC[s] || pd(PERMISO_SEC[s]));
 
-  const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasaVE);
+  const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasa.valor);
   // Varios locales: aparece el selector de sucursal y los gráficos por sucursal (sea negocio o empresa).
   const E = S.negocio.sucursales.length > 1;
   const valida = permitida(sec) && !(sec === 'gastos' && tel) ? sec : 'hoy';
@@ -162,7 +163,9 @@ function subtitulo(s, { S, E, suc, T }) {
   }[s];
 }
 
-render(html`<${App} />`, document.getElementById('app'));
-// La pantalla de carga se va cuando la app ya se dibujó.
-requestAnimationFrame(() => { if (window.__listo) window.__listo(); });
+// Primero se leen los datos guardados; después se dibuja y se va la pantalla de carga.
+iniciarDatos().then(() => {
+  render(html`<${App} />`, document.getElementById('app'));
+  requestAnimationFrame(() => { if (window.__listo) window.__listo(); });
+});
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

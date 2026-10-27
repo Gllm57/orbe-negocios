@@ -3,6 +3,7 @@
 
 export const PERMISOS = [
   { k: 'vender', n: 'Vender y cobrar', g: 'Ventas', i: 'carrito' },
+  { k: 'anular', n: 'Anular ventas y hacer devoluciones', g: 'Ventas', i: 'deshacer' },
   { k: 'fiado', n: 'Fiar o vender a crédito', g: 'Ventas', i: 'reloj' },
   { k: 'clientes', n: 'Agregar clientes y anotar abonos', g: 'Clientes', i: 'personas' },
   { k: 'ganancias', n: 'Ver ganancias, costos y reportes', g: 'Dinero', i: 'grafico' },
@@ -19,7 +20,7 @@ const con = ks => PERMISOS.reduce((o, p) => (o[p.k] = ks.includes(p.k), o), {});
 export const ROLES_BASE = () => [
   { id: 'dueno', n: 'Dueño', fijo: true, p: todo(true) },
   { id: 'admin', n: 'Administrador', p: todo(true) },
-  { id: 'encargado', n: 'Encargado', p: con(['vender', 'fiado', 'clientes', 'gastos', 'cierre', 'reponer']) },
+  { id: 'encargado', n: 'Encargado', p: con(['vender', 'anular', 'fiado', 'clientes', 'gastos', 'cierre', 'reponer']) },
   { id: 'cajero', n: 'Cajero', p: con(['vender']) }
 ];
 

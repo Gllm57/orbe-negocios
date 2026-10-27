@@ -44,7 +44,7 @@ export function Clientes() {
   const vencido = deben.filter(viejo).reduce((a, c) => a + c.deuda, 0);
   const mes0 = new Date(); mes0.setDate(1); mes0.setHours(0, 0, 0, 0);
   const cobrado = S.abonos.filter(a => a.t >= mes0.getTime()).reduce((a, x) => a + x.v, 0);
-  const cifras = [['Te deben', tot, deben.length + ' clientes', 'var(--amber)', 'reloj'], ['Vencido', vencido, 'más de 15 días', 'var(--out)', 'alerta'], ['Cobrado este mes', cobrado, 'en abonos', 'var(--in)', 'check'], ['Clientes', S.clientes.length, todos.filter(c => c.ultima > Date.now() - 30 * 86400000).length + ' compraron este mes', 'var(--c1)', 'personas']];
+  const cifras = [['Te deben', tot, deben.length + ' clientes', 'var(--amber)', 'reloj'], ['Vencido', vencido, 'más de 15 días', 'var(--out)', 'alerta'], ['Cobrado este mes', cobrado, 'en abonos', 'var(--in)', 'check'], ['Clientes', todos.length, todos.filter(c => c.ultima > Date.now() - 30 * 86400000).length + ' compraron este mes', 'var(--c1)', 'personas']];
   return html`
     <div class="cifras">${cifras.map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="fila" style="gap:8px"><span class="simb-c" style=${{ '--c': k[3] }}><${Icono} n=${k[4]} t=${14} g=${2.2} /></span><span class="sub">${k[0]}</span></span>${i === 3 ? html`<span class="v num">${k[1]}</span>` : html`<${Monto} v=${k[1]} f=${D.m} clase="v" />`}<span class="sub faint">${k[2]}</span></div>`)}</div>
     <div class="con-lado">

@@ -13,7 +13,7 @@ export function Equipo() {
   const editables = roles.filter(r => !r.fijo);
   const [rolSel, setRolSel] = useState(editables[0] ? editables[0].id : '');
   const hoy0 = inicioDia(Date.now()), r = resumen(hoy0, hoy0 + 86400000, '');
-  const ventasDe = pid => S.ventas.filter(v => v.por === pid && v.t >= hoy0).length;
+  const ventasDe = pid => S.ventas.filter(v => v.por === pid && v.t >= hoy0 && !v.anulada && !v.dev).length;
   const porPersona = S.perfiles.filter(p => r.porPersona[p.id]).map((p, i) => ({ n: p.n, v: r.porPersona[p.id], c: color(S.perfiles.indexOf(p)), i: 'personas' }));
   const tocar = (rol, k, on) => {
     if (rol.fijo) { avisar('El dueño siempre puede todo'); return; }
