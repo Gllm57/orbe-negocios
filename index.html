@@ -4,58 +4,148 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0a14">
-<title>Orbe Negocios · demos</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Orbe Negocios">
+<title>Orbe Negocios</title>
 <style>
-  :root { --bg: #0b0a14; --surface: #16142a; --ink: #efeefe; --muted: #9a97b8; --line: #2a2745; --accent: #8f84ff; --spring: cubic-bezier(0.32, 0.72, 0, 1); }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  main { max-width: 980px; margin: 0 auto; padding: max(40px, env(safe-area-inset-top)) 16px 60px; display: flex; flex-direction: column; gap: 28px; }
-  header { display: flex; align-items: center; gap: 14px; }
-  h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
-  header p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
-  h2 { margin: 0 0 12px; font-size: 15px; color: var(--muted); font-weight: 600; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-  a.card { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 22px; background: var(--surface); color: var(--ink); text-decoration: none; border: 1.5px solid transparent; transition: transform .2s var(--spring), border-color .25s ease; animation: fadeUp .45s var(--spring) both; }
-  a.card:hover { border-color: var(--accent); }
-  a.card:active { transform: scale(.97); }
-  a.card b { font-size: 16px; }
-  a.card span { font-size: 13px; color: var(--muted); line-height: 1.4; }
-  .nota { font-size: 13px; color: var(--muted); line-height: 1.5; }
-  .nota a { color: #c9c0ff; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { a.card { animation: none; } }
+  html, body { margin: 0; background: #0b0a14; color: #efeefe; font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .cargando { position: fixed; inset: 0; display: grid; place-items: center; }
+  .cargando svg { animation: latido 1.2s cubic-bezier(0.32, 0.72, 0, 1) infinite alternate; }
+  @keyframes latido { from { opacity: .5; transform: scale(.94); } to { opacity: 1; transform: none; } }
+  .aviso { padding: 40px 20px; text-align: center; color: #9a97b8; }
+  /* Teléfono: la app ocupa toda la pantalla, respetando la muesca y la barra de abajo. */
+  .tel { position: fixed; inset: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); box-sizing: border-box; overflow: hidden; }
+  .tel > div { width: 100% !important; height: 100% !important; }
+  /* Teléfono abierto en una pantalla grande (por ejemplo ?vista=telefono): se centra con su marco. */
+  .tel.marco { display: flex; align-items: center; justify-content: center; padding: 0; }
+  .tel.marco > div { width: 390px !important; height: 844px !important; flex: none; border-radius: 44px; overflow: hidden; box-shadow: 0 0 0 10px #1c1a30, 0 30px 80px rgba(0,0,0,.6); }
+  @media (prefers-reduced-motion: reduce) { .cargando svg { animation: none; } }
 </style>
+<script src="lib/preact.min.js"></script>
 </head>
 <body>
-<main>
-  <header>
-    <svg width="56" height="56" viewBox="0 0 92 92" aria-hidden="true"><rect width="92" height="92" rx="26" fill="#16142a"/><circle cx="38" cy="40" r="19" fill="none" stroke="#8f84ff" stroke-width="5"/><circle cx="54" cy="40" r="19" fill="none" stroke="#3ddc9f" stroke-width="5"/><circle cx="46" cy="54" r="19" fill="none" stroke="#f0a020" stroke-width="5"/></svg>
-    <div><h1>Orbe Negocios</h1><p>Tú vendes. Orbe hace lo repetitivo. · Maquetas de la Fase 1</p></div>
-  </header>
+<div id="app"><div class="cargando"><svg width="64" height="64" viewBox="0 0 92 92" role="img" aria-label="Cargando Orbe Negocios"><rect width="92" height="92" rx="26" fill="#16142a"/><circle cx="38" cy="40" r="19" fill="none" stroke="#8f84ff" stroke-width="5"/><circle cx="54" cy="40" r="19" fill="none" stroke="#3ddc9f" stroke-width="5"/><circle cx="46" cy="54" r="19" fill="none" stroke="#f0a020" stroke-width="5"/></svg></div></div>
+<script>
+// Orbe Negocios (demo de las maquetas). Abre sola la versión de teléfono o de computadora según el aparato.
+// Se puede forzar con ?vista=telefono o ?vista=pc, y elegir datos con ?pais=CO&tipo=comida&escala=empresa.
+(function () {
+  var h = preact.h, q = new URLSearchParams(location.search);
+  var HOLE = /\{\{\s*([^}]+?)\s*\}\}/g;
 
-  <section>
-    <h2>En el teléfono</h2>
-    <div class="grid">
-      <a class="card" href="demo/ver.html?f=Fase1"><b>Empezar</b><span>Recorrido completo: país, tipo, tamaño, datos y la app</span></a>
-      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=VE&amp;tipo=tienda" style="animation-delay:25ms"><b>Tienda · Venezuela</b><span>Dólares y bolívares con la tasa BCV</span></a>
-      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=CO&amp;tipo=comida" style="animation-delay:50ms"><b>Comida · Colombia</b><span>Nequi, Daviplata, IVA 19 %</span></a>
-      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=MX&amp;tipo=citas" style="animation-delay:75ms"><b>Peluquería · México</b><span>Servicios con duración</span></a>
-      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=PE&amp;tipo=online" style="animation-delay:100ms"><b>Venta en línea · Perú</b><span>Yape, Plin e inventario</span></a>
-      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=ES&amp;tipo=indep" style="animation-delay:125ms"><b>Independiente · España</b><span>Bizum, euros, IVA 21 %</span></a>
-      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=VE&amp;tipo=tienda&amp;escala=empresa" style="animation-delay:150ms"><b>Empresa · Venezuela</b><span>Sucursales, aprobaciones y crédito a empresas</span></a>
-    </div>
-  </section>
+  function esTelefono() {
+    var v = q.get('vista');
+    if (v === 'telefono') return true;
+    if (v === 'pc') return false;
+    var corto = Math.min(screen.width, screen.height);
+    var tactil = window.matchMedia('(pointer: coarse)').matches;
+    var movil = /Android.+Mobile|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
+    return movil || (tactil && corto < 600) || window.innerWidth < 600;
+  }
+  var tel = esTelefono();
+  var props = {};
+  ['pantalla', 'pais', 'tipo', 'escala'].forEach(function (k) { if (q.get(k)) props[k] = q.get(k); });
+  if (!tel && !props.pais) props.pais = 'VE';
 
-  <section>
-    <h2>En la computadora</h2>
-    <div class="grid">
-      <a class="card" href="demo/ver.html?f=PCEmpresa&amp;escala=negocio&amp;pais=CO&amp;tipo=tienda"><b>Negocio · Colombia</b><span>Panel, caja con lector y atajos, tablas y reportes</span></a>
-      <a class="card" href="demo/ver.html?f=PCEmpresa&amp;escala=empresa&amp;pais=VE&amp;tipo=tienda" style="animation-delay:25ms"><b>Empresa · Venezuela</b><span>Sucursales, compras, facturas, permisos y registro</span></a>
-    </div>
-  </section>
+  function resolve(path, scope) {
+    if (path === 'true') return true;
+    if (path === 'false') return false;
+    if (path === 'null') return null;
+    if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+    var parts = path.split('.'), v = scope;
+    for (var i = 0; i < parts.length; i++) { if (v == null) return undefined; v = v[parts[i]]; }
+    return v;
+  }
+  function text(v) { return v == null || v === false || v === true ? '' : String(v); }
+  function attrFn(raw) {
+    var whole = raw.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+    if (whole) return function (s) { return resolve(whole[1], s); };
+    if (raw.indexOf('{{') < 0) return function () { return raw; };
+    return function (s) { return raw.replace(HOLE, function (_, p) { return text(resolve(p, s)); }); };
+  }
+  function kidsFn(node) {
+    var fns = [];
+    node.childNodes.forEach(function (c) { var f = compile(c); if (f) fns.push(f); });
+    return function (s) { var out = []; fns.forEach(function (f) { var r = f(s); if (Array.isArray(r)) out.push.apply(out, r); else if (r != null) out.push(r); }); return out; };
+  }
+  function compile(node) {
+    if (node.nodeType === 3) {
+      var t = node.nodeValue;
+      if (t.indexOf('{{') < 0) return function () { return t; };
+      return function (s) { return t.replace(HOLE, function (_, p) { return text(resolve(p, s)); }); };
+    }
+    if (node.nodeType !== 1) return null;
+    var tag = node.localName;
+    if (tag === 'helmet' || tag === 'script') return null;
+    var kids = kidsFn(node);
+    if (tag === 'sc-if') {
+      var cond = attrFn(node.getAttribute('value') || '');
+      return function (s) { return cond(s) ? kids(s) : null; };
+    }
+    if (tag === 'sc-for') {
+      var list = attrFn(node.getAttribute('list') || ''), as = node.getAttribute('as') || 'item';
+      return function (s) {
+        var arr = list(s) || [], out = [];
+        arr.forEach(function (item, i) { var sc = Object.create(s); sc[as] = item; sc.$index = i; out.push.apply(out, kids(sc)); });
+        return out;
+      };
+    }
+    var attrs = [];
+    Array.prototype.forEach.call(node.attributes, function (a) {
+      var n = a.name;
+      if (/^hint-/.test(n)) return;
+      if (n === 'onchange' && (tag === 'input' || tag === 'textarea')) n = 'oninput';
+      attrs.push([n, attrFn(a.value)]);
+    });
+    return function (s) {
+      var p = {};
+      attrs.forEach(function (a) { var v = a[1](s); if (v !== undefined && v !== null) p[a[0]] = v; });
+      return h.apply(null, [tag, p].concat(kids(s)));
+    };
+  }
 
-  <p class="nota">Son maquetas para aprobar el diseño: los datos son de ejemplo y nada se guarda. El lienzo con todas las maquetas está en <a href="https://claude.ai/artifact/G5XgQd56oAYGYSxnKFB5j4">claude.ai</a>.</p>
-</main>
+  var archivo = tel ? 'Fase1' : 'PCEmpresa';
+  fetch('maquetas/fase1/' + archivo + '.dc.html').then(function (r) {
+    if (!r.ok) throw new Error('No se pudo abrir Orbe Negocios. Revisa tu conexión.');
+    return r.text();
+  }).then(function (src) {
+    var doc = new DOMParser().parseFromString(src, 'text/html');
+    var dc = doc.querySelector('x-dc');
+    var helmet = dc.querySelector('helmet');
+    if (helmet) Array.prototype.forEach.call(helmet.children, function (el) { document.head.appendChild(document.importNode(el, true)); });
+    var codigo = doc.querySelector('script[data-dc-script]').textContent;
+
+    var programado = false, comp;
+    function DCLogic(p) { this.props = p || {}; this.state = {}; }
+    DCLogic.prototype.setState = function (o) {
+      var nuevo = typeof o === 'function' ? o(this.state, this.props) : o;
+      this.state = Object.assign({}, this.state, nuevo);
+      programar();
+    };
+    DCLogic.prototype.forceUpdate = function () { programar(); };
+    var Component = new Function('DCLogic', codigo + '\n;return Component;')(DCLogic);
+    var plantilla = kidsFn(dc);
+    var app = document.getElementById('app');
+    app.innerHTML = '';
+    if (tel) {
+      app.className = 'tel';
+      var conMarco = function () { app.classList.toggle('marco', window.innerWidth >= 600 && window.innerHeight >= 880); };
+      window.addEventListener('resize', conMarco);
+      conMarco();
+    }
+    function dibujar() {
+      programado = false;
+      preact.render(h(preact.Fragment, null, plantilla(comp.renderVals())), app);
+    }
+    function programar() { if (!programado && comp) { programado = true; requestAnimationFrame(dibujar); } }
+    comp = new Component(props);
+    dibujar();
+    if (comp.componentDidMount) comp.componentDidMount();
+  }).catch(function (e) {
+    document.getElementById('app').innerHTML = '<p class="aviso">' + String(e.message || e) + '</p>';
+  });
+})();
+</script>
 </body>
 </html>
