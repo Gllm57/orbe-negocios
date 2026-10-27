@@ -49,7 +49,7 @@ Además del tipo, al empezar se elige el **tamaño**. Se puede cambiar después 
 - **Seguridad:** PIN por cajero, Face ID o Windows Hello, y verificación en dos pasos obligatoria para administradores.
 - **Pasar los datos:** importar productos y clientes desde Excel.
 
-## 1b'. En el teléfono y en la computadora (propuesta, pendiente de aprobar la maqueta)
+## 1b. En el teléfono y en la computadora (propuesta, pendiente de aprobar la maqueta)
 
 La misma app sirve en las dos. En una pantalla ancha cambia la forma, no las funciones:
 - **Menú lateral** con las secciones agrupadas (Día a día, Operación, Gestión) en vez de la barra de abajo.
@@ -60,7 +60,7 @@ La misma app sirve en las dos. En una pantalla ancha cambia la forma, no las fun
 - **Impresora de tickets** de 80 mm y **gaveta de dinero** que se abre al cobrar en efectivo.
 - Se instala desde Chrome o Edge en Windows y Mac, y funciona sin internet igual que en el teléfono.
 
-## 1b. Referencia: Fina (el objetivo es parecido)
+## 1c. Referencia: Fina (el objetivo es parecido)
 
 [Fina](https://www.finapartner.com/) es una startup de Caracas (2023) con un sistema administrativo en la nube para pymes venezolanas:
 - Inventario, ventas, cuentas por cobrar y por pagar, y reportes de ganancia, en bolívares y dólares, desde el navegador o el teléfono.
