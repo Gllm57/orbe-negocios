@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0a14">
+<title>Orbe Negocios · demos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root { --bg: #0b0a14; --surface: #16142a; --ink: #efeefe; --muted: #9a97b8; --line: #2a2745; --accent: #8f84ff; --spring: cubic-bezier(0.32, 0.72, 0, 1); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 980px; margin: 0 auto; padding: max(40px, env(safe-area-inset-top)) 16px 60px; display: flex; flex-direction: column; gap: 28px; }
+  header { display: flex; align-items: center; gap: 14px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+  h2 { margin: 0 0 12px; font-size: 15px; color: var(--muted); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  a.card { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 22px; background: var(--surface); color: var(--ink); text-decoration: none; border: 1.5px solid transparent; transition: transform .2s var(--spring), border-color .25s ease; animation: fadeUp .45s var(--spring) both; }
+  a.card:hover { border-color: var(--accent); }
+  a.card:active { transform: scale(.97); }
+  a.card b { font-size: 16px; }
+  a.card span { font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .nota { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .nota a { color: #c9c0ff; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { a.card { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg width="56" height="56" viewBox="0 0 92 92" aria-hidden="true"><rect width="92" height="92" rx="26" fill="#16142a"/><circle cx="38" cy="40" r="19" fill="none" stroke="#8f84ff" stroke-width="5"/><circle cx="54" cy="40" r="19" fill="none" stroke="#3ddc9f" stroke-width="5"/><circle cx="46" cy="54" r="19" fill="none" stroke="#f0a020" stroke-width="5"/></svg>
+    <div><h1>Orbe Negocios</h1><p>Tú vendes. Orbe hace lo repetitivo. · Maquetas de la Fase 1</p></div>
+  </header>
+
+  <section>
+    <h2>En el teléfono</h2>
+    <div class="grid">
+      <a class="card" href="demo/ver.html?f=Fase1"><b>Empezar</b><span>Recorrido completo: país, tipo, tamaño, datos y la app</span></a>
+      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=VE&amp;tipo=tienda" style="animation-delay:25ms"><b>Tienda · Venezuela</b><span>Dólares y bolívares con la tasa BCV</span></a>
+      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=CO&amp;tipo=comida" style="animation-delay:50ms"><b>Comida · Colombia</b><span>Nequi, Daviplata, IVA 19 %</span></a>
+      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=MX&amp;tipo=citas" style="animation-delay:75ms"><b>Peluquería · México</b><span>Servicios con duración</span></a>
+      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=PE&amp;tipo=online" style="animation-delay:100ms"><b>Venta en línea · Perú</b><span>Yape, Plin e inventario</span></a>
+      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=ES&amp;tipo=indep" style="animation-delay:125ms"><b>Independiente · España</b><span>Bizum, euros, IVA 21 %</span></a>
+      <a class="card" href="demo/ver.html?f=Fase1&amp;pantalla=app&amp;pais=VE&amp;tipo=tienda&amp;escala=empresa" style="animation-delay:150ms"><b>Empresa · Venezuela</b><span>Sucursales, aprobaciones y crédito a empresas</span></a>
+    </div>
+  </section>
+
+  <section>
+    <h2>En la computadora</h2>
+    <div class="grid">
+      <a class="card" href="demo/ver.html?f=PCEmpresa&amp;escala=negocio&amp;pais=CO&amp;tipo=tienda"><b>Negocio · Colombia</b><span>Panel, caja con lector y atajos, tablas y reportes</span></a>
+      <a class="card" href="demo/ver.html?f=PCEmpresa&amp;escala=empresa&amp;pais=VE&amp;tipo=tienda" style="animation-delay:25ms"><b>Empresa · Venezuela</b><span>Sucursales, compras, facturas, permisos y registro</span></a>
+    </div>
+  </section>
+
+  <p class="nota">Son maquetas para aprobar el diseño: los datos son de ejemplo y nada se guarda. El lienzo con todas las maquetas está en <a href="https://claude.ai/artifact/G5XgQd56oAYGYSxnKFB5j4">claude.ai</a>.</p>
+</main>
+</body>
+</html>
