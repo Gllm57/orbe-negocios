@@ -319,3 +319,17 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width
 .sp-error { max-width: 300px; color: var(--muted); font-size: 14px; line-height: 1.45; margin: 18px 0 0; }
 .splash.con-error .sp-barra { display: none; }
 @media (prefers-reduced-motion: reduce) { .sp-gira, .sp-c, .sp-nombre, .sp-frase, .sp-negocio, .sp-barra, .sp-barra i { animation: none; } }
+
+/* ---------- logo animado ---------- */
+.logo-orbe { flex: none; cursor: pointer; overflow: hidden; border-radius: 28%; }
+.lo-c { fill: none; stroke-width: 6.5; stroke-linecap: round; stroke-dasharray: 100 100; animation: loDibuja .95s var(--spring) backwards; }
+.lo-c1 { stroke: #8f84ff; }
+.lo-c2 { stroke: #3ddc9f; animation-delay: .1s; }
+.lo-c3 { stroke: #f0a020; animation-delay: .2s; }
+@keyframes loDibuja { from { stroke-dasharray: 0 100; } }
+.lo-g, .lo-orbita { transform-origin: 46px 43.5px; }
+.lo-g.gira { animation: loGira 1.15s var(--spring); }
+@keyframes loGira { from { transform: rotate(-360deg) scale(.85); } }
+.logo-orbe.orbita .lo-orbita { transform: scale(.9); animation: loOrbita 14s linear 1.2s infinite; }
+@keyframes loOrbita { from { transform: rotate(0deg) scale(.9); } to { transform: rotate(360deg) scale(.9); } }
+@media (prefers-reduced-motion: reduce) { .lo-c, .lo-g.gira, .logo-orbe.orbita .lo-orbita { animation: none; } }

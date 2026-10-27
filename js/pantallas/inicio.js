@@ -31,7 +31,7 @@ export function Inicio({ tel }) {
     <div class=${tel ? '' : 'tarjeta'} style=${tel ? 'min-height:100dvh;display:flex;flex-direction:column' : 'width:min(520px,100%);height:min(820px,calc(100vh - 64px));padding:0;display:flex;flex-direction:column;overflow:hidden;border-radius:28px'}>${contenido}</div></div>`;
 
   if (paso === -1) return marco(html`<div class="entra" style="flex:1;display:flex;flex-direction:column;gap:16px;padding:calc(72px + env(safe-area-inset-top)) 26px calc(28px + env(safe-area-inset-bottom))">
-    <span class="entra"><${LogoOrbe} t=${88} /></span>
+    <span class="entra"><${LogoOrbe} t=${88} orbita /></span>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px"><h1 style="font-size:34px">Orbe Negocios</h1><span style="font-size:18px;color:var(--muted)">Tú vendes. Orbe hace lo repetitivo.</span></div>
     <div class="pila" style="margin-top:14px;gap:14px">
       ${[['carrito', 'Vende y cobra con las formas de pago de tu país', 't-vio'], ['grafico', 'Mira cuánto vendes y cuánto ganas de verdad', 't-ver'], ['wifi', 'Funciona sin internet, en el teléfono y en la computadora', 't-amb']].map((x, k) => html`

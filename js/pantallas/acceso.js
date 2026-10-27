@@ -47,7 +47,7 @@ export function Acceso({ tel }) {
     <span class="sub faint" style="text-align:center;margin-top:auto">¿Olvidaste tu PIN? Pídele al dueño que te ponga uno nuevo.</span>`);
 
   return caja(html`
-    <div class="fila entra" style="gap:12px"><${LogoOrbe} t=${44} /><span style="display:flex;flex-direction:column"><b style="font-size:17px">${S.negocio.nombre}</b><span class="sub">Orbe Negocios</span></span></div>
+    <div class="fila entra" style="gap:12px"><${LogoOrbe} t=${44} orbita /><span style="display:flex;flex-direction:column"><b style="font-size:17px">${S.negocio.nombre}</b><span class="sub">Orbe Negocios</span></span></div>
     <h1 class="entra" style="--i:2;font-size:26px;margin-top:10px">¿Quién está usando Orbe?</h1>
     <div class="perfiles">${activos.map((p, i) => { const r = rolDe(S, p); return html`
       <button type="button" key=${p.id} class="tarjeta toca entra perfil-btn" style=${{ '--i': 3 + i }} onClick=${() => tocar(p)}>

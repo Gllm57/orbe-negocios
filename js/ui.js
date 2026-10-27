@@ -55,8 +55,21 @@ export function Icono({ n, t = 20, g = 2, c = 'currentColor', estilo }) {
   return html`<svg width=${t} height=${t} viewBox="0 0 24 24" fill="none" stroke=${c} stroke-width=${g} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style=${estilo}><path d=${ICONOS[n] || ''}></path></svg>`;
 }
 
-export function LogoOrbe({ t = 42 }) {
-  return html`<svg width=${t} height=${t} viewBox="0 0 92 92" aria-hidden="true" class="logo-orbe"><rect width="92" height="92" rx="26" fill="#16142a"></rect><circle cx="35" cy="37" r="23" fill="none" stroke="#8f84ff" stroke-width="6.5"></circle><circle cx="57" cy="37" r="23" fill="none" stroke="#3ddc9f" stroke-width="6.5"></circle><circle cx="46" cy="56" r="23" fill="none" stroke="#f0a020" stroke-width="6.5"></circle></svg>`;
+// Logo de Orbe Negocios: los círculos se dibujan al aparecer; al tocarlo (o pasar el ratón) da una vuelta.
+// «orbita» lo hace girar despacio todo el tiempo (para los logos grandes).
+export function LogoOrbe({ t = 42, orbita = false }) {
+  const [vuelta, setVuelta] = useState(0);
+  const girar = () => setVuelta(v => v + 1);
+  return html`<svg width=${t} height=${t} viewBox="0 0 92 92" class=${'logo-orbe' + (orbita ? ' orbita' : '')} role="img" aria-label="Orbe Negocios" onClick=${girar} onMouseEnter=${girar}>
+    <rect width="92" height="92" rx="26" fill="#16142a"></rect>
+    <g key=${vuelta} class=${'lo-g' + (vuelta ? ' gira' : '')}>
+      <g class="lo-orbita">
+        <circle class="lo-c lo-c1" cx="35" cy="37" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c2" cx="57" cy="37" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c3" cx="46" cy="56" r="23" pathLength="100"></circle>
+      </g>
+    </g>
+  </svg>`;
 }
 
 // ---------- avisos ----------

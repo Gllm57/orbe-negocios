@@ -1,5 +1,5 @@
 // Orbe Negocios · funciona sin internet. Guarda la app y responde desde la copia si no hay conexión.
-const VERSION = 'orbe-negocios-v5';
+const VERSION = 'orbe-negocios-v6';
 const ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'css/orbe.css', 'icons/icono.svg', 'icons/icono-192.png',
   'js/lib/preact-htm.js', 'js/app.js', 'js/ctx.js', 'js/paises.js', 'js/datos.js', 'js/graficos.js', 'js/ui.js',
   'js/pantallas/inicio.js', 'js/pantallas/hoy.js', 'js/pantallas/vender.js', 'js/pantallas/clientes.js', 'js/pantallas/inventario.js',
