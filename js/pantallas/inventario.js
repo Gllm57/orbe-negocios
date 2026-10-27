@@ -15,7 +15,7 @@ export function Inventario() {
   const top = Object.keys(mes.porProd).map(k => Object.assign({ id: k }, mes.porProd[k])).sort((a, b) => b.v - a.v);
 
   if (!T.inv) {
-    const Lista = html`<div class="pila">${listaProductos().map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
+    const Lista = html`<div class="pila" data-tour="productos">${listaProductos().map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
       <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
         <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${p.n}</b><span class="sub">${p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min'} · ${x.q} este mes</span></span>
@@ -43,7 +43,7 @@ export function Inventario() {
   const Top = html`<section class="tarjeta entra" style="--i:2"><div class="tarjeta-tit">Lo que más vendes<span class="sub">30 días</span></div>
     <${Reparto} segs=${segs} f=${D.m} titulo="Vendido en 30 días" /></section>`;
 
-  const Tarjetas = html`<div class="pila">${lista.map((p, i) => { const e = estado(p); return html`
+  const Tarjetas = html`<div class="pila" data-tour="productos">${lista.map((p, i) => { const e = estado(p); return html`
     <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
       <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
       <span class="crece" style="display:flex;flex-direction:column;gap:6px">

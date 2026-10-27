@@ -15,7 +15,7 @@ export function Clientes() {
   const opciones = ['Deben', 'Todos'].concat(S.negocio.escala === 'empresa' ? ['Empresas'] : []);
   const viejo = c => c.desde && Date.now() - c.desde > 15 * 86400000;
 
-  const Resumen = html`<section class="tarjeta entra" style="background:var(--amber-soft);box-shadow:none">
+  const Resumen = html`<section class="tarjeta entra" data-tour="deben" style="background:var(--amber-soft);box-shadow:none">
     <div class="fila" style="align-items:flex-start">
       <span class="crece" style="display:flex;flex-direction:column;gap:2px"><span class="sub">Te deben</span><${Monto} v=${tot} f=${D.m} clase="titulo amber" />${D.dual && html`<span class="sub num">${D.s(tot)}</span>`}</span>
       <span class="sub" style="max-width:170px;text-align:right;line-height:1.4">${deben.length} ${deben.length === 1 ? 'cliente' : 'clientes'}. Orbe te dice a quién recordarle; tú tocas enviar.</span>

@@ -1,7 +1,8 @@
 // Orbe Negocios · arranque. Decide si es teléfono o computadora, y arma la navegación.
 import { html, render, useState, useEffect } from './lib/preact-htm.js';
 import { Ctx } from './ctx.js';
-import { iniciarDatos, useDatos, leer, guardarTasa, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir } from './datos.js';
+import { iniciarDatos, useDatos, leer, guardarTasa, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir, guardarPerfil } from './datos.js';
+import { Recorrido } from './recorrido.js';
 import { puede, rolDe } from './permisos.js';
 import { pais, tipo, dinero, leerTasa } from './paises.js';
 import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS } from './ui.js';
@@ -54,6 +55,7 @@ function App() {
   const [hoja, setHoja] = useState(null);
   const [suc, setSuc] = useState('');
   const [enLinea, setEnLinea] = useState(navigator.onLine);
+  const [tour, setTour] = useState(false);
 
   useEffect(() => {
     const r = () => setTel(esTelefono());
@@ -83,7 +85,10 @@ function App() {
   const valida = permitida(sec) && !(sec === 'gastos' && tel) ? sec : 'hoy';
   const ir = s => { if (location.hash !== '#' + s) location.hash = s; else setSec(s); const p = document.querySelector('.principal') || document.querySelector('.app-fondo'); if (p) p.scrollTop = 0; };
   const abrir = (t, datos) => setHoja({ t, datos: datos || {}, n: Date.now() });
-  const ctx = { S, P, T, D, E, tel, ir, abrir, suc: E ? suc : '', setSuc, enLinea, yo, rol: rolDe(S, yo), puede: pd };
+  const marcarTour = v => guardarPerfil({ id: yo.id, tour: v });
+  const ctx = { S, P, T, D, E, tel, ir, abrir, suc: E ? suc : '', setSuc, enLinea, yo, rol: rolDe(S, yo), puede: pd, ver: permitida,
+    verRecorrido: () => { setHoja(null); setTour(true); }, omitirRecorrido: () => { marcarTour('omitido'); avisar('Lo encuentras en Ajustes → Ayuda'); } };
+  const Tour = tour ? html`<${Recorrido} onFin=${() => { setTour(false); if (!yo.tour) marcarTour(Date.now()); }} />` : null;
   const nombreSec = s => s === 'vender' ? (tel ? T.vender : 'Caja') : s === 'inventario' && !T.inv ? 'Servicios' : tel ? SECCIONES[s].n : (SECCIONES[s].npc || SECCIONES[s].n);
   const Pantalla = SECCIONES[valida].C;
   const cuenta = { clientes: deudores().filter(c => c.deuda > 0).length, inventario: bajoMinimo().length, gastos: porPagar().length };
@@ -102,6 +107,7 @@ function App() {
         </nav>
       </div>
       ${hoja && html`<${HojaActual} key=${hoja.n} hoja=${hoja} cerrar=${() => setHoja(null)} />`}
+      ${Tour}
       <${Avisos} />
     </${Ctx.Provider}>`;
   }
@@ -124,7 +130,7 @@ function App() {
             </button>`)}</div>`)}
         </nav>
         <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
-          <div class="tarjeta fila" style="padding:10px 12px;gap:10px">
+          <div class="tarjeta fila" data-tour="usuario" style="padding:10px 12px;gap:10px">
             <span class=${'logo redondo ' + TONOS[S.perfiles.indexOf(yo) % 5]} style="width:34px;height:34px;font-size:12px">${iniciales(yo.n)}</span>
             <span class="crece" style="display:flex;flex-direction:column"><b class="corta" style="font-size:13px">${yo.n}</b><span class="sub corta" style="font-size:12px">${(rolDe(S, yo) || {}).n || ''}</span></span>
             <button type="button" class="icono-btn chico toca" aria-label="Cambiar de perfil" title="Cambiar de perfil" onClick=${() => salir()}><${Icono} n="personas" t=${16} /></button>
@@ -143,6 +149,7 @@ function App() {
       </div>
     </div>
     ${hoja && html`<${HojaActual} key=${hoja.n} hoja=${hoja} cerrar=${() => setHoja(null)} />`}
+    ${Tour}
     <${Avisos} />
   </${Ctx.Provider}>`;
 }

@@ -75,7 +75,7 @@ export function Vender() {
     ${n ? html`<button type="button" class="btn2 chico toca" onClick=${() => setCart({})}>Vaciar${tel ? '' : html` <span class="tecla">Esc</span>`}</button>` : null}
   </div>`;
 
-  const Boton = html`<button type="button" class=${'btn toca' + (n ? '' : ' apagado')} onClick=${cobrar}>${n ? 'Cobrar ' + D.m(total) : 'Agrega ' + (T.inv ? 'productos' : 'servicios')}${!tel && n ? html` <span class="tecla" style="color:#fff;border-color:rgba(255,255,255,.4)">F12</span>` : null}</button>`;
+  const Boton = html`<button type="button" data-tour="cobrar" class=${'btn toca' + (n ? '' : ' apagado')} onClick=${cobrar}>${n ? 'Cobrar ' + D.m(total) : 'Agrega ' + (T.inv ? 'productos' : 'servicios')}${!tel && n ? html` <span class="tecla" style="color:#fff;border-color:rgba(255,255,255,.4)">F12</span>` : null}</button>`;
 
   if (tel) return html`
     <div class="fila entra"><h1 class="titulo crece">${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</h1><span class="sub">Toca para sumar</span></div>
@@ -106,7 +106,7 @@ export function Vender() {
 
   return html`<div class="caja-pc">
     <div class="pila" style="gap:14px;min-width:0">
-      <label class="buscador" style="width:100%;min-height:54px;border-radius:18px;background:var(--surface);border:1.5px solid var(--line)">
+      <label class="buscador" data-tour="lector" style="width:100%;min-height:54px;border-radius:18px;background:var(--surface);border:1.5px solid var(--line)">
         <${Icono} n="codigo" t=${22} c="var(--accent)" />
         <input ref=${lector} type="text" value=${q} onInput=${e => setQ(e.target.value)} onKeyDown=${buscar} placeholder="Pasa el lector de códigos o escribe el nombre y pulsa Enter" aria-label="Código o nombre" style="font-size:16px" />
         <span class="tecla">F1</span>

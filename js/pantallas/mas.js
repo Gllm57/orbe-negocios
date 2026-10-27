@@ -9,9 +9,9 @@ import { BloqueGastos, inicioMes } from './gastos.js';
 import { descargar, ventasCSV } from './reportes.js';
 
 function Ajustes() {
-  const { S, P, T, D, abrir, tel, puede, yo, rol, ir } = useApp();
+  const { S, P, T, D, abrir, tel, puede, yo, rol, ir, verRecorrido } = useApp();
   const n = S.negocio;
-  const Tarjeta = (titulo, icono, hijos, i) => html`<section class="tarjeta entra" style=${{ '--i': i }}>
+  const Tarjeta = (titulo, icono, hijos, i, dt) => html`<section class="tarjeta entra" data-tour=${dt} style=${{ '--i': i }}>
     <div class="fila" style="gap:10px;margin-bottom:6px"><span class="ic t-vio" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${icono} t=${16} g=${2.2} /></span><b style="font-size:15px">${titulo}</b></div>${hijos}</section>`;
   const Dato = (a, b) => html`<div class="fila" style="justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:13px"><span class="muted">${a}</span><b style="font-weight:600;text-align:right">${b}</b></div>`;
   const tarjetas = [
@@ -36,7 +36,7 @@ function Ajustes() {
         <button type="button" class="btn2 chico acento toca" onClick=${() => abrir('copias')}><${Icono} n="deshacer" t=${15} />Restaurar copia</button>
         <button type="button" class="btn2 chico toca" onClick=${() => { descargar('orbe-negocios-copia-' + new Date().toISOString().slice(0, 10) + '.json', exportar(), 'application/json'); avisar('Copia descargada'); }}><${Icono} n="descarga" t=${15} />Descargar copia</button>
         <button type="button" class="btn2 chico toca" onClick=${() => { descargar('orbe-ventas.csv', ventasCSV(0, Date.now() + 1), 'text/csv;charset=utf-8'); avisar('Excel descargado'); }}><${Icono} n="doc" t=${15} />Ventas en Excel</button>
-      </div>`, 5),
+      </div>`, 5, 'copias'),
     Tarjeta('Registro de cambios', 'lista', html`${(S.registro || []).length ? (S.registro || []).slice(-3).reverse().map(x => Dato(x.que, hace(x.t))) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Aquí queda anotado quién anula ventas, hace devoluciones o borra algo.</p>`}
       <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico toca" onClick=${() => abrir('registro')}>Ver todo</button></div>`, 6),
     Tarjeta('Empezar de nuevo', 'basura', html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Borra este negocio de este aparato para probar otro país o tipo. Antes se guarda una copia.</p><button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('borrar')}>Empezar de nuevo</button>`, 6)
@@ -49,9 +49,11 @@ function Ajustes() {
       <button type="button" class="btn2 chico toca" onClick=${() => abrir('perfil', { pid: yo.id })}>Cambiar nombre o PIN</button>
       <button type="button" class="btn2 chico acento toca" onClick=${() => salir()}>Cambiar de perfil</button>
       ${puede('equipo') && tel && html`<button type="button" class="btn2 chico verde toca" onClick=${() => ir('equipo')}>Equipo y permisos</button>`}
-    </div>`, 0);
+    </div>`, 0, 'perfil');
+  const ayuda = Tarjeta('Ayuda', 'lista', html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Un recorrido guiado por toda la app: qué hace cada parte y cómo se usa.</p>
+    <button type="button" class="btn2 chico acento toca" onClick=${verRecorrido}>Ver el recorrido guiado</button>`, 1);
   const apariencia = tarjetas[5];
-  const lista = [perfil].concat(puede('ajustes') ? tarjetas : [apariencia]);
+  const lista = [perfil, ayuda].concat(puede('ajustes') ? tarjetas : [apariencia]);
   return tel ? html`<div class="pila">${lista}</div>` : html`<div class="ajustes-pc">${lista}</div>`;
 }
 
@@ -70,7 +72,7 @@ export function Mas() {
       <${Monto} v=${real} f=${D.m} clase="titulo" />
       <span class="rejilla-3 num" style="gap:8px">${[['Ventas', r.total], ['Costo', -r.costo], ['Gastos', -gastos]].map(k => html`<span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="sub" style="font-size:11px">${k[0]}</span><b class="corta" style="font-size:13px">${D.m(k[1])}</b></span>`)}</span>
     </button>`}
-    <div class="rejilla-2">
+    <div class="rejilla-2" data-tour="mas-acciones">
       ${puede('gastos') && html`<button type="button" class="btn2 rojo toca" style="min-height:52px" onClick=${() => abrir('gasto')}>Anotar gasto</button>`}
       ${puede('cierre') && html`<button type="button" class="btn2 acento toca" style="min-height:52px" onClick=${() => abrir('cierre')}>Cierre del día</button>`}
     </div>

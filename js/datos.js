@@ -255,6 +255,9 @@ function ejemplo(neg, productos, D, perfiles) {
 }
 
 // ---------- acciones ----------
+// Parte fiada de una venta: con pagos combinados puede ser solo una parte (p. ej. la mitad por Pago Móvil y el resto fiado).
+export const fiadoDe = v => v.pagos.reduce((a, p) => a + (p.m === 'Fiado' ? p.v : 0), 0);
+const juntar = pagos => pagos.map(p => p.m).join(' + ');
 export const sigNumero = () => (S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1;
 const stockMas = (productos, lineas, signo) => productos.map(p => { const q = lineas[p.id]; return q && p.q != null ? Object.assign({}, p, { q: Math.max(0, p.q + signo * q) }) : p; });
 const porLinea = items => items.reduce((o, it) => (o[it.pid] = (o[it.pid] || 0) + it.q, o), {});
@@ -281,13 +284,16 @@ export function anularVenta(vid, motivo) {
 }
 // Devolución: un movimiento nuevo en negativo (cuenta el día que se devuelve) y lo devuelto vuelve al inventario.
 // Si la venta fue fiada, lo devuelto se descuenta de lo que debe el cliente.
-export function devolver(vid, lineas, m, motivo, monto) {
+// pagos: cómo se devuelve el dinero (puede ser combinado). Si la venta tuvo parte fiada, eso se descuenta primero de la deuda.
+export function devolver(vid, lineas, pagos, motivo, monto) {
   const v = S.ventas.find(x => x.id === vid);
   if (!v || v.anulada || v.dev) return null;
   const items = v.items.filter(it => lineas[it.pid] > 0).map(it => ({ pid: it.pid, n: it.n, q: -lineas[it.pid], p: it.p, c: it.c }));
   if (!items.length) return null;
   const total = monto ? -monto : items.reduce((a, it) => a + it.q * it.p, 0);
-  const dev = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos: [{ m: v.fiado ? 'Fiado' : m, v: total }], cli: v.cli, suc: v.suc, fiado: v.fiado, por: S.ajustes.perfil || '', dev: v.n, motivo };
+  const aDeuda = Math.min(-total, fiadoDe(v));
+  const salen = (aDeuda > 0 ? [{ m: 'Fiado', v: aDeuda }] : []).concat(pagos || []).filter(p => p.v > 0).map(p => ({ m: p.m, v: -p.v }));
+  const dev = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos: salen.length ? salen : [{ m: (pagos && pagos[0] && pagos[0].m) || 'Efectivo', v: total }], cli: v.cli, suc: v.suc, fiado: aDeuda > 0, por: S.ajustes.perfil || '', dev: v.n, motivo };
   const devuelto = Object.assign({}, v.devuelto); Object.keys(lineas).forEach(k => { if (lineas[k] > 0) devuelto[k] = (devuelto[k] || 0) + lineas[k]; });
   cambiar(s => Object.assign({
     ventas: s.ventas.map(x => x.id === vid ? Object.assign({}, x, { devuelto }) : x).concat([dev]),
@@ -295,9 +301,14 @@ export function devolver(vid, lineas, m, motivo, monto) {
   }, nota(s, 'Devolución de la venta #' + v.n + ' (' + motivo + ')')));
   return dev;
 }
-export function abonar(cli, v, m) { cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m, por: s.ajustes.perfil || '' }]) })); }
-export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '' }, g)]) })); }
-export function editarGasto(gid, g) { cambiar(s => ({ gastos: s.gastos.map(x => x.id === gid ? Object.assign({}, x, g) : x) })); }
+export function abonar(cli, pagos) {
+  const v = pagos.reduce((a, p) => a + p.v, 0);
+  cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: s.ajustes.perfil || '' }]) }));
+}
+export const pagosDeAbono = a => a.pagos || [{ m: a.m, v: a.v }];
+const conPagos = g => g.pagos && g.pagos.length ? Object.assign({}, g, { m: juntar(g.pagos) }) : g;
+export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '' }, conPagos(g))]) })); }
+export function editarGasto(gid, g) { cambiar(s => ({ gastos: s.gastos.map(x => x.id === gid ? Object.assign({}, x, conPagos(g)) : x) })); }
 export function borrarGasto(gid) {
   const g = S.gastos.find(x => x.id === gid); if (!g) return;
   cambiar(s => Object.assign({ gastos: s.gastos.filter(x => x.id !== gid) }, nota(s, 'Borró el gasto «' + g.n + '»')));
@@ -365,7 +376,7 @@ export function resumen(desde, hasta, suc) {
     let total = 0, cost = 0, fiado = 0;
     vs.forEach(v => {
       total += v.total; cost += costo(v);
-      if (v.fiado) fiado += v.total;
+      fiado += fiadoDe(v);
       v.pagos.forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; });
       porHora[new Date(v.t).getHours()] += v.total;
       porSuc[v.suc] = (porSuc[v.suc] || 0) + v.total;
@@ -389,11 +400,11 @@ export function serieDias(dias, suc) {
 }
 
 export function deudaDe(cid) {
-  return m('de' + cid, () => vigentes().filter(v => v.fiado && v.cli === cid).reduce((a, v) => a + v.total, 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0));
+  return m('de' + cid, () => vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0));
 }
 export function deudores() {
   return m('deudores', () => listaClientes().map(c => {
-    const fiados = vigentes().filter(v => v.fiado && v.cli === c.id && !v.dev);
+    const fiados = vigentes().filter(v => v.cli === c.id && !v.dev && fiadoDe(v) > 0);
     const deuda = deudaDe(c.id);
     const desde = fiados.length ? fiados[0].t : 0;
     const suyas = vigentes().filter(v => v.cli === c.id && !v.dev);

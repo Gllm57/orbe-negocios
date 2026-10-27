@@ -35,7 +35,7 @@ export function Equipo() {
 
   const Ventas = puede('ganancias') && porPersona.length ? html`<section class="tarjeta entra" style="--i:2"><div class="tarjeta-tit">Ventas por persona<span class="sub">hoy</span></div><${Reparto} segs=${porPersona} f=${D.m} titulo="Vendido hoy" /></section>` : null;
 
-  const Matriz = html`<section class="tarjeta entra" style="--i:1">
+  const Matriz = html`<section class="tarjeta entra" data-tour="equipo" style="--i:1">
     <div class="tarjeta-tit">Qué puede hacer cada rol<button type="button" class="btn2 chico acento toca" onClick=${() => abrir('rol')}>+ Rol</button></div>
     <span class="sub" style="display:block;margin:-4px 0 10px">Toca para dar o quitar un permiso. El dueño siempre puede todo.</span>
     <div style="overflow-x:auto"><table class="matriz">

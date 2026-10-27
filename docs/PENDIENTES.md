@@ -11,6 +11,10 @@ _Tanda 1 lista (27 oct 2026): todo menos Supabase, que va al final._
 - [x] **Tasa manual en Venezuela** cuando no hay internet o se quiere otra tasa; dólar blue o MEP en Argentina.
 - [x] **Guardar en IndexedDB** en vez de localStorage: con muchos meses de ventas se llena (hoy ~400 KB por mes de ejemplo).
 
+## Hecho aparte (27 oct 2026)
+- [x] Pagos combinados en todo lugar donde entra o sale dinero: cobrar (también con una parte fiada), abonos, gastos y devoluciones; cada parte en $ o Bs (US$ en Argentina).
+- [x] Recorrido guiado por toda la app, adaptado al aparato y a los permisos de cada perfil.
+
 ## 2. Para vender mejor
 - [ ] Descuentos por producto o por venta (con permiso).
 - [ ] Escáner con la cámara del teléfono (en la computadora ya funciona el lector USB).
@@ -43,7 +47,7 @@ _Tanda 1 lista (27 oct 2026): todo menos Supabase, que va al final._
 - [ ] Catálogo, menú o reservas en línea con enlace propio (Fase 4).
 - [ ] Recordatorios que se envían solos por WhatsApp y confirmación automática de pagos (Fase 5, app nativa).
 - [ ] Avisos: cuentas por vencer, stock bajo y hora del cierre.
-- [ ] Recorrido guiado la primera vez.
+- [x] Recorrido guiado la primera vez.
 - [ ] Planes, prueba de 14 días y cobro (Fase 6); inglés y portugués.
 - [ ] Varios negocios en la misma cuenta y cambiar entre ellos.
 

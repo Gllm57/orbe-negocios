@@ -6,6 +6,7 @@ import { Barras, Linea, Reparto, Monto, Anillo, color } from '../graficos.js';
 import { Icono, LogoOrbe, iniciales, hora, fechaCorta } from '../ui.js';
 import { nombreTasa } from '../paises.js';
 import { FilaVenta } from './hojas.js';
+import { OfertaRecorrido } from '../recorrido.js';
 
 const DIA = 86400000;
 
@@ -34,7 +35,7 @@ export function Hoy() {
 
   const recientes = leer().ventas.filter(v => !suc || v.suc === suc).slice(-6).reverse();
 
-  const Pendientes = html`<div class="tarjeta" style="padding-bottom:6px">
+  const Pendientes = html`<div class="tarjeta" data-tour="pendientes" style="padding-bottom:6px">
     <div class="tarjeta-tit">Pendientes de hoy<span class="sub">${pendientes.filter(p => p.go).length} por hacer</span></div>
     <div class="lista">${pendientes.map((p, k) => html`<button type="button" class="item toca entra" style=${{ '--i': k, color: 'var(--ink)', cursor: p.go ? 'pointer' : 'default' }} onClick=${p.go || undefined}>
       <span class=${'ic ' + p.t} style="width:32px;height:32px;border-radius:10px"><${Icono} n=${p.i} t=${16} g=${2.2} /></span>
@@ -54,8 +55,9 @@ export function Hoy() {
       <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${P.f} ${E ? (suc || 'Todos los locales') : T.n}</span></span>
       <span class="pildora" style=${{ background: enLinea ? 'var(--in-soft)' : 'var(--amber-soft)', color: enLinea ? 'var(--in-text)' : 'var(--amber-text)' }}><span class="punto"></span>${enLinea ? 'En línea' : 'Sin internet'}</span>
     </header>
+    <${OfertaRecorrido} />
     ${E && html`<div class="chips desliza">${[''].concat(S.negocio.sucursales).map(x => html`<button type="button" class=${'chip chico toca' + (suc === x ? ' on' : '')} onClick=${() => setSuc(x)}>${x || 'Todas'}</button>`)}</div>`}
-    <section class="tarjeta entra" style="--i:1;background:linear-gradient(160deg, color-mix(in srgb, var(--c1) 26%, var(--surface)), var(--surface));display:flex;flex-direction:column;gap:12px">
+    <section class="tarjeta entra" data-tour="resumen" style="--i:1;background:linear-gradient(160deg, color-mix(in srgb, var(--c1) 26%, var(--surface)), var(--surface));display:flex;flex-direction:column;gap:12px">
       <div class="fila" style="align-items:flex-start">
         <span class="crece" style="display:flex;flex-direction:column;gap:2px">
           <span class="sub">${T.vender === 'Cobrar' ? 'Cobrado hoy' : 'Ventas de hoy'}</span>
@@ -71,7 +73,7 @@ export function Hoy() {
       ${[verGan ? ['Ganancia', D.m(r.ganancia), 'ya sin el costo', 'var(--in)'] : ['Ticket', D.m(r.ticket), 'promedio por venta', 'var(--ink)'], [T.inv ? 'Ventas' : 'Clientes', String(r.n), 'promedio ' + D.corto(r.ticket), 'var(--ink)'], ['Te deben', D.m(debenTot), deben.length + ' clientes', 'var(--amber)']].map((k, i) => html`
         <div class="tarjeta cifra entra" style=${{ '--i': 2 + i }}><span class="sub" style="font-size:11px">${k[0]}</span><span class="v num corta" style=${{ color: k[3] }}>${k[1]}</span><span class="faint corta" style="font-size:11px">${k[2]}</span></div>`)}
     </div>
-    <div class="rejilla-3">
+    <div class="rejilla-3" data-tour="accesos">
       ${[['carrito', T.vender, 't-vio', () => ir('vender')], ['dinero', 'Anotar gasto', 't-ros', () => abrir('gasto')], ['candado', cierre ? 'Día cerrado' : 'Cierre del día', 't-ver', () => cierre ? null : abrir('cierre')]].filter((q, i) => [puede('vender'), puede('gastos'), puede('cierre')][i]).map((q, i) => html`
         <button type="button" class="tarjeta toca entra" style=${{ '--i': 5 + i, border: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 6px', color: 'var(--ink)', fontSize: '12px', fontWeight: 600 }} onClick=${q[3]}>
           <span class=${'ic ' + q[2]}><${Icono} n=${q[0]} t=${18} g=${2.2} /></span>${q[1]}</button>`)}
@@ -86,6 +88,7 @@ export function Hoy() {
 
   // ---------- computadora ----------
   return html`
+    <${OfertaRecorrido} />
     <div class="cifras">
       <div class="tarjeta cifra entra fila" style="--i:0;flex-direction:row;align-items:center">
         <span class="crece" style="display:flex;flex-direction:column;gap:4px"><span class="sub">${T.vender === 'Cobrar' ? 'Cobrado hoy' : 'Ventas de hoy'}</span><${Monto} v=${r.total} f=${D.m} clase="v" /><span class="sub" style=${{ color: vs >= 0 ? 'var(--in)' : 'var(--out)' }}>${vs >= 0 ? '+' : ''}${vs} % vs ayer${D.dual ? ' · ' + D.s(r.total) : ''}</span></span>

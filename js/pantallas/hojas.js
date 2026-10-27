@@ -1,17 +1,15 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR } from '../paises.js';
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo } from '../ui.js';
-const conSimbolo = lista => lista.map(x => ({ v: x, n: html`<span class="simb"><${Icono} n=${simbolo(x)} t=${13} g=${2.2} /></span>${x}` }));
 import { Monto } from '../graficos.js';
+import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
 const VENCE = [{ v: 7, n: 'En 7 días' }, { v: 15, n: 'En 15 días' }, { v: 30, n: 'En 30 días' }];
-const esEfectivo = m => /Efectivo/.test(m);
-const numero = t => { const v = parseFloat(String(t).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isFinite(v) ? v : 0; };
 const telWA = t => { const d = String(t || '').replace(/\D/g, ''); return d.length >= 10 ? d : ''; };
 const abrirWA = (tel, texto) => window.open('https://wa.me/' + telWA(tel) + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
 const Pie2 = (txt, fn, clase) => html`<button type="button" class=${'btn2 toca ' + (clase || '')} style="min-height:50px;border-radius:25px" onClick=${fn}>${txt}</button>`;
@@ -45,46 +43,41 @@ function Cobrar({ d, cerrar }) {
   const { S, P, D, T, abrir, suc, tel, puede } = useApp();
   const fiadoN = T.id === 'tienda' || T.id === 'comida' ? 'Fiado' : 'Por cobrar';
   const metodos = S.negocio.pays.concat(puede('fiado') ? [fiadoN] : []);
-  const [m, setM] = useState(metodos[0]);
-  const [mixto, setMixto] = useState(false);
-  const [parte, setParte] = useState(0.5);
-  const [m2, setM2] = useState(metodos[1] || metodos[0]);
+  const total = D.redondo(d.tt.total);
+  const fp = usePagos(total, metodos);
   const [recibe, setRecibe] = useState(0);
   const [cli, setCli] = useState('');
-  const total = D.redondo(d.tt.total);
-  const fiado = m === fiadoN, efectivo = esEfectivo(m) && !mixto && !fiado;
+  // Con pagos combinados también se puede fiar solo una parte.
+  const partes = fp.pagos().map(p => p.m === fiadoN ? { m: 'Fiado', v: p.v } : p);
+  const fiado = partes.some(p => p.m === 'Fiado'), parteFiada = partes.reduce((a, p) => a + (p.m === 'Fiado' ? p.v : 0), 0);
+  const efectivo = fp.efectivo;
   const dado = recibe >= total ? recibe : total;
-  const p1 = D.redondo(total * parte), p2 = D.redondo(total - p1);
   const clientes = deudores();
   const listo = c => {
+    if (!fp.ok) { avisar(fp.falta > 0 ? 'Falta ' + D.m(fp.falta) + ' por repartir' : 'Sobran ' + D.m(-fp.falta)); return; }
     if (fiado && !cli) { avisar('Elige a quién se lo anotas'); return; }
-    const pagos = fiado ? [{ m: 'Fiado', v: total }] : mixto ? [{ m, v: p1 }, { m: m2, v: p2 }] : [{ m, v: total }];
     const items = d.items.map(it => Object.assign({}, it));
-    const venta = vender({ items, pagos, cli, suc: suc || S.negocio.sucursales[0], fiado, total });
-    venta.recibido = efectivo ? dado : 0; venta.imp = d.tt.imp; venta.impTxt = d.tt.txt;
+    const venta = vender({ items, pagos: partes, cli, suc: suc || S.negocio.sucursales[0], fiado, total });
+    venta.recibido = efectivo ? dado : fp.vuelto ? total + fp.vuelto : 0; venta.imp = d.tt.imp; venta.impTxt = d.tt.txt;
     d.onListo && d.onListo();
     c(() => abrir('recibo', { venta, nueva: true }));
   };
+  const textoBoton = !fp.ok ? (fp.falta > 0 ? 'Falta ' + D.m(fp.falta) : 'Sobran ' + D.m(-fp.falta))
+    : fiado && parteFiada >= total - 0.001 ? 'Anotar ' + D.m(total) + (cli ? ' a ' + clientes.find(x => x.id === cli).n.split(' ')[0] : '')
+    : 'Cobrar ' + D.m(total) + (fiado ? ' · ' + D.m(parteFiada) + ' fiado' : '');
   return html`<${Hoja} titulo=${T.vender === 'Pedido' ? 'Cobrar pedido' : 'Cobrar'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><b class="num" style="font-size:40px;letter-spacing:-0.02em">${D.m(total)}</b>${D.dual && html`<span class="sub num">${D.s(total)}</span>`}${d.tt.txt && html`<span class="sub faint num">${d.tt.txt}: ${D.m(d.tt.imp)}</span>`}</div>
-      <div class="campo"><span>Forma de pago</span><${Chips} opciones=${conSimbolo(metodos)} valor=${m} onCambio=${v => { setM(v); setRecibe(0); if (v === m2) setM2(metodos.find(x => x !== v && x !== fiadoN)); }} desliza=${tel} calido=${v => v === fiadoN} /></div>
+      ${fp.vista({ desliza: tel, calido: v => v === fiadoN, ayuda: 'Ej.: una parte por ' + (S.negocio.pays[0] || '') + ' y otra por ' + (S.negocio.pays[S.negocio.pays.length - 1] || '') + (puede('fiado') ? ', o una parte fiada' : '') })}
       ${efectivo && html`<div class="campo entra"><span>¿Con cuánto te paga?</span>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">${D.billetes(total).map((v, i) => html`<button type="button" class=${'chip toca' + (v === dado ? ' on' : '')} style="justify-content:center;padding:0 4px;color:var(--ink)" onClick=${() => setRecibe(v)}>${i === 0 ? 'Exacto' : D.m(v)}</button>`)}</div>
         <div class="fila" style="border-radius:16px;background:var(--in-soft);padding:12px 14px"><span class="crece in" style="font-size:14px;font-weight:600">Vuelto</span><${Monto} v=${dado - total} f=${D.m} clase="in" /></div>
       </div>`}
-      ${!fiado && S.negocio.pays.length > 1 && html`<${Interruptor} on=${mixto} onCambio=${setMixto} titulo="Pago mixto" sub="Una parte con una forma y el resto con otra" />`}
-      ${mixto && !fiado && html`<div class="tarjeta pila entra" style="background:var(--fill2);box-shadow:none">
-        <span class="sub">Paga con ${m}</span>
-        <div class="rejilla-3">${[0.25, 0.5, 0.75].map(f => html`<button type="button" class=${'chip toca' + (parte === f ? ' on' : '')} style="justify-content:center;color:var(--ink)" onClick=${() => setParte(f)}>${D.m(D.redondo(total * f))}</button>`)}</div>
-        <span class="sub">Y el resto, <b class="num" style="color:var(--ink)">${D.m(p2)}</b>, con</span>
-        <${Chips} opciones=${S.negocio.pays.filter(x => x !== m)} valor=${m2} onCambio=${setM2} chico />
-      </div>`}
-      ${fiado && html`<div class="campo entra"><span>¿A quién se lo anotas?</span>
+      ${fiado && html`<div class="campo entra"><span>¿A quién se lo anotas?${parteFiada < total - 0.001 ? ' (' + D.m(parteFiada) + ')' : ''}</span>
         <div class="chips">${clientes.map((x, i) => html`<button type="button" class=${'chip toca' + (cli === x.id ? ' on calido' : '')} style="padding-left:6px;color:var(--ink)" onClick=${() => setCli(x.id)}><span class=${'logo redondo ' + TONOS[i % 5]} style="width:28px;height:28px;font-size:11px">${iniciales(x.n)}</span>${x.n.split(' ')[0]}</button>`)}
         <button type="button" class="chip toca" style="border:1.5px dashed var(--line);background:transparent" onClick=${() => c(() => abrir('nuevoCliente', { volver: d }))}>+ Nuevo</button></div>
       </div>`}`,
-    pie: html`<button type="button" class=${'btn toca' + (fiado ? ' ambar' : '')} onClick=${() => listo(c)}>${fiado ? 'Anotar ' + D.m(total) + (cli ? ' a ' + clientes.find(x => x.id === cli).n.split(' ')[0] : '') : 'Cobrar ' + D.m(total)}</button>`
+    pie: html`<button type="button" class=${'btn toca' + (fiado && parteFiada >= total - 0.001 ? ' ambar' : '') + (fp.ok ? '' : ' apagado')} onClick=${() => listo(c)}>${textoBoton}</button>`
   })} />`;
 }
 
@@ -150,18 +143,24 @@ function Devolver({ d, cerrar }) {
   const { S, D, tel } = useApp();
   const v = S.ventas.find(x => x.id === d.vid);
   const [q, setQ] = useState({});
-  const [m, setM] = useState(v && v.pagos[0].m !== 'Fiado' ? v.pagos[0].m : S.negocio.pays[0]);
   const [motivo, setMotivo] = useState(MOTIVOS_DEV[0]);
-  if (!v) return null;
-  const max = it => it.q - ((v.devuelto || {})[it.pid] || 0);
+  const vv = v || { items: [], pagos: [], total: 0 };
+  const max = it => it.q - ((vv.devuelto || {})[it.pid] || 0);
   // Si el impuesto se cobró aparte, se devuelve en la misma proporción.
-  const bruto = v.items.reduce((a, it) => a + it.q * it.p, 0), factor = bruto ? v.total / bruto : 1;
-  const monto = D.redondo(v.items.reduce((a, it) => a + (q[it.pid] || 0) * it.p, 0) * factor);
+  const bruto = vv.items.reduce((a, it) => a + it.q * it.p, 0), factor = bruto ? vv.total / bruto : 1;
+  const monto = D.redondo(vv.items.reduce((a, it) => a + (q[it.pid] || 0) * it.p, 0) * factor);
+  // Lo que se fió se descuenta de la deuda; el resto se devuelve en dinero (también combinado).
+  const aDeuda = Math.min(monto, fiadoDe(vv)), enDinero = D.redondo(monto - aDeuda);
+  const pv = vv.pagos.find(p => p.m !== 'Fiado');
+  const fp = usePagos(enDinero, S.negocio.pays, pv && pv.m);
+  if (!v) return null;
   const pon = (it, dd) => setQ(Object.assign({}, q, { [it.pid]: Math.max(0, Math.min(max(it), (q[it.pid] || 0) + dd)) }));
   const listo = c => {
     if (!monto) { avisar('Elige qué devuelven'); return; }
-    devolver(v.id, q, m, motivo, monto);
-    c(() => avisar(v.fiado ? 'Devuelto: se restó ' + D.m(monto) + ' de lo que debe' : 'Devuelto · entrega ' + D.m(monto) + ' en ' + m));
+    if (enDinero > 0 && !fp.ok) { avisar('Reparte bien lo que devuelves'); return; }
+    const pagos = enDinero > 0 ? fp.pagos() : [];
+    devolver(v.id, q, pagos, motivo, monto);
+    c(() => avisar(aDeuda && !enDinero ? 'Devuelto: se restó ' + D.m(aDeuda) + ' de lo que debe' : 'Devuelto · entrega ' + D.m(enDinero) + ' en ' + pagos.map(p => p.m).join(' + ') + (aDeuda ? ' y se restó ' + D.m(aDeuda) + ' de la deuda' : '')));
   };
   return html`<${Hoja} titulo=${'Devolver de la venta #' + v.n} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`<span class="sub" style="margin-top:-6px">Elige qué y cuántos devuelven. Vuelve al inventario.</span>
@@ -169,7 +168,8 @@ function Devolver({ d, cerrar }) {
         <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;font-weight:600">${it.n}</b><span class="sub faint num">${mx ? 'Compró ' + it.q + (mx < it.q ? ' · quedan ' + mx : '') + ' · ' + D.m(it.p) + ' c/u' : 'Ya se devolvió todo'}</span></span>
         ${mx ? html`<span class="fila" style="gap:6px"><button type="button" class="icono-btn chico toca" aria-label=${'Uno menos de ' + it.n} onClick=${() => pon(it, -1)}><${Icono} n="menos1" t=${14} g=${2.6} /></button><b class="num" style="min-width:26px;text-align:center">${x}</b><button type="button" class="icono-btn chico toca" aria-label=${'Uno más de ' + it.n} onClick=${() => pon(it, 1)}><${Icono} n="mas1" t=${14} g=${2.6} /></button></span>` : null}
       </div>`; })}</div></div>
-      ${v.fiado ? html`<span class="sub">Fue fiado: lo devuelto se resta de lo que debe.</span>` : html`<div class="campo"><span>¿Cómo le devuelves el dinero?</span><${Chips} opciones=${conSimbolo(S.negocio.pays)} valor=${m} onCambio=${setM} desliza=${tel} /></div>`}
+      ${aDeuda > 0 && html`<span class="sub">${enDinero ? D.m(aDeuda) + ' se restan de lo que debe (fue fiado).' : 'Fue fiado: lo devuelto se resta de lo que debe.'}</span>`}
+      ${(enDinero > 0 || !monto) && fiadoDe(vv) < vv.total && fp.vista({ titulo: '¿Cómo le devuelves el dinero?', desliza: tel, ayuda: 'Ej.: una parte en efectivo y otra por transferencia' })}
       <div class="campo"><span>¿Por qué?</span><${Chips} opciones=${MOTIVOS_DEV} valor=${motivo} onCambio=${setMotivo} chico /></div>`,
     pie: html`<button type="button" class=${'btn toca' + (monto ? '' : ' apagado')} onClick=${() => listo(c)}>${monto ? 'Devolver ' + D.m(monto) : 'Elige qué devuelven'}</button>`
   })} />`;
@@ -184,10 +184,12 @@ function Gasto({ d, cerrar }) {
   const [cat, setCat] = useState(g0 ? g0.cat : 'Mercancía');
   const [despues, setDespues] = useState(g0 ? !g0.pagado : false);
   const [vence, setVence] = useState(g0 ? 0 : 7);
-  const [m, setM] = useState(g0 && g0.m ? g0.m : S.negocio.pays[0]);
+  const fp = usePagos(numero(monto), S.negocio.pays, g0 && g0.pagos ? g0.pagos[0].m : g0 && g0.m);
   const guardar = c => {
     const v = numero(monto); if (!v) { avisar('Escribe el monto'); return; }
-    const g = { n: n.trim() || cat, cat, v, m, pagado: !despues, vence: despues ? (vence ? Date.now() + vence * 86400000 : (g0 && g0.vence) || Date.now() + 7 * 86400000) : 0 };
+    if (!despues && !fp.ok) { avisar('Falta repartir ' + D.m(fp.falta)); return; }
+    const pagos = despues ? [] : fp.pagos();
+    const g = { n: n.trim() || cat, cat, v, m: despues ? (g0 && g0.m) || S.negocio.pays[0] : pagos[0].m, pagos: despues ? null : pagos, pagado: !despues, vence: despues ? (vence ? Date.now() + vence * 86400000 : (g0 && g0.vence) || Date.now() + 7 * 86400000) : 0 };
     if (g0) { if (g0.pagado !== g.pagado) g.t = Date.now(); editarGasto(g0.id, g); c(() => avisar('Gasto cambiado')); return; }
     anotarGasto(g);
     c(() => avisar(despues ? 'Anotado en «Por pagar»' : 'Gasto guardado · ' + D.m(v)));
@@ -200,7 +202,7 @@ function Gasto({ d, cerrar }) {
       <label class="campo"><span>Nota (opcional)</span><input type="text" placeholder=${cat} value=${n} onInput=${e => setN(e.target.value)} /></label>
       <${Interruptor} on=${despues} onCambio=${setDespues} titulo="Lo pago después" sub="Va a «Por pagar» y Orbe te avisa antes de que venza" />
       ${despues ? html`<div class="entra">${g0 && g0.vence && !vence ? html`<span class="sub" style="display:block;margin-bottom:8px">Vence el ${fechaCorta(g0.vence)}. Para cambiarlo, elige:</span>` : null}<${Chips} opciones=${VENCE} valor=${vence} onCambio=${setVence} calido=${() => true} /></div>`
-        : html`<div class="campo"><span>¿Cómo lo pagaste?</span><${Chips} opciones=${conSimbolo(S.negocio.pays)} valor=${m} onCambio=${setM} desliza=${tel} /></div>`}`,
+        : fp.vista({ titulo: '¿Cómo lo pagaste?', desliza: tel, ayuda: 'Ej.: una parte en efectivo y otra por ' + (S.negocio.pays[0] || 'transferencia') })}`,
     pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>${g0 ? 'Guardar cambios' : 'Guardar gasto'}</button>${g0 ? Pie2('Borrar gasto', () => borrar(c), 'rojo') : null}`
   })} />`;
 }
@@ -210,14 +212,22 @@ function Abono({ d, cerrar }) {
   const { S, D, tel } = useApp();
   const c0 = deudores().find(x => x.id === d.cid) || { n: '', deuda: 0 };
   const [parte, setParte] = useState(1);
-  const [m, setM] = useState(S.negocio.pays[0]);
-  const valor = D.redondo(c0.deuda * parte);
+  const [otro, setOtro] = useState('');
+  const valor = parte === 'otro' ? Math.min(D.redondo(numero(otro)), c0.deuda) : D.redondo(c0.deuda * parte);
+  const fp = usePagos(valor, S.negocio.pays);
+  const listo = c => {
+    if (!valor) { avisar('Escribe cuánto paga'); return; }
+    if (!fp.ok) { avisar('Falta repartir ' + D.m(fp.falta)); return; }
+    abonar(d.cid, fp.pagos());
+    c(() => avisar(valor >= c0.deuda - 0.004 ? c0.n.split(' ')[0] + ' ya no debe nada' : c0.n.split(' ')[0] + ' abonó ' + D.m(valor)));
+  };
   return html`<${Hoja} titulo="Anotar abono" onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <div class="fila"><b class="crece" style="font-size:16px">${c0.n}</b><span class="amber num" style="font-weight:600">Debe ${D.m(c0.deuda)}</span></div>
-      <div class="campo"><span>¿Cuánto paga?</span><div class="rejilla-3">${[[1, 'Todo'], [0.5, 'La mitad'], [0.25, 'Una parte']].map(x => html`<button type="button" class=${'chip toca' + (parte === x[0] ? ' on' : '')} style="flex-direction:column;justify-content:center;gap:0;min-height:56px;color:var(--ink)" onClick=${() => setParte(x[0])}><span class="sub" style="font-weight:500">${x[1]}</span><b class="num">${D.m(D.redondo(c0.deuda * x[0]))}</b></button>`)}</div></div>
-      <div class="campo"><span>¿Cómo pagó?</span><${Chips} opciones=${conSimbolo(S.negocio.pays)} valor=${m} onCambio=${setM} desliza=${tel} /></div>`,
-    pie: html`<button type="button" class="btn toca" onClick=${() => { abonar(d.cid, valor, m); c(() => avisar(parte === 1 ? c0.n.split(' ')[0] + ' ya no debe nada' : c0.n.split(' ')[0] + ' abonó ' + D.m(valor))); }}>Anotar abono de ${D.m(valor)}</button>`
+      <div class="campo"><span>¿Cuánto paga?</span><div class="rejilla-2">${[[1, 'Todo'], [0.5, 'La mitad'], [0.25, 'Una parte'], ['otro', 'Otro monto']].map(x => html`<button type="button" class=${'chip toca' + (parte === x[0] ? ' on' : '')} style="flex-direction:column;justify-content:center;gap:0;min-height:56px;color:var(--ink)" onClick=${() => setParte(x[0])}><span class="sub" style="font-weight:500">${x[1]}</span><b class="num">${x[0] === 'otro' ? (otro ? D.m(valor) : 'Escribir') : D.m(D.redondo(c0.deuda * x[0]))}</b></button>`)}</div></div>
+      ${parte === 'otro' && html`<label class="campo entra"><span>Monto que paga</span><input class="grande num" type="text" inputmode="decimal" placeholder="0" value=${otro} onInput=${e => setOtro(e.target.value)} /></label>`}
+      ${fp.vista({ titulo: '¿Cómo pagó?', desliza: tel })}`,
+    pie: html`<button type="button" class=${'btn toca' + (valor && fp.ok ? '' : ' apagado')} onClick=${() => listo(c)}>Anotar abono de ${D.m(valor)}</button>`
   })} />`;
 }
 
@@ -241,7 +251,11 @@ function Recordar({ d, cerrar }) {
 function Cierre({ d, cerrar }) {
   const { S, D, puede } = useApp();
   const hoy0 = inicioDia(Date.now());
-  const r = resumen(hoy0, Date.now() + 1, '');
+  const r0 = resumen(hoy0, Date.now() + 1, '');
+  // Lo que entró hoy: ventas y abonos de clientes, por forma de pago.
+  const porPago = Object.assign({}, r0.porPago);
+  S.abonos.filter(a => a.t >= hoy0).forEach(a => pagosDeAbono(a).forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; }));
+  const r = Object.assign({}, r0, { porPago });
   const gastosHoy = gastosEntre(hoy0, Date.now() + 1).reduce((a, g) => a + g.v, 0);
   const metodos = Object.keys(r.porPago).filter(k => k !== 'Fiado');
   const [contado, setContado] = useState(() => { const o = {}; metodos.forEach(k => { o[k] = D.redondo(r.porPago[k]); }); return o; });
