@@ -1,7 +1,8 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, guardarProducto, reponer, nuevoCliente, cerrarDia, empezarDeNuevo, deudores, resumen, inicioDia, gastosEntre, guardarSucursales } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, guardarProducto, reponer, nuevoCliente, cerrarDia, empezarDeNuevo, deudores, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, nuevoRol, perfilActual } from '../datos.js';
+import { rolDe, puedeEditarRol } from '../permisos.js';
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo } from '../ui.js';
 const conSimbolo = lista => lista.map(x => ({ v: x, n: html`<span class="simb"><${Icono} n=${simbolo(x)} t=${13} g=${2.2} /></span>${x}` }));
 import { Monto } from '../graficos.js';
@@ -14,15 +15,15 @@ const telWA = t => { const d = String(t || '').replace(/\D/g, ''); return d.leng
 const abrirWA = (tel, texto) => window.open('https://wa.me/' + telWA(tel) + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, locales: Locales }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, locales: Locales, perfil: Perfil, rol: Rol }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
 // ---------- cobrar ----------
 function Cobrar({ d, cerrar }) {
-  const { S, P, D, T, abrir, suc, tel } = useApp();
+  const { S, P, D, T, abrir, suc, tel, puede } = useApp();
   const fiadoN = T.id === 'tienda' || T.id === 'comida' ? 'Fiado' : 'Por cobrar';
-  const metodos = S.negocio.pays.concat([fiadoN]);
+  const metodos = S.negocio.pays.concat(puede('fiado') ? [fiadoN] : []);
   const [m, setM] = useState(metodos[0]);
   const [mixto, setMixto] = useState(false);
   const [parte, setParte] = useState(0.5);
@@ -69,13 +70,13 @@ function Cobrar({ d, cerrar }) {
 // ---------- recibo ----------
 export function textoRecibo(v, S, D, P) {
   const cli = S.clientes.find(c => c.id === v.cli);
-  return [S.negocio.nombre + (S.negocio.razon ? ' · ' + S.negocio.razon : ''), S.negocio.fiscal ? P.fiscal[0] + ' ' + S.negocio.fiscal : '', 'Recibo #' + v.n + ' · ' + new Date(v.t).toLocaleString('es'), '',
+  return [S.negocio.nombre + (S.negocio.razon ? ' · ' + S.negocio.razon : ''), S.negocio.fiscal ? P.fiscal[0] + ' ' + S.negocio.fiscal : '', 'Recibo #' + v.n + ' · ' + new Date(v.t).toLocaleString('es'), (S.perfiles || []).find(p => p.id === v.por) ? 'Te atendió ' + S.perfiles.find(p => p.id === v.por).n.split(' ')[0] : '', '',
     ...v.items.map(it => it.q + ' x ' + it.n + ': ' + D.m(it.q * it.p)), '', 'Total: ' + D.m(v.total) + (D.dual ? ' (' + D.s(v.total) + ')' : ''),
     ...v.pagos.map(p => p.m + ': ' + D.m(p.v)), cli ? 'Cliente: ' + cli.n : '', '', '¡Gracias por tu compra!'].filter((x, i, a) => x !== '' || a[i - 1] !== '').join('\n');
 }
 function Recibo({ d, cerrar }) {
   const { S, P, D, tel } = useApp();
-  const v = d.venta, cli = S.clientes.find(c => c.id === v.cli);
+  const v = d.venta, cli = S.clientes.find(c => c.id === v.cli), atendio = S.perfiles.find(p => p.id === v.por);
   const enviar = () => { abrirWA(cli && cli.tel, textoRecibo(v, S, D, P)); };
   return html`<${Hoja} titulo=${d.nueva ? (v.fiado ? 'Anotado' : 'Venta guardada') : 'Venta #' + v.n} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
@@ -85,6 +86,7 @@ function Recibo({ d, cerrar }) {
         <b style="text-align:center;font-size:14px">${S.negocio.nombre}</b>
         ${S.negocio.razon && html`<span style="text-align:center;color:#625f7d">${S.negocio.razon}${S.negocio.fiscal ? ' · ' + P.fiscal[0] + ' ' + S.negocio.fiscal : ''}</span>`}
         <span style="text-align:center;color:#625f7d">Recibo #${v.n} · ${fechaCorta(v.t)} ${hora(v.t)}${cli ? ' · ' + cli.n : ''}</span>
+        ${atendio && html`<span style="text-align:center;color:#625f7d">Te atendió ${atendio.n.split(' ')[0]}${S.negocio.sucursales.length > 1 ? ' · ' + v.suc : ''}</span>`}
         <span style="border-top:1px dashed #c9c6e0"></span>
         ${v.items.map(it => html`<span class="fila" style="justify-content:space-between;gap:8px"><span>${it.q} x ${it.n}</span><span>${D.m(it.q * it.p)}</span></span>`)}
         <span style="border-top:1px dashed #c9c6e0"></span>
@@ -160,7 +162,7 @@ function Recordar({ d, cerrar }) {
 
 // ---------- cierre del día ----------
 function Cierre({ d, cerrar }) {
-  const { S, D } = useApp();
+  const { S, D, puede } = useApp();
   const hoy0 = inicioDia(Date.now());
   const r = resumen(hoy0, Date.now() + 1, '');
   const gastosHoy = gastosEntre(hoy0, Date.now() + 1).reduce((a, g) => a + g.v, 0);
@@ -176,7 +178,7 @@ function Cierre({ d, cerrar }) {
           ${ef ? html`<span class="fila" style="gap:6px"><button type="button" class="icono-btn chico toca" aria-label="Contar menos" onClick=${() => setContado(Object.assign({}, contado, { [k]: Math.max(0, D.redondo(contado[k] - D.paso)) }))}><${Icono} n="menos1" t=${14} g=${2.6} /></button><b class="num" style="min-width:84px;text-align:center">${D.m(contado[k])}</b><button type="button" class="icono-btn chico toca" aria-label="Contar más" onClick=${() => setContado(Object.assign({}, contado, { [k]: D.redondo(contado[k] + D.paso) }))}><${Icono} n="mas1" t=${14} g=${2.6} /></button></span>` : html`<b class="num">${D.m(esp)}</b>`}
         </div>`; }) : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
       </div></div>
-      <div class="rejilla-2">${[['Total vendido', r.total, 'var(--ink)'], ['Ganancia', r.ganancia, 'var(--in)'], ['Fiado hoy', r.fiado, 'var(--amber)'], ['Gastos hoy', gastosHoy, 'var(--out)']].map(k => html`<div class="tarjeta cifra" style="background:var(--fill2);box-shadow:none;padding:12px"><span class="sub" style="font-size:11px">${k[0]}</span><b class="num" style=${{ color: k[2], fontSize: '17px' }}>${D.m(k[1])}</b></div>`)}</div>`,
+      <div class="rejilla-2">${[['Total vendido', r.total, 'var(--ink)'], puede('ganancias') ? ['Ganancia', r.ganancia, 'var(--in)'] : ['Ventas', r.n, 'var(--ink)', true], ['Fiado hoy', r.fiado, 'var(--amber)'], ['Gastos hoy', gastosHoy, 'var(--out)']].map(k => html`<div class="tarjeta cifra" style="background:var(--fill2);box-shadow:none;padding:12px"><span class="sub" style="font-size:11px">${k[0]}</span><b class="num" style=${{ color: k[2], fontSize: '17px' }}>${k[3] ? k[1] : D.m(k[1])}</b></div>`)}</div>`,
     pie: html`<button type="button" class="btn toca" onClick=${() => { cerrarDia(contado, { total: r.total, ganancia: r.ganancia, dif }); c(() => avisar(dif === 0 ? 'Día cerrado. Todo cuadra' : 'Día cerrado con ' + (dif < 0 ? 'faltante' : 'sobrante') + ' de ' + D.m(Math.abs(dif)))); }}>Cerrar el día</button>`
   })} />`;
 }
@@ -229,7 +231,7 @@ function NuevoCliente({ d, cerrar }) {
 }
 
 function Cliente({ d, cerrar }) {
-  const { S, D, abrir } = useApp();
+  const { S, D, abrir, puede } = useApp();
   const c0 = deudores().find(x => x.id === d.cid);
   if (!c0) return null;
   const mov = S.ventas.filter(v => v.cli === c0.id).map(v => ({ t: v.t, txt: (v.fiado ? 'Fiado #' : 'Compra #') + v.n, v: v.total, fiado: v.fiado, venta: v }))
@@ -239,7 +241,7 @@ function Cliente({ d, cerrar }) {
       <div class="rejilla-2"><div class="tarjeta cifra" style="background:var(--amber-soft);box-shadow:none;padding:12px"><span class="sub">Debe</span><b class="num amber" style="font-size:20px">${D.m(c0.deuda)}</b></div><div class="tarjeta cifra" style="background:var(--fill2);box-shadow:none;padding:12px"><span class="sub">Compras</span><b class="num" style="font-size:20px">${c0.compras}</b></div></div>
       ${c0.tel && html`<span class="sub">WhatsApp: ${c0.tel}</span>`}
       <div class="lista">${mov.length ? mov.map((m, i) => html`<div class="item entra" style=${{ '--i': i }}><span class="crece" style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px">${m.txt}</span><span class="sub faint">${fechaCorta(m.t)} · ${hora(m.t)}</span></span><b class=${'num ' + (m.v < 0 ? 'in' : m.fiado ? 'amber' : '')}>${m.v < 0 ? '−' + D.m(-m.v) : D.m(m.v)}</b></div>`) : html`<p class="vacio">Sin movimientos todavía.</p>`}</div>`,
-    pie: c0.deuda > 0 ? html`<button type="button" class="btn wa toca" onClick=${() => c(() => abrir('recordar', { cid: c0.id }))}>Recordar por WhatsApp</button><button type="button" class="btn2 toca" style="min-height:50px;border-radius:25px" onClick=${() => c(() => abrir('abono', { cid: c0.id }))}>Anotar abono</button>` : null
+    pie: c0.deuda > 0 ? html`<button type="button" class="btn wa toca" onClick=${() => c(() => abrir('recordar', { cid: c0.id }))}>Recordar por WhatsApp</button>${puede('clientes') && html`<button type="button" class="btn2 toca" style="min-height:50px;border-radius:25px" onClick=${() => c(() => abrir('abono', { cid: c0.id }))}>Anotar abono</button>`}` : null
   })} />`;
 }
 
@@ -284,3 +286,47 @@ function Locales({ d, cerrar }) {
     pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar</button>`
   })} />`;
 }
+
+// ---------- perfiles del equipo ----------
+function Perfil({ d, cerrar }) {
+  const { S, E, yo, puede } = useApp();
+  const p0 = S.perfiles.find(p => p.id === d.pid) || null;
+  // Sin permiso de equipo solo se cambia el nombre y el PIN propio, nunca el rol.
+  const admin = puede('equipo');
+  const esDueno = p0 && p0.rol === 'dueno', soloDatos = esDueno || !admin;
+  const rolesPosibles = S.roles.filter(r => !r.fijo && puedeEditarRol(yo, r.id));
+  const [f, setF] = useState(p0 ? { n: p0.n, rol: p0.rol, pin: p0.pin || '', sucs: p0.sucs || [], inactivo: !!p0.inactivo } : { n: '', rol: (rolesPosibles.find(r => r.id === 'cajero') || rolesPosibles[0] || {}).id, pin: '', sucs: [], inactivo: false });
+  const pon = o => setF(x => Object.assign({}, x, o));
+  const guardar = c => {
+    if (!f.n.trim()) { avisar('Escribe el nombre'); return; }
+    if (f.pin && !/^\d{4}$/.test(f.pin)) { avisar('El PIN son 4 números'); return; }
+    if (p0 && p0.id === yo.id && f.inactivo) { avisar('No puedes desactivar tu propio perfil'); return; }
+    guardarPerfil(Object.assign({ id: p0 ? p0.id : undefined }, { n: f.n.trim(), pin: f.pin }, soloDatos ? {} : { rol: f.rol, sucs: f.sucs, inactivo: f.inactivo }));
+    c(() => avisar(p0 ? 'Perfil guardado' : 'Perfil creado: ' + f.n.trim().split(' ')[0] + (f.pin ? ' entra con su PIN' : '')));
+  };
+  const rolActual = S.roles.find(r => r.id === f.rol);
+  return html`<${Hoja} titulo=${p0 ? (p0.id === yo.id ? 'Tu perfil' : 'Editar perfil') : 'Nuevo perfil'} onCerrar=${cerrar} contenido=${c => ({
+    cuerpo: html`
+      <label class="campo"><span>Nombre</span><input type="text" value=${f.n} placeholder="Ej.: Luisa Pino" autocomplete="off" onInput=${e => pon({ n: e.target.value })} /></label>
+      ${esDueno || !admin ? esDueno && html`<div class="tarjeta fila" style="background:var(--accent-soft);box-shadow:none"><${Icono} n="escudo" t=${18} c="var(--accent)" /><span class="sub" style="color:var(--ink)">Es el dueño: siempre puede todo y nadie le puede quitar permisos.</span></div>`
+        : html`<div class="campo"><span>Rol</span><${Chips} opciones=${rolesPosibles.map(r => ({ v: r.id, n: r.n }))} valor=${f.rol} onCambio=${v => pon({ rol: v })} /></div>
+          ${rolActual && html`<span class="sub faint entra" key=${f.rol}>Puede: ${Object.keys(rolActual.p).filter(k => rolActual.p[k]).length} de 10 permisos. Los cambias en «Qué puede hacer cada rol».</span>`}`}
+      <label class="campo"><span>PIN de 4 números (para entrar)</span><input class="num" type="text" inputmode="numeric" maxlength="4" autocomplete="off" value=${f.pin} placeholder="Sin PIN" onInput=${e => pon({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></label>
+      ${E && !soloDatos && html`<div class="campo"><span>Trabaja en</span><div class="chips">
+        <button type="button" class=${'chip toca' + (!f.sucs.length ? ' on' : '')} onClick=${() => pon({ sucs: [] })}>Todos los locales</button>
+        ${S.negocio.sucursales.map(s => { const on = f.sucs.includes(s); return html`<button type="button" class=${'chip toca' + (on ? ' on' : '')} onClick=${() => pon({ sucs: on ? f.sucs.filter(x => x !== s) : f.sucs.concat([s]) })}>${s}</button>`; })}
+      </div></div>`}
+      ${p0 && !soloDatos && p0.id !== yo.id && html`<${Interruptor} on=${!f.inactivo} onCambio=${v => pon({ inactivo: !v })} titulo="Perfil activo" sub="Si lo apagas, ya no puede entrar. Sus ventas se quedan." />`}`,
+    pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>${p0 ? 'Guardar' : 'Crear perfil'}</button>`
+  })} />`;
+}
+
+function Rol({ d, cerrar }) {
+  const [n, setN] = useState('');
+  return html`<${Hoja} titulo="Nuevo rol" onCerrar=${cerrar} contenido=${c => ({
+    cuerpo: html`<label class="campo"><span>Nombre del rol</span><input type="text" value=${n} placeholder="Ej.: Repartidor, Contador" onInput=${e => setN(e.target.value)} /></label>
+      <span class="sub">Empieza solo con «Vender y cobrar». Después le das los permisos que quieras.</span>`,
+    pie: html`<button type="button" class="btn toca" onClick=${() => { if (!n.trim()) { avisar('Escribe el nombre'); return; } nuevoRol(n.trim()); c(() => avisar('Rol creado: ' + n.trim())); }}>Crear rol</button>`
+  })} />`;
+}
+

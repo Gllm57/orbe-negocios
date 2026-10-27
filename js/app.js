@@ -1,9 +1,10 @@
 // Orbe Negocios · arranque. Decide si es teléfono o computadora, y arma la navegación.
 import { html, render, useState, useEffect } from './lib/preact-htm.js';
 import { Ctx } from './ctx.js';
-import { useDatos, leer, guardarTasa, diaClave, bajoMinimo, deudores, porPagar } from './datos.js';
+import { useDatos, leer, guardarTasa, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir } from './datos.js';
+import { puede, rolDe } from './permisos.js';
 import { pais, tipo, dinero, leerTasaVE } from './paises.js';
-import { Icono, LogoOrbe, Avisos, iniciales, avisar } from './ui.js';
+import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS } from './ui.js';
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
 import { Vender } from './pantallas/vender.js';
@@ -13,6 +14,8 @@ import { Gastos } from './pantallas/gastos.js';
 import { Reportes } from './pantallas/reportes.js';
 import { Mas } from './pantallas/mas.js';
 import { HojaActual } from './pantallas/hojas.js';
+import { Equipo } from './pantallas/equipo.js';
+import { Acceso } from './pantallas/acceso.js';
 
 const esTelefono = () => {
   const q = new URLSearchParams(location.search).get('vista');
@@ -29,8 +32,11 @@ const SECCIONES = {
   inventario: { n: 'Inventario', i: 'caja', C: Inventario },
   gastos: { n: 'Gastos y por pagar', i: 'dinero', C: Gastos },
   reportes: { n: 'Reportes', i: 'grafico', C: Reportes },
+  equipo: { n: 'Equipo', npc: 'Equipo y permisos', i: 'escudo', C: Equipo },
   mas: { n: 'Más', npc: 'Ajustes', i: 'mas', ipc: 'ajustes', C: Mas }
 };
+// Secciones que necesitan un permiso para verse.
+const PERMISO_SEC = { vender: 'vender', gastos: 'gastos', reportes: 'ganancias', equipo: 'equipo' };
 
 function aplicarTema(tema) {
   const r = document.documentElement;
@@ -65,27 +71,32 @@ function App() {
   }, [S.negocio && S.negocio.pais]);
 
   if (!S.negocio) return html`<${Inicio} tel=${tel} /><${Avisos} />`;
+  const yo = perfilActual();
+  if (!yo) return html`<${Acceso} tel=${tel} /><${Avisos} />`;
+  const pd = k => puede(S, yo, k);
+  const permitida = s => SECCIONES[s] && (!PERMISO_SEC[s] || pd(PERMISO_SEC[s]));
 
   const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasaVE);
   // Varios locales: aparece el selector de sucursal y los gráficos por sucursal (sea negocio o empresa).
   const E = S.negocio.sucursales.length > 1;
-  const valida = SECCIONES[sec] && !(sec === 'gastos' && tel) ? sec : 'hoy';
+  const valida = permitida(sec) && !(sec === 'gastos' && tel) ? sec : 'hoy';
   const ir = s => { if (location.hash !== '#' + s) location.hash = s; else setSec(s); const p = document.querySelector('.principal') || document.querySelector('.app-fondo'); if (p) p.scrollTop = 0; };
   const abrir = (t, datos) => setHoja({ t, datos: datos || {}, n: Date.now() });
-  const ctx = { S, P, T, D, E, tel, ir, abrir, suc: E ? suc : '', setSuc, enLinea };
+  const ctx = { S, P, T, D, E, tel, ir, abrir, suc: E ? suc : '', setSuc, enLinea, yo, rol: rolDe(S, yo), puede: pd };
   const nombreSec = s => s === 'vender' ? (tel ? T.vender : 'Caja') : s === 'inventario' && !T.inv ? 'Servicios' : tel ? SECCIONES[s].n : (SECCIONES[s].npc || SECCIONES[s].n);
   const Pantalla = SECCIONES[valida].C;
   const cuenta = { clientes: deudores().filter(c => c.deuda > 0).length, inventario: bajoMinimo().length, gastos: porPagar().length };
 
   if (tel) {
-    const tabs = ['hoy', 'vender', 'clientes', 'inventario', 'mas'];
+    const tabs = ['hoy', 'vender', 'clientes', 'inventario', 'mas'].filter(permitida);
+    const marcada = valida === 'equipo' || valida === 'reportes' ? 'mas' : valida;
     return html`<${Ctx.Provider} value=${ctx}>
       <div class=${'tel-raiz' + (hoja ? ' con-hoja' : '')}>
         <div class="app-fondo">
           <main class="pantalla" key=${valida}><${Pantalla} /></main>
         </div>
-        <nav class="nav-tel" aria-label="Secciones">
-          ${tabs.map(t => html`<button type="button" class=${'toca' + (t === valida ? ' on' : '')} aria-current=${t === valida ? 'page' : 'false'} onClick=${() => ir(t)}>
+        <nav class="nav-tel" aria-label="Secciones" style=${{ gridTemplateColumns: 'repeat(' + tabs.length + ', minmax(0, 1fr))' }}>
+          ${tabs.map(t => html`<button type="button" class=${'toca' + (t === marcada ? ' on' : '')} aria-current=${t === marcada ? 'page' : 'false'} onClick=${() => ir(t)}>
             <${Icono} n=${t === 'inventario' && !T.inv ? 'lista' : SECCIONES[t].i} t=${22} /><span>${nombreSec(t)}</span></button>`)}
         </nav>
       </div>
@@ -94,7 +105,7 @@ function App() {
     </${Ctx.Provider}>`;
   }
 
-  const grupos = [['Día a día', ['hoy', 'vender', 'clientes']], ['Operación', ['inventario', 'gastos']], ['Gestión', ['reportes', 'mas']]];
+  const grupos = [['Día a día', ['hoy', 'vender', 'clientes']], ['Operación', ['inventario', 'gastos']], ['Gestión', ['reportes', 'equipo', 'mas']]].map(g => [g[0], g[1].filter(permitida)]).filter(g => g[1].length);
   const colores = { clientes: 'var(--c3)', inventario: 'var(--c3)', gastos: 'var(--c5)' };
   return html`<${Ctx.Provider} value=${ctx}>
     <div class="marco-pc">
@@ -112,6 +123,11 @@ function App() {
             </button>`)}</div>`)}
         </nav>
         <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+          <div class="tarjeta fila" style="padding:10px 12px;gap:10px">
+            <span class=${'logo redondo ' + TONOS[S.perfiles.indexOf(yo) % 5]} style="width:34px;height:34px;font-size:12px">${iniciales(yo.n)}</span>
+            <span class="crece" style="display:flex;flex-direction:column"><b class="corta" style="font-size:13px">${yo.n}</b><span class="sub corta" style="font-size:12px">${(rolDe(S, yo) || {}).n || ''}</span></span>
+            <button type="button" class="icono-btn chico toca" aria-label="Cambiar de perfil" title="Cambiar de perfil" onClick=${() => salir()}><${Icono} n="personas" t=${16} /></button>
+          </div>
           <span class="pildora" style=${{ background: enLinea ? 'var(--in-soft)' : 'var(--amber-soft)', color: enLinea ? 'var(--in-text)' : 'var(--amber-text)', padding: '9px 12px', borderRadius: '12px', justifyContent: 'flex-start' }}><span class="punto"></span>${enLinea ? 'En línea · todo guardado' : 'Sin internet · se guarda aquí'}</span>
         </div>
       </aside>
@@ -120,7 +136,7 @@ function App() {
           <div class="crece"><h1>${valida === 'hoy' ? saludo() : nombreSec(valida)}</h1><span class="sub">${subtitulo(valida, ctx)}</span></div>
           <label class="buscador"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" aria-label="Buscar" placeholder="Buscar producto o cliente" onKeyDown=${e => { if (e.key === 'Enter' && e.target.value.trim()) { abrir('buscar', { q: e.target.value.trim() }); } }} /><span class="tecla">Enter</span></label>
           ${E && (valida === 'hoy' || valida === 'vender' || valida === 'reportes') && html`<div class="segmento" role="group" aria-label="Sucursal">${[''].concat(S.negocio.sucursales).map(x => html`<button type="button" class=${suc === x ? 'on' : ''} aria-pressed=${suc === x ? 'true' : 'false'} onClick=${() => setSuc(x)}>${x || 'Todas'}</button>`)}</div>`}
-          ${valida !== 'vender' && html`<button type="button" class="btn2 lleno toca" onClick=${() => ir('vender')}><${Icono} n="mas1" t=${16} g=${2.4} />${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</button>`}
+          ${valida !== 'vender' && pd('vender') && html`<button type="button" class="btn2 lleno toca" onClick=${() => ir('vender')}><${Icono} n="mas1" t=${16} g=${2.4} />${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</button>`}
         </div>
         <div class="contenido" key=${valida}><${Pantalla} /></div>
       </div>
@@ -141,6 +157,7 @@ function subtitulo(s, { S, E, suc, T }) {
     inventario: T.inv ? 'Lo que tienes y lo que falta' : 'Precios y duración',
     gastos: 'Lo que gastas y lo que debes',
     reportes: donde,
+    equipo: 'Perfiles de tu equipo y lo que cada uno puede hacer',
     mas: S.negocio.nombre
   }[s];
 }

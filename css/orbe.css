@@ -270,3 +270,24 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width
 .chip .simb { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-left: -6px; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); color: var(--c, var(--accent)); }
 @media (prefers-reduced-motion: reduce) { .rings .rg { animation: none; } }
 .simb-c { width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
+
+/* ---------- perfiles y PIN ---------- */
+.perfiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.perfil-btn { border: 0; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px; text-align: center; }
+.perfil-btn b { font-size: 15px; }
+.puntos-pin { display: flex; gap: 16px; }
+.puntos-pin i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); transition: background-color .2s ease, border-color .2s ease, transform .25s var(--bounce); }
+.puntos-pin i.on { background: var(--accent); border-color: var(--accent); transform: scale(1.1); }
+.puntos-pin.mal { animation: sacude .45s var(--spring); }
+.puntos-pin.mal i { border-color: var(--out); background: var(--out); }
+@keyframes sacude { 0%, 100% { transform: none; } 20% { transform: translateX(-10px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); } }
+.teclado { display: grid; grid-template-columns: repeat(3, 76px); gap: 14px; justify-content: center; }
+.teclado button { width: 76px; height: 76px; border-radius: 50%; border: 0; background: var(--fill); font-size: 28px; font-weight: 500; display: grid; place-items: center; }
+.matriz { width: 100%; border-collapse: collapse; font-size: 14px; }
+.matriz th { font-size: 12px; font-weight: 600; color: var(--muted); padding: 10px 8px; text-align: center; white-space: nowrap; }
+.matriz th:first-child, .matriz td:first-child { text-align: left; min-width: 230px; }
+.matriz td { padding: 8px; border-top: 1px solid var(--line); text-align: center; }
+.permiso-btn { width: 34px; height: 34px; border-radius: 11px; border: 0; display: inline-grid; place-items: center; transition: background-color .25s ease, color .25s ease, transform .18s var(--spring); }
+.permiso-btn.on { background: var(--in-soft); color: var(--in); }
+.permiso-btn.off { background: var(--fill); color: var(--faint); }
+.permiso-btn[disabled] { opacity: .55; cursor: not-allowed; }

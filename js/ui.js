@@ -55,15 +55,8 @@ export function Icono({ n, t = 20, g = 2, c = 'currentColor', estilo }) {
   return html`<svg width=${t} height=${t} viewBox="0 0 24 24" fill="none" stroke=${c} stroke-width=${g} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style=${estilo}><path d=${ICONOS[n] || ''}></path></svg>`;
 }
 
-export function LogoOrbe({ t = 42, fondo = true }) {
-  return html`<svg width=${t} height=${t} viewBox="0 0 100 100" aria-hidden="true" class="logo-orbe">
-    ${fondo && html`<rect width="100" height="100" rx="28" fill="#0b0a14"></rect>`}
-    <g transform=${fondo ? 'translate(14 14) scale(.72)' : ''}>
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#8f84ff" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="74 100" transform="rotate(-90 50 50)"></circle>
-      <circle cx="50" cy="50" r="25" fill="none" stroke="#3ddc9f" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="56 100" transform="rotate(30 50 50)"></circle>
-      <circle cx="50" cy="50" r="10" fill="none" stroke="#f0a020" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="40 100" transform="rotate(150 50 50)"></circle>
-    </g>
-  </svg>`;
+export function LogoOrbe({ t = 42 }) {
+  return html`<svg width=${t} height=${t} viewBox="0 0 92 92" aria-hidden="true" class="logo-orbe"><rect width="92" height="92" rx="26" fill="#16142a"></rect><circle cx="35" cy="37" r="23" fill="none" stroke="#8f84ff" stroke-width="6.5"></circle><circle cx="57" cy="37" r="23" fill="none" stroke="#3ddc9f" stroke-width="6.5"></circle><circle cx="46" cy="56" r="23" fill="none" stroke="#f0a020" stroke-width="6.5"></circle></svg>`;
 }
 
 // ---------- avisos ----------

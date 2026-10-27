@@ -2,12 +2,19 @@
 // Regla de Orbe: si algo se daña al cargar, se aparta y nunca se borra.
 import { useState, useEffect } from './lib/preact-htm.js';
 import { pais, tipo, dinero } from './paises.js';
+import { ROLES_BASE } from './permisos.js';
 
 const CLAVE = 'orbe-negocios';
 const subs = new Set();
 let S = cargar();
 
-function vacio() { return { v: 1, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], ajustes: { tema: 'auto' }, tasaVE: 0, tasaFecha: '' }; }
+function vacio() { return { v: 1, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), ajustes: { tema: 'auto', perfil: '' }, tasaVE: 0, tasaFecha: '' }; }
+// Datos guardados antes de que existieran los perfiles: el negocio pasa a tener un perfil de dueño.
+function migrar(d) {
+  if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
+  if (d.negocio && (!Array.isArray(d.perfiles) || !d.perfiles.length)) { d.perfiles = [{ id: 'u0', n: 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }]; d.ajustes = Object.assign({}, d.ajustes, { perfil: 'u0' }); }
+  return d;
+}
 
 function valido(d) { return d && typeof d === 'object' && Array.isArray(d.ventas) && Array.isArray(d.productos) && Array.isArray(d.clientes); }
 
@@ -17,7 +24,7 @@ function cargar() {
   if (!crudo) return vacio();
   try {
     const d = JSON.parse(crudo);
-    if (valido(d)) return Object.assign(vacio(), d);
+    if (valido(d)) return migrar(Object.assign(vacio(), d));
     throw new Error('forma inválida');
   } catch (e) {
     try { localStorage.setItem(CLAVE + '-rescate-' + Date.now(), crudo); } catch (e2) { /* sin espacio */ }
@@ -81,12 +88,16 @@ export function crearNegocio(cfg, conEjemplo) {
   const sucursales = nSuc === 1 ? ['Principal'] : Array.from({ length: nSuc }, (_, i) => ((cfg.sucNombres || [])[i] || '').trim() || NOM[i]);
   const productos = CATALOGO[T.id].map((x, i) => ({ id: 'p' + i, ab: x[0], n: x[1], p: D.precio(x[2]), c: D.precio(x[3]), q: x[4] < 0 ? null : Math.round(x[4] * (E ? 3 : 1)), min: Math.round(x[5] * (E ? 3 : 1)), dur: x[6] || 0, pop: x[7], cod: '759' + String(1234000 + i * 37) }));
   const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now() };
-  const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [] };
-  if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D));
+  const perfiles = [{ id: 'u0', n: (cfg.dueno || '').trim() || 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }];
+  if (conEjemplo) perfiles.push(
+    { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
+    { id: 'u2', n: 'Luis Pino', rol: 'cajero', pin: '2222', sucs: sucursales.length > 1 ? [sucursales[0]] : [], creado: Date.now() });
+  const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
+  if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D, perfiles));
   cambiar(() => base);
 }
 
-function ejemplo(neg, productos, D) {
+function ejemplo(neg, productos, D, perfiles) {
   const r = azar(20261027), E = neg.escala === 'empresa', ahora = Date.now(), hoy0 = inicioDia(ahora);
   const clientes = (E
     ? [['Constructora Andina', 'empresa', 2000], ['Hotel Miramar', 'empresa', 1500], ['Colegio San José', 'empresa', 1000], ['Carmen Díaz', 'persona', 0], ['María Pérez', 'persona', 0], ['Luis Gómez', 'persona', 0]]
@@ -118,7 +129,7 @@ function ejemplo(neg, productos, D) {
       const cli = fiado || r() < 0.15 ? clientes[ci].id : '';
       const m = fiado ? 'Fiado' : neg.pays[elegir(r, pesosPago)];
       items.forEach(it => { stock[it.pid] += it.q; });
-      ventas.push({ id: id(), n: n++, t, items, total, pagos: [{ m, v: total }], cli: fiado ? cli : cli, suc: neg.sucursales[elegir(r, pesosSuc)], fiado });
+      ventas.push({ id: id(), n: n++, t, items, total, pagos: [{ m, v: total }], cli, suc: neg.sucursales[elegir(r, pesosSuc)], fiado, por: perfiles[elegir(r, [2, 4, 5].slice(0, perfiles.length))].id });
     }
   }
   ventas.sort((a, b) => a.t - b.t); ventas.forEach((v, i) => { v.n = 1001 + i; });
@@ -147,20 +158,29 @@ function ejemplo(neg, productos, D) {
 export function vender({ items, pagos, cli, suc, fiado }) {
   const total = items.reduce((a, it) => a + it.q * it.p, 0);
   const n = (S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1;
-  const venta = { id: id(), n, t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado };
+  const venta = { id: id(), n, t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado, por: S.ajustes.perfil || '' };
   cambiar(s => ({
     ventas: s.ventas.concat([venta]),
     productos: s.productos.map(p => { const it = items.find(x => x.pid === p.id); return it && p.q != null ? Object.assign({}, p, { q: Math.max(0, p.q - it.q) }) : p; })
   }));
   return venta;
 }
-export function abonar(cli, v, m) { cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m }]) })); }
-export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0] }, g)]) })); }
+export function abonar(cli, v, m) { cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m, por: s.ajustes.perfil || '' }]) })); }
+export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '' }, g)]) })); }
 export function pagarGasto(gid) { cambiar(s => ({ gastos: s.gastos.map(g => g.id === gid ? Object.assign({}, g, { pagado: true, t: Date.now() }) : g) })); }
 export function guardarProducto(p) { cambiar(s => ({ productos: p.id && s.productos.some(x => x.id === p.id) ? s.productos.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.productos.concat([Object.assign({ id: 'p' + id(), cod: '' }, p)]) })); }
 export function reponer(pid, cuanto) { cambiar(s => ({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }) : p) })); }
 export function nuevoCliente(c) { const nuevo = Object.assign({ id: 'c' + id(), tipo: 'persona', limite: 0, tel: '' }, c); cambiar(s => ({ clientes: s.clientes.concat([nuevo]) })); return nuevo; }
 export function cerrarDia(contado, resumen) { cambiar(s => ({ cierres: s.cierres.concat([{ id: id(), t: Date.now(), dia: diaClave(Date.now()), contado, resumen }]) })); }
+// ---------- perfiles y permisos ----------
+export const perfilActual = () => (S.perfiles || []).find(p => p.id === S.ajustes.perfil && !p.inactivo) || null;
+export function entrar(pid) { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, { perfil: pid }) })); }
+export function salir() { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, { perfil: '' }) })); }
+export function guardarPerfil(p) {
+  cambiar(s => ({ perfiles: p.id && s.perfiles.some(x => x.id === p.id) ? s.perfiles.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.perfiles.concat([Object.assign({ id: 'u' + id(), pin: '', sucs: [], creado: Date.now() }, p)]) }));
+}
+export function cambiarPermiso(rolId, k, v) { cambiar(s => ({ roles: s.roles.map(r => r.id === rolId && !r.fijo ? Object.assign({}, r, { p: Object.assign({}, r.p, { [k]: v }) }) : r) })); }
+export function nuevoRol(n) { const r = { id: 'r' + id(), n, p: { vender: true } }; cambiar(s => ({ roles: s.roles.concat([r]) })); return r; }
 export function cambiarAjustes(a) { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, a) })); }
 export function cambiarNegocio(n) { cambiar(s => ({ negocio: Object.assign({}, s.negocio, n) })); }
 // Agregar o renombrar locales. Al renombrar, las ventas y gastos pasan al nombre nuevo.
@@ -190,7 +210,7 @@ const costo = v => v.items.reduce((a, it) => a + it.q * it.c, 0);
 export function resumen(desde, hasta, suc) {
   return m('re' + desde + hasta + suc, () => {
     const vs = ventasEntre(desde, hasta, suc);
-    const porPago = {}, porHora = new Array(24).fill(0), porSuc = {}, porProd = {};
+    const porPago = {}, porHora = new Array(24).fill(0), porSuc = {}, porProd = {}, porPersona = {};
     let total = 0, cost = 0, fiado = 0;
     vs.forEach(v => {
       total += v.total; cost += costo(v);
@@ -198,9 +218,10 @@ export function resumen(desde, hasta, suc) {
       v.pagos.forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; });
       porHora[new Date(v.t).getHours()] += v.total;
       porSuc[v.suc] = (porSuc[v.suc] || 0) + v.total;
+      porPersona[v.por || ''] = (porPersona[v.por || ''] || 0) + v.total;
       v.items.forEach(it => { const x = porProd[it.pid] || (porProd[it.pid] = { n: it.n, q: 0, v: 0, g: 0 }); x.q += it.q; x.v += it.q * it.p; x.g += it.q * (it.p - it.c); });
     });
-    return { n: vs.length, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, ticket: vs.length ? total / vs.length : 0 };
+    return { n: vs.length, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: vs.length ? total / vs.length : 0 };
   });
 }
 

@@ -8,7 +8,8 @@ import { Icono, LogoOrbe, iniciales, hora, fechaCorta } from '../ui.js';
 const DIA = 86400000;
 
 export function Hoy() {
-  const { S, P, T, D, E, tel, ir, abrir, suc, setSuc, enLinea } = useApp();
+  const { S, P, T, D, E, tel, ir, abrir, suc, setSuc, enLinea, puede } = useApp();
+  const verGan = puede('ganancias');
   const hoy0 = inicioDia(Date.now());
   const r = resumen(hoy0, hoy0 + DIA, suc), ayer = resumen(hoy0 - DIA, Date.now() - DIA, suc);
   const semana = serieDias(7, suc), mes = serieDias(30, suc);
@@ -25,9 +26,9 @@ export function Hoy() {
   const pendientes = [];
   if (deben.length) pendientes.push({ i: 'campana', t: 't-amb', txt: deben.length + (deben.length === 1 ? ' cliente te debe ' : ' clientes te deben ') + D.m(debenTot), sub: 'Mándales el recordatorio por WhatsApp', go: () => ir('clientes') });
   if (bajos.length) pendientes.push({ i: 'caja', t: 't-azu', txt: bajos.length + (bajos.length === 1 ? ' producto por debajo del mínimo' : ' productos por debajo del mínimo'), sub: bajos.slice(0, 2).map(p => p.n).join(', '), go: () => ir('inventario') });
-  if (pp.length) pendientes.push({ i: 'calendario', t: 't-ros', txt: pp[0].n + ': ' + D.m(pp[0].v), sub: venceTxt(pp[0].vence), go: () => ir(tel ? 'mas' : 'gastos') });
+  if (pp.length && puede('gastos')) pendientes.push({ i: 'calendario', t: 't-ros', txt: pp[0].n + ': ' + D.m(pp[0].v), sub: venceTxt(pp[0].vence), go: () => ir(tel ? 'mas' : 'gastos') });
   if (P.id === 'VE') pendientes.push({ i: 'sube', t: 't-vio', txt: 'Tasa BCV: Bs ' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(S.tasaVE || 875.68), sub: S.tasaVE ? 'Leída hoy de internet' : 'Sin internet: se usa la última guardada', go: null });
-  pendientes.push(cierre ? { i: 'check', t: 't-ver', txt: 'Día cerrado', sub: 'Cerraste a las ' + hora(cierre.t), go: null } : { i: 'candado', t: 't-ver', txt: 'Cierre del día', sub: 'Cuenta la caja cuando cierres', go: () => abrir('cierre') });
+  if (puede('cierre')) pendientes.push(cierre ? { i: 'check', t: 't-ver', txt: 'Día cerrado', sub: 'Cerraste a las ' + hora(cierre.t), go: null } : { i: 'candado', t: 't-ver', txt: 'Cierre del día', sub: 'Cuenta la caja cuando cierres', go: () => abrir('cierre') });
 
   const recientes = leer().ventas.filter(v => !suc || v.suc === suc).slice(-6).reverse();
 
@@ -68,11 +69,11 @@ export function Hoy() {
       <${Barras} datos=${horas} alto=${86} resaltar=${ahoraH - 7} hueco=${4} />
     </section>
     <div class="rejilla-3">
-      ${[['Ganancia', D.m(r.ganancia), 'ya sin el costo', 'var(--in)'], [T.inv ? 'Ventas' : 'Clientes', String(r.n), 'promedio ' + D.corto(r.ticket), 'var(--ink)'], ['Te deben', D.m(debenTot), deben.length + ' clientes', 'var(--amber)']].map((k, i) => html`
+      ${[verGan ? ['Ganancia', D.m(r.ganancia), 'ya sin el costo', 'var(--in)'] : ['Ticket', D.m(r.ticket), 'promedio por venta', 'var(--ink)'], [T.inv ? 'Ventas' : 'Clientes', String(r.n), 'promedio ' + D.corto(r.ticket), 'var(--ink)'], ['Te deben', D.m(debenTot), deben.length + ' clientes', 'var(--amber)']].map((k, i) => html`
         <div class="tarjeta cifra entra" style=${{ '--i': 2 + i }}><span class="sub" style="font-size:11px">${k[0]}</span><span class="v num corta" style=${{ color: k[3] }}>${k[1]}</span><span class="faint corta" style="font-size:11px">${k[2]}</span></div>`)}
     </div>
     <div class="rejilla-3">
-      ${[['carrito', T.vender, 't-vio', () => ir('vender')], ['dinero', 'Anotar gasto', 't-ros', () => abrir('gasto')], ['candado', cierre ? 'Día cerrado' : 'Cierre del día', 't-ver', () => cierre ? null : abrir('cierre')]].map((q, i) => html`
+      ${[['carrito', T.vender, 't-vio', () => ir('vender')], ['dinero', 'Anotar gasto', 't-ros', () => abrir('gasto')], ['candado', cierre ? 'Día cerrado' : 'Cierre del día', 't-ver', () => cierre ? null : abrir('cierre')]].filter((q, i) => [puede('vender'), puede('gastos'), puede('cierre')][i]).map((q, i) => html`
         <button type="button" class="tarjeta toca entra" style=${{ '--i': 5 + i, border: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 6px', color: 'var(--ink)', fontSize: '12px', fontWeight: 600 }} onClick=${q[3]}>
           <span class=${'ic ' + q[2]}><${Icono} n=${q[0]} t=${18} g=${2.2} /></span>${q[1]}</button>`)}
     </div>
@@ -91,7 +92,7 @@ export function Hoy() {
         <span class="crece" style="display:flex;flex-direction:column;gap:4px"><span class="sub">${T.vender === 'Cobrar' ? 'Cobrado hoy' : 'Ventas de hoy'}</span><${Monto} v=${r.total} f=${D.m} clase="v" /><span class="sub" style=${{ color: vs >= 0 ? 'var(--in)' : 'var(--out)' }}>${vs >= 0 ? '+' : ''}${vs} % vs ayer${D.dual ? ' · ' + D.s(r.total) : ''}</span></span>
         <${Anillo} p=${r.total / meta} tam=${62}>${Math.round(r.total / meta * 100)}%</${Anillo}>
       </div>
-      ${[['Ganancia de hoy', r.ganancia, 'ya sin el costo · ' + r.n + ' ventas', 'var(--in)'], ['Te deben', debenTot, deben.length + ' clientes', 'var(--amber)'], ['Por pagar', ppTot, pp.length ? pp.length + ' cuentas · ' + venceTxt(pp[0].vence).toLowerCase() : 'Nada pendiente', 'var(--out)']].map((k, i) => html`
+      ${[verGan ? ['Ganancia de hoy', r.ganancia, 'ya sin el costo · ' + r.n + ' ventas', 'var(--in)'] : ['Ticket promedio', r.ticket, r.n + ' ventas hoy', 'var(--ink)'], ['Te deben', debenTot, deben.length + ' clientes', 'var(--amber)'], !puede('gastos') ? ['Fiado hoy', r.fiado, 'anotado a clientes', 'var(--amber)'] : ['Por pagar', ppTot, pp.length ? pp.length + ' cuentas · ' + venceTxt(pp[0].vence).toLowerCase() : 'Nada pendiente', 'var(--out)']].map((k, i) => html`
         <div class="tarjeta cifra entra" style=${{ '--i': i + 1 }}><span class="sub">${k[0]}</span><${Monto} v=${k[1]} f=${D.m} clase="v" /><span class="sub faint">${k[2]}</span></div>`)}
     </div>
     <div class="dos-uno">

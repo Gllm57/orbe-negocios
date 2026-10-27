@@ -51,6 +51,16 @@ Además del tipo, al empezar se elige el **tamaño**. Se puede cambiar después 
 - **Seguridad:** PIN por cajero, Face ID o Windows Hello, y verificación en dos pasos obligatoria para administradores.
 - **Pasar los datos:** importar productos y clientes desde Excel.
 
+## 1a'. Perfiles y permisos dentro del negocio (ya en la muestra)
+
+- Al crear el negocio se crea el perfil del **dueño**, que siempre puede todo.
+- Las **cuentas principales** (el dueño y quien tenga el permiso «Crear perfiles y dar permisos», como un administrador) crean perfiles para el equipo: nombre, rol, PIN de 4 números y en qué locales trabaja.
+- Cada **rol** tiene permisos que se encienden y apagan: vender, fiar, clientes y abonos, ver ganancias y reportes, gastos, cierre del día, productos y precios, reponer, ajustes y equipo. Se pueden crear roles nuevos.
+- Un administrador no puede cambiar al dueño, a otros administradores ni el permiso de administrar el equipo.
+- Al abrir la app: «¿Quién está usando Orbe?» y el PIN en un teclado en pantalla. Cada venta, abono y gasto guarda quién lo hizo, y el recibo dice «Te atendió…».
+- Quien no tiene un permiso no ve el botón ni la sección.
+- En la Fase 3 los perfiles pasan a la nube (tabla `neg_miembros` y `neg_roles`) para que cada persona entre desde su propio teléfono.
+
 ## 1b. En el teléfono y en la computadora (propuesta, pendiente de aprobar la maqueta)
 
 La misma app sirve en las dos. En una pantalla ancha cambia la forma, no las funciones:

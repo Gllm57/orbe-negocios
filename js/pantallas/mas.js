@@ -1,14 +1,14 @@
 // Más (teléfono): gastos, cierre, reportes y ajustes. En la computadora es la pantalla de Ajustes.
 import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { cambiarAjustes, cambiarNegocio, exportar, resumen, gastosEntre, inicioDia } from '../datos.js';
+import { cambiarAjustes, cambiarNegocio, exportar, resumen, gastosEntre, inicioDia, salir } from '../datos.js';
 import { Monto } from '../graficos.js';
-import { Icono, Interruptor, Chips, avisar } from '../ui.js';
+import { Icono, Interruptor, Chips, avisar, iniciales, TONOS } from '../ui.js';
 import { BloqueGastos, inicioMes } from './gastos.js';
 import { descargar, ventasCSV } from './reportes.js';
 
 function Ajustes() {
-  const { S, P, T, abrir, tel } = useApp();
+  const { S, P, T, abrir, tel, puede, yo, rol, ir } = useApp();
   const n = S.negocio;
   const Tarjeta = (titulo, icono, hijos, i) => html`<section class="tarjeta entra" style=${{ '--i': i }}>
     <div class="fila" style="gap:10px;margin-bottom:6px"><span class="ic t-vio" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${icono} t=${16} g=${2.2} /></span><b style="font-size:15px">${titulo}</b></div>${hijos}</section>`;
@@ -34,11 +34,22 @@ function Ajustes() {
       </div>`, 5),
     Tarjeta('Empezar de nuevo', 'basura', html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Borra este negocio de este aparato para probar otro país o tipo. Antes se guarda una copia.</p><button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('borrar')}>Empezar de nuevo</button>`, 6)
   ];
-  return tel ? html`<div class="pila">${tarjetas}</div>` : html`<div class="tres">${tarjetas}</div>`;
+  // Tu perfil va primero; los ajustes del negocio solo con permiso. La apariencia es de cada quien.
+  const perfil = Tarjeta('Tu perfil', 'personas', html`
+    <div class="fila" style="gap:10px;padding:6px 0 10px"><span class=${'logo redondo ' + TONOS[S.perfiles.indexOf(yo) % 5]} style="width:40px;height:40px;font-size:14px">${iniciales(yo.n)}</span>
+      <span class="crece" style="display:flex;flex-direction:column"><b style="font-size:15px">${yo.n}</b><span class="sub">${rol ? rol.n : ''} · ${yo.pin ? 'con PIN' : 'sin PIN'}</span></span></div>
+    <div class="chips">
+      <button type="button" class="btn2 chico toca" onClick=${() => abrir('perfil', { pid: yo.id })}>Cambiar nombre o PIN</button>
+      <button type="button" class="btn2 chico acento toca" onClick=${() => salir()}>Cambiar de perfil</button>
+      ${puede('equipo') && tel && html`<button type="button" class="btn2 chico verde toca" onClick=${() => ir('equipo')}>Equipo y permisos</button>`}
+    </div>`, 0);
+  const apariencia = tarjetas[5];
+  const lista = [perfil].concat(puede('ajustes') ? tarjetas : [apariencia]);
+  return tel ? html`<div class="pila">${lista}</div>` : html`<div class="tres">${lista}</div>`;
 }
 
 export function Mas() {
-  const { D, tel, ir, abrir } = useApp();
+  const { D, tel, ir, abrir, puede } = useApp();
   if (!tel) return html`<${Ajustes} />`;
   const desde = inicioMes(), r = resumen(desde, Date.now() + 1, '');
   const gastos = gastosEntre(desde, Date.now() + 1).reduce((a, g) => a + g.v, 0);
@@ -47,16 +58,16 @@ export function Mas() {
   const mes = new Date().toLocaleDateString('es', { month: 'long' });
   return html`
     <h1 class="titulo entra">Más</h1>
-    <button type="button" class="tarjeta toca entra" style="border:0;text-align:left;color:var(--ink);background:linear-gradient(160deg, color-mix(in srgb, var(--c2) 22%, var(--surface)), var(--surface));display:flex;flex-direction:column;gap:10px" onClick=${() => ir('reportes')}>
+    ${puede('ganancias') && html`<button type="button" class="tarjeta toca entra" style="border:0;text-align:left;color:var(--ink);background:linear-gradient(160deg, color-mix(in srgb, var(--c2) 22%, var(--surface)), var(--surface));display:flex;flex-direction:column;gap:10px" onClick=${() => ir('reportes')}>
       <span class="fila"><span class="sub crece">Ganancia real de ${mes}</span><span class="pildora t-vio">Ver reportes <${Icono} n="sig" t=${12} g=${2.6} /></span></span>
       <${Monto} v=${real} f=${D.m} clase="titulo" />
       <span class="rejilla-3 num" style="gap:8px">${[['Ventas', r.total], ['Costo', -r.costo], ['Gastos', -gastos]].map(k => html`<span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="sub" style="font-size:11px">${k[0]}</span><b class="corta" style="font-size:13px">${D.m(k[1])}</b></span>`)}</span>
-    </button>
+    </button>`}
     <div class="rejilla-2">
-      <button type="button" class="btn2 rojo toca" style="min-height:52px" onClick=${() => abrir('gasto')}>Anotar gasto</button>
-      <button type="button" class="btn2 acento toca" style="min-height:52px" onClick=${() => abrir('cierre')}>Cierre del día</button>
+      ${puede('gastos') && html`<button type="button" class="btn2 rojo toca" style="min-height:52px" onClick=${() => abrir('gasto')}>Anotar gasto</button>`}
+      ${puede('cierre') && html`<button type="button" class="btn2 acento toca" style="min-height:52px" onClick=${() => abrir('cierre')}>Cierre del día</button>`}
     </div>
-    ${b.PorPagar}${b.Mes}${b.Recientes}
+    ${puede('gastos') && html`${b.PorPagar}${b.Mes}${b.Recientes}`}
     <h2 class="sub" style="font-size:13px;margin:6px 4px -4px">Ajustes</h2>
     <${Ajustes} />`;
 }

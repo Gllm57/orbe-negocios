@@ -11,7 +11,7 @@ const TONO = { vio: 't-vio', amb: 't-amb', ver: 't-ver', ros: 't-ros', azu: 't-a
 
 export function Inicio({ tel }) {
   const [paso, setPaso] = useState(-1);
-  const [c, setC] = useState({ pais: '', tipo: '', escala: 'negocio', nombre: '', razon: '', fiscal: '', sucN: 1, sucNombres: [], pays: null, taxOn: null, taxIncl: true });
+  const [c, setC] = useState({ pais: '', tipo: '', escala: 'negocio', nombre: '', razon: '', fiscal: '', sucN: 1, sucNombres: [], dueno: '', pays: null, taxOn: null, taxIncl: true });
   const [ejemplo, setEjemplo] = useState(true);
   const P = pais(c.pais || 'VE');
   const pon = o => setC(x => Object.assign({}, x, o));
@@ -69,6 +69,7 @@ export function Inicio({ tel }) {
       <span class="pila" style="gap:8px;padding-left:4px">${z[5].map(f => html`<span class="fila" style="gap:10px;font-size:13px;font-weight:500"><${Icono} n="check" t=${14} g=${3} c="var(--in)" />${f}</span>`)}</span>
     </button>`; })}</div>`;
   if (paso === 'datos') cuerpo = html`<div class="pila" style="gap:18px">
+    <label class="campo"><span>Tu nombre (serás el dueño)</span><input type="text" value=${c.dueno} placeholder="Ej.: Ana Ruiz" onInput=${e => pon({ dueno: e.target.value })} autocomplete="name" /></label>
     <label class="campo"><span>${E ? 'Nombre comercial' : 'Nombre del negocio'}</span><input type="text" value=${c.nombre} placeholder=${nombreSugerido(c.tipo, c.escala)} onInput=${e => pon({ nombre: e.target.value })} autocomplete="organization" /></label>
     ${E && html`<div class="pila entra" style="gap:18px">
       <label class="campo"><span>Razón social</span><input type="text" value=${c.razon} placeholder=${(c.nombre || nombreSugerido(c.tipo, c.escala)) + ' ' + (P.suf || 'S.A.')} onInput=${e => pon({ razon: e.target.value })} /></label>
@@ -90,10 +91,10 @@ export function Inicio({ tel }) {
   if (paso === 'listo') cuerpo = html`<div class="pila">
     <span style="width:76px;height:76px;border-radius:50%;background:var(--in);display:grid;place-items:center;animation:pop .55s var(--spring) both"><${Icono} n="check" t=${36} g=${2.8} c="#0b0a14" /></span>
     <div class="tarjeta"><div class="tarjeta-tit"><span class="sub">Encendido para ti</span></div><div class="pila">
-      ${[['carrito', 'Vender con ' + pays.slice(0, 2).join(', ') + '…'], ['personas', 'Clientes y lo que te deben'], [(TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'caja' : 'lista', (TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'Inventario y stock mínimo' : 'Servicios con precio y duración'], ['dinero', 'Gastos y cuentas por pagar'], ['grafico', 'Reportes con gráficos'], ['candado', 'Cierre del día'], ['guardar', 'Copias y modo sin conexión']].map((m, k) => html`
+      ${[['carrito', 'Vender con ' + pays.slice(0, 2).join(', ') + '…'], ['personas', 'Clientes y lo que te deben'], [(TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'caja' : 'lista', (TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'Inventario y stock mínimo' : 'Servicios con precio y duración'], ['dinero', 'Gastos y cuentas por pagar'], ['grafico', 'Reportes con gráficos'], ['candado', 'Cierre del día'], ['escudo', 'Perfiles para tu equipo, con permisos'], ['guardar', 'Copias y modo sin conexión']].map((m, k) => html`
         <div class="fila entra" style=${{ '--i': 4 + k * 2, gap: '12px' }}><span class="ic t-ver" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${m[0]} t=${16} g=${2.2} /></span><b style="font-size:14px;font-weight:600">${m[1]}</b></div>`)}
     </div></div>
-    <div class="tarjeta" style="padding:4px 16px"><${Interruptor} on=${ejemplo} onCambio=${setEjemplo} titulo="Llenar con un mes de ventas de ejemplo" sub="Para probar los gráficos. Luego lo borras en Ajustes." /></div>
+    <div class="tarjeta" style="padding:4px 16px"><${Interruptor} on=${ejemplo} onCambio=${setEjemplo} titulo="Llenar con un mes de ventas de ejemplo" sub="Para probar. Trae dos empleados de prueba: Carla (encargada, PIN 1111) y Luis (cajero, PIN 2222)." /></div>
   </div>`;
 
   return marco(html`

@@ -6,7 +6,8 @@ import { BarrasH, Monto, color } from '../graficos.js';
 import { Icono, Chips, iniciales, TONOS, hace } from '../ui.js';
 
 export function Clientes() {
-  const { S, D, tel, abrir } = useApp();
+  const { S, D, tel, abrir, puede } = useApp();
+  const pc = puede('clientes');
   const [filtro, setFiltro] = useState('Deben');
   const todos = deudores();
   const deben = todos.filter(c => c.deuda > 0), tot = deben.reduce((a, c) => a + c.deuda, 0);
@@ -30,12 +31,12 @@ export function Clientes() {
     </button>
     ${c.deuda > 0 && html`<div class="rejilla-2">
       <button type="button" class="btn2 verde toca" onClick=${() => abrir('recordar', { cid: c.id })}>Recordar por WhatsApp</button>
-      <button type="button" class="btn2 toca" onClick=${() => abrir('abono', { cid: c.id })}>Anotar abono</button>
+      ${pc && html`<button type="button" class="btn2 toca" onClick=${() => abrir('abono', { cid: c.id })}>Anotar abono</button>`}
     </div>`}
   </div>`;
 
   if (tel) return html`
-    <div class="fila entra"><h1 class="titulo crece">Clientes</h1><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('nuevoCliente')}>+ Cliente</button></div>
+    <div class="fila entra"><h1 class="titulo crece">Clientes</h1>${pc && html`<button type="button" class="btn2 chico acento toca" onClick=${() => abrir('nuevoCliente')}>+ Cliente</button>`}</div>
     ${Resumen}
     <${Chips} opciones=${opciones} valor=${filtro} onCambio=${setFiltro} chico />
     ${lista.length ? lista.map(Fila) : html`<p class="vacio">${filtro === 'Deben' ? 'Nadie te debe. Así da gusto.' : 'Todavía no tienes clientes.'}</p>`}`;
@@ -43,7 +44,7 @@ export function Clientes() {
   return html`
     <div class="dos-uno">
       <div class="pila">
-        <div class="fila"><${Chips} opciones=${opciones} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span><button type="button" class="btn2 lleno toca" onClick=${() => abrir('nuevoCliente')}>+ Cliente</button></div>
+        <div class="fila"><${Chips} opciones=${opciones} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pc && html`<button type="button" class="btn2 lleno toca" onClick=${() => abrir('nuevoCliente')}>+ Cliente</button>`}</div>
         <div class="tabla-caja entra"><table class="tabla">
           <thead><tr><th>Cliente</th><th>Teléfono</th>${S.negocio.escala === 'empresa' ? html`<th>Tipo</th>` : null}<th class="der">Debe</th><th>Desde</th><th>Compras</th><th></th></tr></thead>
           <tbody>${lista.map((c, i) => html`<tr key=${c.id} style=${{ animationDelay: i * 25 + 'ms' }}>
@@ -53,7 +54,7 @@ export function Clientes() {
             <td class=${'der num ' + (c.deuda > 0 ? (viejo(c) ? 'out' : 'amber') : 'faint')}><b>${D.m(c.deuda)}</b></td>
             <td>${c.deuda > 0 ? html`<span class=${'pildora ' + (viejo(c) ? 't-ros' : 't-amb')}>${hace(c.desde)}</span>` : html`<span class="pildora t-ver">Al día</span>`}</td>
             <td class="muted num">${c.compras}</td>
-            <td class="der">${c.deuda > 0 && html`<span class="fila" style="gap:6px;justify-content:flex-end"><button type="button" class="btn2 chico verde toca" onClick=${() => abrir('recordar', { cid: c.id })}>Recordar</button><button type="button" class="btn2 chico toca" onClick=${() => abrir('abono', { cid: c.id })}>Abono</button></span>`}</td>
+            <td class="der">${c.deuda > 0 && html`<span class="fila" style="gap:6px;justify-content:flex-end"><button type="button" class="btn2 chico verde toca" onClick=${() => abrir('recordar', { cid: c.id })}>Recordar</button>${pc && html`<button type="button" class="btn2 chico toca" onClick=${() => abrir('abono', { cid: c.id })}>Abono</button>`}</span>`}</td>
           </tr>`)}</tbody>
         </table>${lista.length ? null : html`<p class="vacio">Nada por aquí con ese filtro.</p>`}</div>
       </div>

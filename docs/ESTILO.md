@@ -21,7 +21,7 @@ Se definen como variables en `:root` y cambian solas entre modo claro y oscuro: 
 
 - Botón principal: morado lleno (`#6a5cf2` en las maquetas, `--accent` en la app).
 - Ámbar `#f0a020` para avisos y "por cobrar"; amarillo Binance `#f0b90b` solo para cosas de Binance.
-- Logo: tres anillos (morado `#8f84ff`, verde `#3ddc9f`, ámbar `#f0a020`) sobre `#0b0a14`.
+- Logo de Orbe Negocios: tres círculos que se cruzan (morado `#8f84ff`, verde `#3ddc9f`, ámbar `#f0a020`), grandes dentro de un cuadro redondeado oscuro. Orbe personal usa los anillos concéntricos; Orbe Negocios usa este.
 
 ## 2. Letra
 
