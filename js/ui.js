@@ -39,6 +39,15 @@ export const ICONOS = {
   descarga: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3',
   alerta: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
   basura: 'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+  billete: 'M2 6h20v12H2zM12 15a3 3 0 100-6 3 3 0 000 6zM6 9v.01M18 15v.01',
+  movil: 'M7 2h10a1 1 0 011 1v18a1 1 0 01-1 1H7a1 1 0 01-1-1V3a1 1 0 011-1zM11 18h2',
+  transfer: 'M17 3l4 4-4 4M21 7H9M7 21l-4-4 4-4M3 17h12',
+  cripto: 'M12 22a10 10 0 100-20 10 10 0 000 20zM8 8h8M12 8v9',
+  reloj: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 6v6l4 2',
+  casa: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5',
+  rayo: 'M13 3L5 13h6l-1 8 8-10h-6z',
+  bus: 'M5 4h14v13H5zM5 11h14M8 20v-3M16 20v-3',
+  etiqueta: 'M20 12l-8 8-9-9V4h7zM7.5 7.5h.01',
   ajustes: 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z'
 };
 
@@ -46,8 +55,15 @@ export function Icono({ n, t = 20, g = 2, c = 'currentColor', estilo }) {
   return html`<svg width=${t} height=${t} viewBox="0 0 24 24" fill="none" stroke=${c} stroke-width=${g} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style=${estilo}><path d=${ICONOS[n] || ''}></path></svg>`;
 }
 
-export function LogoOrbe({ t = 42 }) {
-  return html`<svg width=${t} height=${t} viewBox="0 0 92 92" aria-hidden="true"><rect width="92" height="92" rx="26" fill="#16142a"></rect><circle cx="38" cy="40" r="19" fill="none" stroke="#8f84ff" stroke-width="5"></circle><circle cx="54" cy="40" r="19" fill="none" stroke="#3ddc9f" stroke-width="5"></circle><circle cx="46" cy="54" r="19" fill="none" stroke="#f0a020" stroke-width="5"></circle></svg>`;
+export function LogoOrbe({ t = 42, fondo = true }) {
+  return html`<svg width=${t} height=${t} viewBox="0 0 100 100" aria-hidden="true" class="logo-orbe">
+    ${fondo && html`<rect width="100" height="100" rx="28" fill="#0b0a14"></rect>`}
+    <g transform=${fondo ? 'translate(14 14) scale(.72)' : ''}>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#8f84ff" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="74 100" transform="rotate(-90 50 50)"></circle>
+      <circle cx="50" cy="50" r="25" fill="none" stroke="#3ddc9f" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="56 100" transform="rotate(30 50 50)"></circle>
+      <circle cx="50" cy="50" r="10" fill="none" stroke="#f0a020" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="40 100" transform="rotate(150 50 50)"></circle>
+    </g>
+  </svg>`;
 }
 
 // ---------- avisos ----------
@@ -114,6 +130,15 @@ export function Hoja({ titulo, onCerrar, contenido }) {
       ${pie && html`<div class="hoja-pie">${pie}</div>`}
     </div>`;
 }
+
+// Símbolo para una forma de pago, una categoría de gasto o una sucursal.
+const SIMBOLOS = [
+  [/Efectivo/i, 'billete'], [/Tarjeta/i, 'tarjeta'], [/USDT|Binance|cripto/i, 'cripto'],
+  [/Transfer|SPEI|Zelle|Interac|Pix|De Una/i, 'transfer'], [/Pago Móvil|Nequi|Daviplata|Yape|Plin|SINPE|Yappy|Bizum|MB Way|CoDi|QR|Cash App|Venmo|Satispay|Mercado Pago/i, 'movil'],
+  [/Fiado|Por cobrar|Crédito/i, 'reloj'], [/Mercancía|Compras/i, 'caja'], [/Alquiler/i, 'casa'], [/Servicios/i, 'rayo'], [/Sueldo/i, 'personas'], [/Transporte/i, 'bus'],
+  [/Centro|Norte|Sur|Este|Oeste|Principal|Sucursal|Local/i, 'edificio'], [/Otros?$/i, 'mas']
+];
+export const simbolo = n => { const s = SIMBOLOS.find(x => x[0].test(n || '')); return s ? s[1] : 'etiqueta'; };
 
 export const iniciales = n => (n || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'ON';
 export const TONOS = ['t-vio', 't-ver', 't-amb', 't-azu', 't-ros'];

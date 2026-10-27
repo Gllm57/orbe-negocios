@@ -61,7 +61,7 @@ Se definen como variables en `:root` y cambian solas entre modo claro y oscuro: 
 - **Curva de Orbe:** `cubic-bezier(0.32, 0.72, 0, 1)` (`--spring`), con duraciones de 0,3 a 0,6 s. El rebote (`--bounce`) solo para detalles.
 - **Al aparecer:** subir 8 px y aclararse (`fadeUp`). Las listas aparecen en cascada, con 25 ms entre filas.
 - **Hojas:** suben desde abajo y la app de atrás se achica un poco.
-- **Gráficos:** se dibujan en la pantalla y los anillos se llenan.
+- **Gráficos:** se dibujan en la pantalla y los anillos se llenan. Los repartos (formas de pago, gastos, sucursales, productos) usan **orbes**: anillos concéntricos como en `ringsSvg` de Orbe personal, con pista al 18 % y puntas redondeadas, más una lista con el símbolo de cada parte en un círculo de su color.
 - **Al tocar:** el elemento se encoge un poco (`scale(0.96)`).
 - **Al elegir algo:** cambia el borde o el fondo con una transición. Nunca se redibuja la lista entera.
 - Respetar `prefers-reduced-motion`.

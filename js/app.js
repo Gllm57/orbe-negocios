@@ -67,7 +67,8 @@ function App() {
   if (!S.negocio) return html`<${Inicio} tel=${tel} /><${Avisos} />`;
 
   const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasaVE);
-  const E = S.negocio.escala === 'empresa' && S.negocio.sucursales.length > 1;
+  // Varios locales: aparece el selector de sucursal y los gráficos por sucursal (sea negocio o empresa).
+  const E = S.negocio.sucursales.length > 1;
   const valida = SECCIONES[sec] && !(sec === 'gastos' && tel) ? sec : 'hoy';
   const ir = s => { if (location.hash !== '#' + s) location.hash = s; else setSec(s); const p = document.querySelector('.principal') || document.querySelector('.app-fondo'); if (p) p.scrollTop = 0; };
   const abrir = (t, datos) => setHoja({ t, datos: datos || {}, n: Date.now() });
@@ -101,7 +102,7 @@ function App() {
         <div class="fila" style="gap:10px;padding:0 6px"><${LogoOrbe} t=${30} /><b style="font-size:16px;letter-spacing:-0.02em">Orbe Negocios</b></div>
         <div class="tarjeta fila" style="padding:12px;gap:10px">
           <span class="logo marca">${iniciales(S.negocio.nombre)}</span>
-          <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px">${S.negocio.nombre}</b><span class="sub corta">${P.f} ${E ? 'Empresa · ' + S.negocio.sucursales.length + ' sucursales' : T.n}</span></span>
+          <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px">${S.negocio.nombre}</b><span class="sub corta">${P.f} ${(S.negocio.escala === 'empresa' ? 'Empresa' : T.n) + (E ? ' · ' + S.negocio.sucursales.length + ' locales' : '')}</span></span>
         </div>
         <nav style="display:flex;flex-direction:column;gap:10px">
           ${grupos.map(g => html`<div class="grupo"><small>${g[0]}</small>

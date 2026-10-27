@@ -2,7 +2,7 @@
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { bajoMinimo, resumen, inicioDia } from '../datos.js';
-import { BarrasH, Dona, Leyenda, color } from '../graficos.js';
+import { BarrasH, Reparto, color } from '../graficos.js';
 import { Chips, Icono, TONOS } from '../ui.js';
 
 export function Inventario() {
@@ -31,14 +31,14 @@ export function Inventario() {
   const margen = conStock.length ? conStock.reduce((a, p) => a + (p.p > 0 ? (p.p - p.c) / p.p : 0), 0) / conStock.length : 0;
   const lista = (filtro === 'Por reponer' ? bajos : conStock).slice().sort((a, b) => (a.q < a.min ? 0 : 1) - (b.q < b.min ? 0 : 1));
   const estado = p => p.q === 0 ? ['Agotado', 't-ros', 'var(--out)'] : p.q < p.min ? ['Bajo', 't-amb', 'var(--amber)'] : ['Bien', 't-ver', 'var(--in)'];
-  const segs = top.slice(0, 4).map((t, i) => ({ n: t.n, v: t.v, c: color(i) })).concat(top.length > 4 ? [{ n: 'Otros', v: top.slice(4).reduce((a, t) => a + t.v, 0), c: 'var(--faint)' }] : []);
+  const segs = top.slice(0, 4).map((t, i) => ({ n: t.n, v: t.v, c: color(i), i: 'etiqueta' })).concat(top.length > 4 ? [{ n: 'Otros', v: top.slice(4).reduce((a, t) => a + t.v, 0), c: 'var(--faint)', i: 'mas' }] : []);
 
   const Cifras = html`<div class="rejilla-2">
     <div class="tarjeta cifra entra"><span class="sub">Valor en estantes</span><span class="v num" style="font-size:20px">${D.m(valor)}</span><span class="sub faint">a precio de costo</span></div>
     <div class="tarjeta cifra entra" style="--i:1"><span class="sub">Ganas en promedio</span><span class="v num in" style="font-size:20px">${Math.round(margen * 100)} %</span><span class="sub faint">por cada venta</span></div>
   </div>`;
   const Top = html`<section class="tarjeta entra" style="--i:2"><div class="tarjeta-tit">Lo que más vendes<span class="sub">30 días</span></div>
-    <div class=${tel ? 'pila' : 'pila'} style="align-items:center;gap:16px"><${Dona} segs=${segs} tam=${150} grosor=${18} centro=${D.corto(mes.total)} sub="30 días" /><div style="width:100%"><${Leyenda} segs=${segs} f=${D.m} /></div></div></section>`;
+    <${Reparto} segs=${segs} f=${D.m} titulo="Vendido en 30 días" /></section>`;
 
   const Tarjetas = html`<div class="pila">${lista.map((p, i) => { const e = estado(p); return html`
     <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => abrir('producto', { pid: p.id })}>

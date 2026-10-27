@@ -76,7 +76,9 @@ function elegir(r, pesos) { const tot = pesos.reduce((a, b) => a + b, 0); let x 
 // ---------- crear el negocio ----------
 export function crearNegocio(cfg, conEjemplo) {
   const P = pais(cfg.pais), T = tipo(cfg.tipo), D = dinero(P), E = cfg.escala === 'empresa';
-  const sucursales = E ? ['Centro', 'Norte', 'Este'].slice(0, Math.max(1, Math.min(3, cfg.sucN || 3))) : ['Principal'];
+  // Si tiene un solo local no se habla de sucursales en ninguna parte de la app.
+  const nSuc = Math.max(1, Math.min(5, cfg.sucN || 1)), NOM = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur'];
+  const sucursales = nSuc === 1 ? ['Principal'] : Array.from({ length: nSuc }, (_, i) => ((cfg.sucNombres || [])[i] || '').trim() || NOM[i]);
   const productos = CATALOGO[T.id].map((x, i) => ({ id: 'p' + i, ab: x[0], n: x[1], p: D.precio(x[2]), c: D.precio(x[3]), q: x[4] < 0 ? null : Math.round(x[4] * (E ? 3 : 1)), min: Math.round(x[5] * (E ? 3 : 1)), dur: x[6] || 0, pop: x[7], cod: '759' + String(1234000 + i * 37) }));
   const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now() };
   const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [] };
@@ -93,7 +95,7 @@ function ejemplo(neg, productos, D) {
   const pesosPago = neg.pays.map((_, i) => [5, 3, 2, 1.2, 0.8, 0.6][i] || 0.5);
   const pesosHora = [0, 0, 0, 0, 0, 0, 0, 1, 3, 5, 6, 8, 9, 7, 5, 4, 5, 7, 8, 6, 3, 1, 0, 0];
   const pesosSuc = neg.sucursales.map((_, i) => 1 / (i + 1.4));
-  const porDia = VENTAS_DIA[neg.tipo] * (E ? 2.5 : 1);
+  const porDia = VENTAS_DIA[neg.tipo] * (E ? 2.5 : 1) * (neg.sucursales.length > 1 && !E ? 1.6 : 1);
   const ventas = []; const stock = {}; productos.forEach(p => { stock[p.id] = 0; });
   let n = 1000;
   const horaAhora = new Date(ahora).getHours();
@@ -161,6 +163,15 @@ export function nuevoCliente(c) { const nuevo = Object.assign({ id: 'c' + id(), 
 export function cerrarDia(contado, resumen) { cambiar(s => ({ cierres: s.cierres.concat([{ id: id(), t: Date.now(), dia: diaClave(Date.now()), contado, resumen }]) })); }
 export function cambiarAjustes(a) { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, a) })); }
 export function cambiarNegocio(n) { cambiar(s => ({ negocio: Object.assign({}, s.negocio, n) })); }
+// Agregar o renombrar locales. Al renombrar, las ventas y gastos pasan al nombre nuevo.
+export function guardarSucursales(nombres, renombres) {
+  const ren = renombres || {};
+  cambiar(s => ({
+    negocio: Object.assign({}, s.negocio, { sucursales: nombres }),
+    ventas: Object.keys(ren).length ? s.ventas.map(v => ren[v.suc] ? Object.assign({}, v, { suc: ren[v.suc] }) : v) : s.ventas,
+    gastos: Object.keys(ren).length ? s.gastos.map(g => ren[g.suc] ? Object.assign({}, g, { suc: ren[g.suc] }) : g) : s.gastos
+  }));
+}
 export function guardarTasa(v) { cambiar(() => ({ tasaVE: v, tasaFecha: diaClave(Date.now()) })); }
 export function empezarDeNuevo() {
   try { localStorage.setItem(CLAVE + '-copia-antes-de-borrar', JSON.stringify(S)); } catch (e) { /* sin espacio */ }

@@ -1,5 +1,6 @@
 // Gráficos de Orbe: barras que crecen, líneas que se dibujan, donas y anillos que se llenan.
 import { html, useState, useEffect, useRef, useMemo } from './lib/preact-htm.js';
+import { Icono, simbolo } from './ui.js';
 
 const COLORES = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)'];
 export const color = i => COLORES[i % COLORES.length];
@@ -90,37 +91,51 @@ export function Linea({ datos, alto = 200, c = 'var(--c1)', etiquetas = 6, id = 
   </div>`;
 }
 
-// Dona por partes. segs: [{ n, v, c }]
-export function Dona({ segs, tam = 150, grosor = 18, centro, sub }) {
-  const [listo, setListo] = useState(false);
-  useEffect(() => { const r = requestAnimationFrame(() => setListo(true)); return () => cancelAnimationFrame(r); }, []);
-  const rr = (tam - grosor) / 2, circ = 2 * Math.PI * rr, tot = segs.reduce((a, s) => a + s.v, 0) || 1;
-  let acum = 0;
-  return html`<svg class="gr-dona" width=${tam} height=${tam} viewBox=${'0 0 ' + tam + ' ' + tam} role="img" aria-label=${segs.map(s => s.n + ' ' + Math.round(s.v / tot * 100) + ' %').join(', ')}>
-    <circle cx=${tam / 2} cy=${tam / 2} r=${rr} fill="none" stroke="var(--fill)" stroke-width=${grosor}></circle>
-    ${segs.map((s, i) => {
-      const largo = Math.max(0, s.v / tot * circ - (segs.length > 1 ? 3 : 0));
-      const off = -acum; acum += s.v / tot * circ;
-      return html`<circle key=${s.n} class="seg" cx=${tam / 2} cy=${tam / 2} r=${rr} stroke=${s.c} stroke-width=${grosor} stroke-linecap="butt"
-        stroke-dasharray=${(listo ? largo : 0) + ' ' + circ} stroke-dashoffset=${listo ? off : 0} transform=${'rotate(-90 ' + tam / 2 + ' ' + tam / 2 + ')'} style=${{ transitionDelay: (i * 80) + 'ms' }}></circle>`;
-    })}
-    ${centro && html`<text x="50%" y=${sub ? '47%' : '53%'} text-anchor="middle" class="centro num" fill="var(--ink)" font-size=${tam / 7.5}>${centro}</text>`}
-    ${sub && html`<text x="50%" y="62%" text-anchor="middle" fill="var(--muted)" font-size="11">${sub}</text>`}
-  </svg>`;
+// Orbes: anillos concéntricos, como en Orbe personal (ringsSvg). items: [{ p (0 a 1), c }], el primero va afuera.
+export function Orbes({ items, tam = 124, grosor = 11, hueco = 4, children }) {
+  const c = tam / 2;
+  return html`<span class="orbes" style=${{ width: tam + 'px', height: tam + 'px' }}>
+    <svg class="rings" width=${tam} height=${tam} viewBox=${'0 0 ' + tam + ' ' + tam} aria-hidden="true">
+      ${items.map((it, k) => {
+        const r = c - grosor / 2 - k * (grosor + hueco);
+        if (r < grosor) return null;
+        const pr = Math.max(0, Math.min(1, it.p || 0));
+        return html`<g key=${k + '-' + it.c}>
+          <circle cx=${c} cy=${c} r=${r.toFixed(2)} fill="none" style=${{ stroke: it.c, strokeOpacity: 0.18, strokeWidth: grosor }}></circle>
+          ${pr > 0.002 && html`<circle class="rg" cx=${c} cy=${c} r=${r.toFixed(2)} fill="none" stroke-linecap="round" pathLength=${(1 / pr).toFixed(4)} stroke-dasharray="1 1000" transform=${'rotate(-90 ' + c + ' ' + c + ')'} style=${{ stroke: it.c, strokeWidth: grosor, animationDelay: (k * 0.08).toFixed(2) + 's' }}></circle>`}
+        </g>`;
+      })}
+    </svg>
+    ${children ? html`<span class="orbes-centro num">${children}</span>` : null}
+  </span>`;
 }
 
-// Anillo de progreso (por ejemplo, la meta del día).
-export function Anillo({ p, tam = 64, grosor = 7, c = 'var(--c2)', children }) {
-  const [listo, setListo] = useState(false);
-  useEffect(() => { const r = requestAnimationFrame(() => setListo(true)); return () => cancelAnimationFrame(r); }, []);
-  const rr = (tam - grosor) / 2, circ = 2 * Math.PI * rr, k = Math.max(0, Math.min(1, p));
-  return html`<span style=${{ position: 'relative', width: tam + 'px', height: tam + 'px', flex: 'none', display: 'grid', placeItems: 'center' }}>
-    <svg width=${tam} height=${tam} style="position:absolute;inset:0" aria-hidden="true">
-      <circle cx=${tam / 2} cy=${tam / 2} r=${rr} fill="none" stroke="var(--fill)" stroke-width=${grosor}></circle>
-      <circle cx=${tam / 2} cy=${tam / 2} r=${rr} fill="none" stroke=${c} stroke-width=${grosor} stroke-linecap="round" stroke-dasharray=${circ} stroke-dashoffset=${listo ? circ * (1 - k) : circ} transform=${'rotate(-90 ' + tam / 2 + ' ' + tam / 2 + ')'} style="transition: stroke-dashoffset 1.1s var(--spring)"></circle>
-    </svg>
-    <span style="position:relative;font-size:12px;font-weight:700" class="num">${children}</span>
-  </span>`;
+// Un solo orbe con su porcentaje en el centro (por ejemplo, la meta del día).
+export function Anillo({ p, tam = 64, grosor = 7, c = 'var(--in)', children }) {
+  return html`<${Orbes} items=${[{ p, c }]} tam=${tam} grosor=${grosor} hueco=${0}>${children}</${Orbes}>`;
+}
+
+// Reparto con orbes y lista con símbolos, como «Ingresos y gastos del mes» en Orbe personal.
+// segs: [{ n, v, c, i? (símbolo), d? (cambio en %), bueno? }]
+export function Reparto({ segs, f, total, titulo = 'Total', tam = 124, grosor = 11, hueco = 4, max = 4 }) {
+  const tot = total ?? segs.reduce((a, s) => a + s.v, 0);
+  const orden = segs.slice().sort((a, b) => b.v - a.v);
+  const pct = v => { const q = tot ? v / tot * 100 : 0; return (q > 0 && q < 1 ? '<1' : Math.round(q)) + ' %'; };
+  return html`<div class="reparto">
+    <div class="fila" style="gap:16px">
+      <${Orbes} items=${orden.slice(0, max).map(s => ({ p: tot ? s.v / tot : 0, c: s.c }))} tam=${tam} grosor=${grosor} hueco=${hueco} />
+      <span class="crece" style="display:flex;flex-direction:column;gap:4px">
+        <span class="sub">${titulo}</span><b class="num" style="font-size:22px;letter-spacing:-0.02em">${f(tot)}</b>
+      </span>
+    </div>
+    <ul class="lista-orbe">${orden.map((s, k) => html`<li key=${s.n} class="entra" style=${{ '--i': k, '--c': s.c }}>
+      <span class="simbolo"><${Icono} n=${s.i || simbolo(s.n)} t=${16} g=${2} /></span>
+      <span class="crece corta"><b>${s.n}</b>${s.d != null && isFinite(s.d) ? html`<span class=${'delta ' + (s.bueno ? 'g' : 'b')}>${s.d > 0 ? '▲' : s.d < 0 ? '▼' : '='} ${Math.abs(Math.round(s.d))}%</span>` : null}</span>
+      <span class="faint num pct">${pct(s.v)}</span>
+      <b class="num">${f(s.v)}</b>
+      <span class="pista" aria-hidden="true"><i style=${{ width: Math.max(0.5, tot ? s.v / tot * 100 : 0).toFixed(2) + '%' }}></i></span>
+    </li>`)}</ul>
+  </div>`;
 }
 
 // Barras horizontales con nombre y valor. datos: [{ n, v, txt, c, sub }]
@@ -133,10 +148,4 @@ export function BarrasH({ datos }) {
       ${d.sub && html`<small class="faint" style="font-size:12px">${d.sub}</small>`}
     </div>`)}
   </div>`;
-}
-
-// Leyenda con color, nombre, valor y porcentaje.
-export function Leyenda({ segs, f }) {
-  const tot = segs.reduce((a, s) => a + s.v, 0) || 1;
-  return html`<div class="leyenda">${segs.map(s => html`<div class="l" key=${s.n}><i style=${{ background: s.c }}></i><span class="crece corta">${s.n}</span><b class="num">${f ? f(s.v) : s.v}</b><span class="faint num" style="width:38px;text-align:right">${Math.round(s.v / tot * 100)} %</span></div>`)}</div>`;
 }

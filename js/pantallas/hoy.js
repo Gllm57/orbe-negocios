@@ -2,7 +2,7 @@
 import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, cierreDeHoy, leer } from '../datos.js';
-import { Barras, Linea, Dona, Leyenda, Monto, Anillo, color } from '../graficos.js';
+import { Barras, Linea, Reparto, Monto, Anillo, color } from '../graficos.js';
 import { Icono, LogoOrbe, iniciales, hora, fechaCorta } from '../ui.js';
 
 const DIA = 86400000;
@@ -51,7 +51,7 @@ export function Hoy() {
   if (tel) return html`
     <header class="cab entra">
       <span class="logo marca">${iniciales(S.negocio.nombre)}</span>
-      <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${P.f} ${E ? (suc || 'Todas las sucursales') : T.n}</span></span>
+      <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${P.f} ${E ? (suc || 'Todos los locales') : T.n}</span></span>
       <span class="pildora" style=${{ background: enLinea ? 'var(--in-soft)' : 'var(--amber-soft)', color: enLinea ? 'var(--in-text)' : 'var(--amber-text)' }}><span class="punto"></span>${enLinea ? 'En línea' : 'Sin internet'}</span>
     </header>
     ${E && html`<div class="chips desliza">${[''].concat(S.negocio.sucursales).map(x => html`<button type="button" class=${'chip chico toca' + (suc === x ? ' on' : '')} onClick=${() => setSuc(x)}>${x || 'Todas'}</button>`)}</div>`}
@@ -76,6 +76,7 @@ export function Hoy() {
         <button type="button" class="tarjeta toca entra" style=${{ '--i': 5 + i, border: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 6px', color: 'var(--ink)', fontSize: '12px', fontWeight: 600 }} onClick=${q[3]}>
           <span class=${'ic ' + q[2]}><${Icono} n=${q[0]} t=${18} g=${2.2} /></span>${q[1]}</button>`)}
     </div>
+    ${pagos.length > 0 && html`<section class="tarjeta entra" style="--i:8"><div class="tarjeta-tit">${E && !suc ? 'Por sucursal hoy' : 'Cómo te pagaron hoy'}</div><${Reparto} segs=${E && !suc ? sucs : pagos} f=${D.m} titulo="Vendido hoy" /></section>`}
     <section class="tarjeta entra" style="--i:8">
       <div class="tarjeta-tit">Últimos 7 días<button type="button" class="btn2 chico acento toca" onClick=${() => ir('reportes')}>Reportes</button></div>
       <${Barras} datos=${semana.map((d, i) => ({ l: i === 6 ? 'Hoy' : new Date(d.t).toLocaleDateString('es', { weekday: 'narrow' }), v: d.total, tip: fechaCorta(d.t) + ' · ' + D.m(d.total) }))} alto=${120} resaltar=${6} />
@@ -103,10 +104,7 @@ export function Hoy() {
       </section>
       <section class="tarjeta entra" style="--i:5">
         <div class="tarjeta-tit">${E && !suc ? 'Por sucursal hoy' : 'Formas de pago hoy'}</div>
-        ${(E && !suc ? sucs : pagos).length ? html`<div class="pila" style="align-items:center;gap:16px">
-          <${Dona} segs=${E && !suc ? sucs : pagos} tam=${170} grosor=${20} centro=${D.corto(r.total)} sub="hoy" />
-          <div style="width:100%"><${Leyenda} segs=${E && !suc ? sucs : pagos} f=${D.m} /></div>
-        </div>` : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
+        ${(E && !suc ? sucs : pagos).length ? html`<${Reparto} segs=${E && !suc ? sucs : pagos} f=${D.m} titulo="Vendido hoy" tam=${132} />` : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
       </section>
     </div>
     <div class="tres">

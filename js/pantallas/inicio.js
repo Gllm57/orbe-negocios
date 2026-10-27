@@ -5,12 +5,13 @@ import { crearNegocio, nombreSugerido } from '../datos.js';
 import { Icono, LogoOrbe, Interruptor, avisar } from '../ui.js';
 
 const PASOS = ['pais', 'tipo', 'tam', 'datos', 'listo'];
-const SUCS = [['1', 1], ['2', 2], ['3 o más', 3]];
+const SUCS = [['Uno solo', 1], ['2', 2], ['3', 3], ['4', 4], ['5', 5]];
+export const NOMBRES_SUC = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur'];
 const TONO = { vio: 't-vio', amb: 't-amb', ver: 't-ver', ros: 't-ros', azu: 't-azu' };
 
 export function Inicio({ tel }) {
   const [paso, setPaso] = useState(-1);
-  const [c, setC] = useState({ pais: '', tipo: '', escala: 'negocio', nombre: '', razon: '', fiscal: '', sucN: 3, pays: null, taxOn: null, taxIncl: true });
+  const [c, setC] = useState({ pais: '', tipo: '', escala: 'negocio', nombre: '', razon: '', fiscal: '', sucN: 1, sucNombres: [], pays: null, taxOn: null, taxIncl: true });
   const [ejemplo, setEjemplo] = useState(true);
   const P = pais(c.pais || 'VE');
   const pon = o => setC(x => Object.assign({}, x, o));
@@ -45,7 +46,7 @@ export function Inicio({ tel }) {
   const titulos = {
     pais: ['¿Dónde está tu negocio?', 'Así ponemos tu moneda, las formas de pago de tu país y tus impuestos.'],
     tipo: ['¿Qué tipo de negocio tienes?', 'Orbe muestra solo lo que te sirve. Lo demás lo activas cuando quieras.'],
-    tam: ['¿De qué tamaño es?', 'Si es una empresa, Orbe suma sucursales y tus datos fiscales.'],
+    tam: ['¿De qué tamaño es?', 'Si es una empresa, tus recibos llevan razón social y número fiscal.'],
     datos: [E ? 'Tu empresa' : 'Tu negocio', 'Ya lo llenamos según ' + P.n + '. Cambia lo que quieras.'],
     listo: ['Tu Orbe está listo', 'Armado para ' + (TIPOS.find(t => t.id === c.tipo) || TIPOS[0]).n.toLowerCase() + ' en ' + P.n + '.']
   }[paso];
@@ -62,8 +63,8 @@ export function Inicio({ tel }) {
       <span class=${'ic ' + TONO[t.color]} style="width:46px;height:46px;border-radius:14px"><${Icono} n=${t.id} t=${22} /></span>
       <span style="flex:1;display:flex;flex-direction:column;gap:3px;text-align:left"><b style="font-size:16px">${t.n}</b><span class="sub" style="font-weight:500">${t.ex}</span></span>
     </button>`; })}</div>`;
-  if (paso === 'tam') cuerpo = html`<div class="pila">${[['negocio', 'Negocio', 'Hasta 10 personas, uno o dos locales', 'tienda', 't-vio', ['Vender, clientes, gastos y cierre del día', 'Dueño y algunos empleados']], ['empresa', 'Empresa', 'Varias sucursales o un equipo grande', 'edificio', 't-ver', ['Ventas y caja por sucursal', 'Razón social y número fiscal en tus recibos', 'Reportes por sucursal']]].map((z, k) => { const on = c.escala === z[0]; return html`
-    <button type="button" key=${z[0]} class=${'chip toca entra' + (on ? ' on' : '')} style=${{ '--i': k * 3, flexDirection: 'column', alignItems: 'stretch', gap: '14px', borderRadius: '22px', padding: '16px', color: 'var(--ink)', background: on ? '' : 'var(--surface)' }} aria-pressed=${on ? 'true' : 'false'} onClick=${() => pon({ escala: z[0] })}>
+  if (paso === 'tam') cuerpo = html`<div class="pila">${[['negocio', 'Negocio', 'Hasta 10 personas, uno o dos locales', 'tienda', 't-vio', ['Vender, clientes, gastos y cierre del día', 'Dueño y algunos empleados']], ['empresa', 'Empresa', 'Varias sucursales o un equipo grande', 'edificio', 't-ver', ['Razón social y número fiscal en tus recibos', 'Ventas y caja por sucursal', 'Reportes por sucursal']]].map((z, k) => { const on = c.escala === z[0]; return html`
+    <button type="button" key=${z[0]} class=${'chip toca entra' + (on ? ' on' : '')} style=${{ '--i': k * 3, flexDirection: 'column', alignItems: 'stretch', gap: '14px', borderRadius: '22px', padding: '16px', color: 'var(--ink)', background: on ? '' : 'var(--surface)' }} aria-pressed=${on ? 'true' : 'false'} onClick=${() => pon({ escala: z[0], sucN: z[0] === 'empresa' ? Math.max(2, c.sucN) : c.sucN })}>
       <span class="fila"><span class=${'ic ' + z[4]} style="width:46px;height:46px;border-radius:14px"><${Icono} n=${z[3]} t=${22} /></span><span style="flex:1;display:flex;flex-direction:column;gap:3px;text-align:left"><b style="font-size:17px">${z[1]}</b><span class="sub" style="font-weight:500">${z[2]}</span></span></span>
       <span class="pila" style="gap:8px;padding-left:4px">${z[5].map(f => html`<span class="fila" style="gap:10px;font-size:13px;font-weight:500"><${Icono} n="check" t=${14} g=${3} c="var(--in)" />${f}</span>`)}</span>
     </button>`; })}</div>`;
@@ -72,8 +73,12 @@ export function Inicio({ tel }) {
     ${E && html`<div class="pila entra" style="gap:18px">
       <label class="campo"><span>Razón social</span><input type="text" value=${c.razon} placeholder=${(c.nombre || nombreSugerido(c.tipo, c.escala)) + ' ' + (P.suf || 'S.A.')} onInput=${e => pon({ razon: e.target.value })} /></label>
       <label class="campo"><span>${P.fiscal[0]} (sale en tus recibos)</span><input type="text" value=${c.fiscal} placeholder=${P.fiscal[1] || 'Tu número fiscal'} onInput=${e => pon({ fiscal: e.target.value })} /></label>
-      <div class="campo"><span>¿Cuántas sucursales tienes?</span><div class="chips">${SUCS.map(s => html`<button type="button" class=${'chip toca' + (c.sucN === s[1] ? ' on' : '')} onClick=${() => pon({ sucN: s[1] })}>${s[0]}</button>`)}</div></div>
     </div>`}
+    <div class="campo"><span>${E ? '¿Cuántas sucursales tienes?' : '¿Cuántos locales tienes?'}</span>
+      <div class="chips">${SUCS.map(s => html`<button type="button" class=${'chip toca' + (c.sucN === s[1] ? ' on' : '')} aria-pressed=${c.sucN === s[1] ? 'true' : 'false'} onClick=${() => pon({ sucN: s[1] })}>${s[0]}</button>`)}</div>
+      <span class="sub faint">${c.sucN === 1 ? 'Si abres otro, lo agregas en Ajustes y Orbe separa las ventas y la caja de cada uno.' : 'Cada uno tendrá su caja, sus ventas y su inventario. Ponles nombre:'}</span>
+      ${c.sucN > 1 && html`<div class="rejilla-2 entra" style="gap:8px">${Array.from({ length: c.sucN }, (_, k) => html`<label class="campo" key=${k}><span class="sr">Nombre del local ${k + 1}</span><input type="text" value=${c.sucNombres[k] || ''} placeholder=${NOMBRES_SUC[k]} onInput=${e => { const ns = c.sucNombres.slice(); ns[k] = e.target.value; pon({ sucNombres: ns }); }} /></label>`)}</div>`}
+    </div>
     <div class="tarjeta fila"><span style="font-size:26px" aria-hidden="true">${P.f}</span><span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px">Moneda</b><span class="sub">${P.id === 'VE' ? 'Precios en dólares y su valor en bolívares con la tasa BCV del día' : P.id === 'AR' ? 'Precios en pesos y su valor en dólares' : 'Todo en ' + P.cur + '.'}</span></span></div>
     <div class="campo"><span>Formas de pago que aceptas · ${pays.length} activas</span>
       <div class="chips">${P.pays.map(n => { const on = pays.includes(n); return html`<button type="button" class=${'chip toca' + (on ? ' on' : '')} aria-pressed=${on ? 'true' : 'false'} onClick=${() => pon({ pays: on ? (pays.length > 1 ? pays.filter(x => x !== n) : pays) : P.pays.filter(x => x === n || pays.includes(x)) })}>${on && html`<${Icono} n="check" t=${14} g=${3} c="var(--accent)" />`}${n}</button>`; })}</div></div>

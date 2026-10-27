@@ -16,7 +16,10 @@ function Ajustes() {
   const tarjetas = [
     Tarjeta(n.escala === 'empresa' ? 'Empresa' : 'Negocio', n.escala === 'empresa' ? 'edificio' : T.id, html`
       ${Dato('Nombre', n.nombre)}${n.razon ? Dato('Razón social', n.razon) : null}${n.fiscal ? Dato(P.fiscal[0], n.fiscal) : null}
-      ${Dato('Tipo', T.n)}${n.escala === 'empresa' ? Dato('Sucursales', n.sucursales.join(', ')) : null}`, 0),
+      ${Dato('Tipo', T.n)}`, 0),
+    Tarjeta(n.sucursales.length > 1 ? 'Locales y sucursales' : 'Tu local', 'edificio', html`
+      ${n.sucursales.length > 1 ? n.sucursales.map((x, k) => Dato('Local ' + (k + 1), x)) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Tienes un solo local, así que Orbe no te muestra sucursales. Si abres otro, agrégalo aquí.</p>`}
+      <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('locales')}>${n.sucursales.length > 1 ? 'Cambiar o agregar' : '+ Agregar otro local'}</button></div>`, 1),
     Tarjeta('País y moneda', 'mundo', html`${Dato('País', P.f + ' ' + P.n)}${Dato('Moneda', P.id === 'VE' ? 'Dólares y bolívares' : P.id === 'AR' ? 'Pesos y dólares' : P.cur)}${P.id === 'VE' ? Dato('Tasa BCV', S.tasaVE ? 'Bs ' + S.tasaVE.toFixed(2).replace('.', ',') + ' · ' + S.tasaFecha : 'Se lee sola cuando hay internet') : null}`, 1),
     Tarjeta('Formas de pago', 'tarjeta', html`<div class="chips" style="margin-top:6px">${P.pays.map(x => { const on = n.pays.includes(x); return html`<button type="button" class=${'chip chico toca' + (on ? ' on' : '')} aria-pressed=${on ? 'true' : 'false'} onClick=${() => { if (on && n.pays.length === 1) return; cambiarNegocio({ pays: on ? n.pays.filter(y => y !== x) : P.pays.filter(y => y === x || n.pays.includes(y)) }); }}>${x}</button>`; })}</div>`, 2),
     Tarjeta('Impuesto', 'porciento', html`

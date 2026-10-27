@@ -30,6 +30,8 @@ Lo común a todos: ventas o cobros, clientes, gastos, ganancia real, cierre del 
 
 Además del tipo, al empezar se elige el **tamaño**. Se puede cambiar después sin perder nada.
 
+**Locales o sucursales:** a todos (negocio o empresa) se les pregunta cuántos locales tienen, en el paso «Tu negocio», antes de crear el perfil. La respuesta por defecto es «Uno solo», y entonces la app no habla de sucursales en ninguna parte. Si tiene más, se les pone nombre y aparecen el selector de sucursal y los gráficos por sucursal. Abrir otro local después se hace en Ajustes; lo vendido hasta ese día queda en el primero.
+
 | | Negocio | Empresa |
 |---|---|---|
 | Para quién | Hasta 10 personas, uno o dos locales | Varias sucursales o un equipo grande |

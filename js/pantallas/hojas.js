@@ -1,8 +1,9 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, guardarProducto, reponer, nuevoCliente, cerrarDia, empezarDeNuevo, deudores, resumen, inicioDia, gastosEntre } from '../datos.js';
-import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace } from '../ui.js';
+import { leer, vender, abonar, anotarGasto, guardarProducto, reponer, nuevoCliente, cerrarDia, empezarDeNuevo, deudores, resumen, inicioDia, gastosEntre, guardarSucursales } from '../datos.js';
+import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo } from '../ui.js';
+const conSimbolo = lista => lista.map(x => ({ v: x, n: html`<span class="simb"><${Icono} n=${simbolo(x)} t=${13} g=${2.2} /></span>${x}` }));
 import { Monto } from '../graficos.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
@@ -13,7 +14,7 @@ const telWA = t => { const d = String(t || '').replace(/\D/g, ''); return d.leng
 const abrirWA = (tel, texto) => window.open('https://wa.me/' + telWA(tel) + '?text=' + encodeURIComponent(texto), '_blank', 'noopener');
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, locales: Locales }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
@@ -45,7 +46,7 @@ function Cobrar({ d, cerrar }) {
   return html`<${Hoja} titulo=${T.vender === 'Pedido' ? 'Cobrar pedido' : 'Cobrar'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><b class="num" style="font-size:40px;letter-spacing:-0.02em">${D.m(total)}</b>${D.dual && html`<span class="sub num">${D.s(total)}</span>`}${d.tt.txt && html`<span class="sub faint num">${d.tt.txt}: ${D.m(d.tt.imp)}</span>`}</div>
-      <div class="campo"><span>Forma de pago</span><${Chips} opciones=${metodos} valor=${m} onCambio=${v => { setM(v); setRecibe(0); if (v === m2) setM2(metodos.find(x => x !== v && x !== fiadoN)); }} desliza=${tel} calido=${v => v === fiadoN} /></div>
+      <div class="campo"><span>Forma de pago</span><${Chips} opciones=${conSimbolo(metodos)} valor=${m} onCambio=${v => { setM(v); setRecibe(0); if (v === m2) setM2(metodos.find(x => x !== v && x !== fiadoN)); }} desliza=${tel} calido=${v => v === fiadoN} /></div>
       ${efectivo && html`<div class="campo entra"><span>¿Con cuánto te paga?</span>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">${D.billetes(total).map((v, i) => html`<button type="button" class=${'chip toca' + (v === dado ? ' on' : '')} style="justify-content:center;padding:0 4px;color:var(--ink)" onClick=${() => setRecibe(v)}>${i === 0 ? 'Exacto' : D.m(v)}</button>`)}</div>
         <div class="fila" style="border-radius:16px;background:var(--in-soft);padding:12px 14px"><span class="crece in" style="font-size:14px;font-weight:600">Vuelto</span><${Monto} v=${dado - total} f=${D.m} clase="in" /></div>
@@ -116,11 +117,11 @@ function Gasto({ d, cerrar }) {
   return html`<${Hoja} titulo="Anotar gasto" onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <label class="campo"><span>Monto (${P.id === 'VE' ? 'dólares' : P.cur})</span><input class="grande num" type="text" inputmode="decimal" placeholder="0" value=${monto} onInput=${e => setMonto(e.target.value)} /></label>
-      <div class="campo"><span>¿En qué?</span><${Chips} opciones=${CATS} valor=${cat} onCambio=${setCat} /></div>
+      <div class="campo"><span>¿En qué?</span><${Chips} opciones=${conSimbolo(CATS)} valor=${cat} onCambio=${setCat} /></div>
       <label class="campo"><span>Nota (opcional)</span><input type="text" placeholder=${cat} value=${n} onInput=${e => setN(e.target.value)} /></label>
       <${Interruptor} on=${despues} onCambio=${setDespues} titulo="Lo pago después" sub="Va a «Por pagar» y Orbe te avisa antes de que venza" />
       ${despues ? html`<div class="entra"><${Chips} opciones=${VENCE} valor=${vence} onCambio=${setVence} calido=${() => true} /></div>`
-        : html`<div class="campo"><span>¿Cómo lo pagaste?</span><${Chips} opciones=${S.negocio.pays} valor=${m} onCambio=${setM} desliza=${tel} /></div>`}`,
+        : html`<div class="campo"><span>¿Cómo lo pagaste?</span><${Chips} opciones=${conSimbolo(S.negocio.pays)} valor=${m} onCambio=${setM} desliza=${tel} /></div>`}`,
     pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar gasto</button>`
   })} />`;
 }
@@ -136,7 +137,7 @@ function Abono({ d, cerrar }) {
     cuerpo: html`
       <div class="fila"><b class="crece" style="font-size:16px">${c0.n}</b><span class="amber num" style="font-weight:600">Debe ${D.m(c0.deuda)}</span></div>
       <div class="campo"><span>¿Cuánto paga?</span><div class="rejilla-3">${[[1, 'Todo'], [0.5, 'La mitad'], [0.25, 'Una parte']].map(x => html`<button type="button" class=${'chip toca' + (parte === x[0] ? ' on' : '')} style="flex-direction:column;justify-content:center;gap:0;min-height:56px;color:var(--ink)" onClick=${() => setParte(x[0])}><span class="sub" style="font-weight:500">${x[1]}</span><b class="num">${D.m(D.redondo(c0.deuda * x[0]))}</b></button>`)}</div></div>
-      <div class="campo"><span>¿Cómo pagó?</span><${Chips} opciones=${S.negocio.pays} valor=${m} onCambio=${setM} desliza=${tel} /></div>`,
+      <div class="campo"><span>¿Cómo pagó?</span><${Chips} opciones=${conSimbolo(S.negocio.pays)} valor=${m} onCambio=${setM} desliza=${tel} /></div>`,
     pie: html`<button type="button" class="btn toca" onClick=${() => { abonar(d.cid, valor, m); c(() => avisar(parte === 1 ? c0.n.split(' ')[0] + ' ya no debe nada' : c0.n.split(' ')[0] + ' abonó ' + D.m(valor))); }}>Anotar abono de ${D.m(valor)}</button>`
   })} />`;
 }
@@ -260,5 +261,26 @@ function Borrar({ d, cerrar }) {
   return html`<${Hoja} titulo="¿Empezar de nuevo?" onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`<p style="margin:0;line-height:1.5">Se borra el negocio de este aparato: ventas, clientes, gastos e inventario. Antes guardamos una copia por si te arrepientes.</p>`,
     pie: html`<button type="button" class="btn toca" style="background:var(--out)" onClick=${() => c(() => { empezarDeNuevo(); location.hash = ''; })}>Sí, empezar de nuevo</button><button type="button" class="btn2 toca" style="min-height:50px;border-radius:25px" onClick=${() => c()}>Cancelar</button>`
+  })} />`;
+}
+
+// ---------- locales y sucursales ----------
+function Locales({ d, cerrar }) {
+  const { S } = useApp();
+  const antes = S.negocio.sucursales;
+  const NOM = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur', 'Sucursal 6', 'Sucursal 7', 'Sucursal 8'];
+  const [nombres, setNombres] = useState(antes.length === 1 ? [antes[0] === 'Principal' ? '' : antes[0], ''] : antes.slice());
+  const pon = (k, v) => { const ns = nombres.slice(); ns[k] = v; setNombres(ns); };
+  const guardar = c => {
+    const finales = nombres.map((x, k) => x.trim() || (k < antes.length && antes[k] !== 'Principal' ? antes[k] : NOM[k]));
+    const ren = {}; antes.forEach((a, k) => { if (finales[k] && finales[k] !== a) ren[a] = finales[k]; });
+    guardarSucursales(finales, ren);
+    c(() => avisar(finales.length > antes.length ? 'Listo. Ahora tienes ' + finales.length + ' locales' : 'Locales guardados'));
+  };
+  return html`<${Hoja} titulo="Locales y sucursales" onCerrar=${cerrar} contenido=${c => ({
+    cuerpo: html`<span class="sub" style="line-height:1.45">${antes.length === 1 ? 'Ponle nombre a tu local de siempre y al nuevo. Lo vendido hasta hoy queda en el primero.' : 'Cambia los nombres o agrega otro. Lo vendido se mueve con el nombre.'}</span>
+      ${nombres.map((x, k) => html`<label class="campo entra" key=${k} style=${{ '--i': k }}><span>${k === 0 && antes.length === 1 ? 'Tu local de siempre' : k >= antes.length ? 'Local nuevo' : 'Local ' + (k + 1)}</span><input type="text" value=${x} placeholder=${k < antes.length && antes[k] !== 'Principal' ? antes[k] : NOM[k]} onInput=${e => pon(k, e.target.value)} /></label>`)}
+      ${nombres.length < 8 && html`<button type="button" class="btn2 acento toca" onClick=${() => setNombres(nombres.concat(['']))}>+ Otro local</button>`}`,
+    pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar</button>`
   })} />`;
 }

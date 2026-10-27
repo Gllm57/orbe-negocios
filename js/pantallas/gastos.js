@@ -2,9 +2,11 @@
 import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { porPagar, gastosEntre, pagarGasto, inicioDia } from '../datos.js';
-import { Dona, Leyenda, Monto, color } from '../graficos.js';
-import { Icono, avisar, fechaCorta } from '../ui.js';
+import { Reparto, Monto, color } from '../graficos.js';
+import { Icono, avisar, fechaCorta, simbolo } from '../ui.js';
 import { venceTxt } from './hoy.js';
+
+const COLOR_CAT = { 'Mercancía': '#5b4cff', 'Alquiler': '#e08a00', 'Servicios': '#8a3ffc', 'Sueldos': '#0e9aa7', 'Transporte': '#12a37a', 'Otro': '#6b7b86' };
 
 export function inicioMes() { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d.getTime(); }
 
@@ -13,7 +15,7 @@ export function BloqueGastos({ compacto }) {
   const pp = porPagar(), gm = gastosEntre(inicioMes(), Date.now() + 1);
   const totMes = gm.reduce((a, g) => a + g.v, 0);
   const cats = {}; gm.forEach(g => { cats[g.cat] = (cats[g.cat] || 0) + g.v; });
-  const segs = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).map((k, i) => ({ n: k, v: cats[k], c: color(i + 1) }));
+  const segs = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).map(k => ({ n: k, v: cats[k], c: COLOR_CAT[k] || 'var(--c4)' }));
   const pagar = g => { pagarGasto(g.id); avisar('Pagado: ' + g.n); };
 
   const PorPagar = html`<section class="tarjeta entra" style="padding-bottom:6px">
@@ -26,13 +28,14 @@ export function BloqueGastos({ compacto }) {
   </section>`;
 
   const Mes = html`<section class="tarjeta entra" style="--i:1">
-    <div class="tarjeta-tit">Gastos del mes<${Monto} v=${totMes} f=${D.m} clase="out" /></div>
-    ${segs.length ? html`<div class=${tel ? 'fila' : 'pila'} style="align-items:center;gap:16px"><${Dona} segs=${segs} tam=${tel ? 120 : 160} grosor=${16} centro=${D.corto(totMes)} /><div style="flex:1;width:100%"><${Leyenda} segs=${segs} f=${D.m} /></div></div>` : html`<p class="vacio">Sin gastos este mes.</p>`}
+    <div class="tarjeta-tit">Gastos del mes</div>
+    ${segs.length ? html`<${Reparto} segs=${segs} f=${D.m} titulo="Gastado este mes" />` : html`<p class="vacio">Sin gastos este mes.</p>`}
   </section>`;
 
   const Recientes = html`<section class="tarjeta entra" style="--i:2;padding-bottom:6px">
     <div class="tarjeta-tit">Gastos recientes<button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('gasto')}>+ Gasto</button></div>
     <div class="lista">${gm.slice().sort((a, b) => b.t - a.t).slice(0, compacto ? 4 : 12).map((g, i) => html`<div class="item entra" key=${g.id} style=${{ '--i': i }}>
+      <span class="simb-c" style=${{ '--c': COLOR_CAT[g.cat] || 'var(--c4)', width: '32px', height: '32px' }}><${Icono} n=${simbolo(g.cat)} t=${16} /></span>
       <span class="crece" style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">${g.n}</span><span class="sub faint">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
       <b class="num out" style="font-size:14px">−${D.m(g.v)}</b>
     </div>`)}</div>
