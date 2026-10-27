@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Orbe Negocios · Fase 1</title>
+<title>Orbe Negocios · Empezar</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -45,7 +45,7 @@ input::placeholder{color:#6f6c8e}
 </div>
 <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
 <button type="button" class="nz-press" onClick="{{goOb1}}" style="width: 100%; min-height: 54px; border: 0; border-radius: 27px; font-size: 17px; font-weight: 600; cursor: pointer; color: #ffffff; background: #6a5cf2">Empezar</button>
-<button type="button" class="nz-press" onClick="{{goOb1}}" style="width: 100%; min-height: 50px; border: 0; border-radius: 25px; font-size: 15px; font-weight: 600; cursor: pointer; color: #c9c0ff; background: rgba(239,238,254,.07)">Ya uso Orbe · entrar con mi cuenta</button>
+<button type="button" class="nz-press" onClick="{{goOb1}}" style="width: 100%; min-height: 50px; border: 0; border-radius: 25px; font-size: 15px; font-weight: 600; cursor: pointer; color: #c9c0ff; background: rgba(239,238,254,.07)">Ya tengo cuenta · entrar</button>
 <span style="text-align: center; font-size: 12px; color: #6f6c8e">14 días gratis, sin tarjeta. Nunca se borra nada.</span>
 </div>
 </div>
@@ -54,8 +54,8 @@ input::placeholder{color:#6f6c8e}
 <sc-if value="{{obStep}}" hint-placeholder-val="{{ false }}">
 <div style="position: absolute; left: 0; right: 0; top: 0; padding: 14px 14px 0; display: flex; align-items: center; gap: 10px; z-index: 2">
 <button type="button" class="nz-press" onClick="{{obBack}}" aria-label="Atrás" style="width: 44px; height: 44px; border: 0; border-radius: 22px; cursor: pointer; background: rgba(239,238,254,.07); color: #efeefe; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button>
-<div style="flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding-right: 54px">
-<sc-for list="{{obBars}}" as="b" hint-placeholder-count="4"><span style="height: 4px; border-radius: 2px; background: {{b.c}}; transition: background .35s ease"></span></sc-for>
+<div style="flex: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding-right: 54px">
+<sc-for list="{{obBars}}" as="b" hint-placeholder-count="5"><span style="height: 4px; border-radius: 2px; background: {{b.c}}; transition: background .35s ease"></span></sc-for>
 </div>
 </div>
 </sc-if>
@@ -89,11 +89,40 @@ input::placeholder{color:#6f6c8e}
 </div>
 </sc-if>
 
+<sc-if value="{{obT}}" hint-placeholder-val="{{ false }}">
+<div class="nz-in" style="position: absolute; inset: 0; display: flex; flex-direction: column">
+<div style="padding: 74px 22px 12px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">¿De qué tamaño es?</span><span style="font-size: 15px; color: #9a97b8; line-height: 1.4">Si es una empresa, Orbe suma sucursales, permisos, compras y facturas.</span></div>
+<div class="nz-scroll" style="flex: 1; overflow-y: auto; padding: 4px 18px 120px; display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{sizes}}" as="z" hint-placeholder-count="2">
+<button type="button" class="nz-press nz-in" onClick="{{z.pick}}" aria-pressed="{{z.on}}" style="display: flex; flex-direction: column; gap: 14px; text-align: left; cursor: pointer; color: #efeefe; padding: 16px; border-radius: 22px; background: {{z.bg}}; border: 1.5px solid {{z.ring}}; animation-delay: {{z.dl}}">
+<span style="display: flex; align-items: center; gap: 14px; width: 100%">
+<span style="width: 46px; height: 46px; border-radius: 14px; flex: none; display: grid; place-items: center; background: {{z.ib}}; color: {{z.ic}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{z.d}}"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 17px; font-weight: 700">{{z.n}}</span><span style="font-size: 13px; color: #9a97b8">{{z.sub}}</span></span>
+</span>
+<span style="display: flex; flex-direction: column; gap: 8px; padding-left: 4px">
+<sc-for list="{{z.feats}}" as="x" hint-placeholder-count="3"><span style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #d6d3f0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3ddc9f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12l5 5L20 7"></path></svg>{{x}}</span></sc-for>
+</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
 <sc-if value="{{ob3}}" hint-placeholder-val="{{ false }}">
 <div class="nz-in" style="position: absolute; inset: 0; display: flex; flex-direction: column">
-<div style="padding: 74px 22px 8px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Tu negocio</span><span style="font-size: 15px; color: #9a97b8; line-height: 1.4">Ya lo llenamos según {{paisN}}. Cambia lo que quieras.</span></div>
+<div style="padding: 74px 22px 8px; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">{{ob3T}}</span><span style="font-size: 15px; color: #9a97b8; line-height: 1.4">Ya lo llenamos según {{paisN}}. Cambia lo que quieras.</span></div>
 <div class="nz-scroll" style="flex: 1; overflow-y: auto; padding: 8px 18px 120px; display: flex; flex-direction: column; gap: 18px">
-<label style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; color: #9a97b8">Nombre del negocio</span><input type="text" value="{{nombre}}" onChange="{{setNombre}}" autocomplete="organization" style="min-height: 52px; border-radius: 16px; border: 1.5px solid #2a2745; background: rgba(239,238,254,.07); color: #efeefe; font-size: 16px; padding: 0 16px; box-sizing: border-box"></label>
+<label style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; color: #9a97b8">{{nomLbl}}</span><input type="text" value="{{nombre}}" onChange="{{setNombre}}" autocomplete="organization" style="min-height: 52px; border-radius: 16px; border: 1.5px solid #2a2745; background: rgba(239,238,254,.07); color: #efeefe; font-size: 16px; padding: 0 16px; box-sizing: border-box"></label>
+<sc-if value="{{isEmp}}" hint-placeholder-val="{{ false }}">
+<div class="nz-in" style="display: flex; flex-direction: column; gap: 18px">
+<label style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; color: #9a97b8">Razón social</span><input type="text" value="{{razon}}" onChange="{{setRazon}}" placeholder="{{razonPh}}" style="min-height: 52px; border-radius: 16px; border: 1.5px solid #2a2745; background: rgba(239,238,254,.07); color: #efeefe; font-size: 16px; padding: 0 16px; box-sizing: border-box"></label>
+<label style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; color: #9a97b8">{{fiscalN}} (para tus facturas)</span><input type="text" value="{{fiscal}}" onChange="{{setFiscal}}" placeholder="{{fiscalPh}}" style="min-height: 52px; border-radius: 16px; border: 1.5px solid #2a2745; background: rgba(239,238,254,.07); color: #efeefe; font-size: 16px; padding: 0 16px; box-sizing: border-box"></label>
+<div style="display: flex; flex-direction: column; gap: 10px"><span style="font-size: 13px; color: #9a97b8">¿Cuántas sucursales tienes?</span>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{sucOpts}}" as="o" hint-placeholder-count="4"><button type="button" class="nz-press" onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="min-height: 44px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 600; color: {{o.fg}}; background: {{o.bg}}; border: 1.5px solid {{o.ring}}; padding: 0 4px">{{o.n}}</button></sc-for>
+</div></div>
+</div>
+</sc-if>
 <div style="border-radius: 20px; background: #16142a; padding: 14px 16px; display: flex; gap: 12px; align-items: center">
 <span style="font-size: 26px; line-height: 1" aria-hidden="true">{{paisF}}</span>
 <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Moneda</span><span style="font-size: 13px; color: #9a97b8; line-height: 1.35">{{monedaTxt}}</span></span>
@@ -130,7 +159,7 @@ input::placeholder{color:#6f6c8e}
 <div class="nz-in" style="position: absolute; inset: 0; display: flex; flex-direction: column">
 <div class="nz-scroll" style="flex: 1; overflow-y: auto; padding: 74px 18px 120px; display: flex; flex-direction: column; gap: 16px">
 <span class="nz-pop" style="width: 76px; height: 76px; border-radius: 50%; background: #3ddc9f; display: grid; place-items: center; align-self: flex-start"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0b0a14" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span>
-<span style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Tu Orbe está listo</span><span style="font-size: 15px; color: #9a97b8; line-height: 1.4">Armado para {{tipoLower}} en {{paisN}}.</span></span>
+<span style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Tu Orbe está listo</span><span style="font-size: 15px; color: #9a97b8; line-height: 1.4">{{armadoTxt}}</span></span>
 <div style="border-radius: 22px; background: #16142a; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
 <span style="font-size: 13px; color: #9a97b8">Encendido para ti</span>
 <sc-for list="{{modsOn}}" as="m" hint-placeholder-count="6">
@@ -138,7 +167,7 @@ input::placeholder{color:#6f6c8e}
 </sc-for>
 </div>
 <div style="border-radius: 22px; background: #16142a; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
-<span style="font-size: 13px; color: #9a97b8">Llegan pronto para tu tipo de negocio</span>
+<span style="font-size: 13px; color: #9a97b8">{{soonT}}</span>
 <sc-for list="{{modsSoon}}" as="m" hint-placeholder-count="2">
 <span style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><span style="font-size: 14px; color: #c9c5e8">{{m}}</span><span style="font-size: 11px; font-weight: 700; color: #a99cff; background: rgba(143,132,255,.14); border-radius: 999px; padding: 3px 8px">Pronto</span></span>
 </sc-for>
@@ -170,6 +199,14 @@ input::placeholder{color:#6f6c8e}
 </button>
 </div>
 
+<sc-if value="{{sucChips}}" hint-placeholder-val="{{ false }}">
+<div class="nz-scroll" role="group" aria-label="Sucursal" style="display: flex; gap: 8px; overflow-x: auto; margin: -2px -18px 0; padding: 0 18px">
+<sc-for list="{{sucs}}" as="u" hint-placeholder-count="4">
+<button type="button" class="nz-press" onClick="{{u.pick}}" aria-pressed="{{u.on}}" style="flex: none; min-height: 36px; padding: 0 14px; border-radius: 18px; cursor: pointer; font-size: 13px; font-weight: 600; color: {{u.fg}}; background: {{u.bg}}; border: 1.5px solid {{u.ring}}">{{u.n}}</button>
+</sc-for>
+</div>
+</sc-if>
+
 <sc-if value="{{tHoy}}" hint-placeholder-val="{{ true }}">
 <div class="nz-in" style="display: flex; flex-direction: column; gap: 12px">
 <div style="border-radius: 24px; padding: 18px; background: linear-gradient(160deg,#241e52,#16142a); display: flex; flex-direction: column; gap: 12px">
@@ -188,6 +225,17 @@ input::placeholder{color:#6f6c8e}
 <div class="nz-in" style="border-radius: 18px; background: #16142a; padding: 12px; display: flex; flex-direction: column; gap: 3px; min-width: 0; animation-delay: {{k.dl}}"><span style="font-size: 11px; color: #9a97b8">{{k.n}}</span><span style="font-size: 16px; font-weight: 700; color: {{k.c}}; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{k.v}}</span><span style="font-size: 11px; color: #6f6c8e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{k.s}}</span></div>
 </sc-for>
 </div>
+<sc-if value="{{sucCard}}" hint-placeholder-val="{{ false }}">
+<div class="nz-in" style="border-radius: 22px; background: #16142a; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 15px; font-weight: 700">Por sucursal</span>
+<sc-for list="{{sucRows}}" as="u" hint-placeholder-count="3">
+<button type="button" class="nz-press" onClick="{{u.pick}}" style="display: flex; flex-direction: column; gap: 6px; border: 0; background: none; color: #efeefe; cursor: pointer; padding: 0; text-align: left">
+<span style="display: flex; justify-content: space-between; width: 100%"><span style="font-size: 14px; font-weight: 600">{{u.n}}</span><span style="font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums">{{u.v}}</span></span>
+<span style="display: block; height: 6px; border-radius: 3px; background: #221f3a; overflow: hidden; width: 100%"><span style="display: block; height: 100%; width: {{u.w}}; background: {{u.c}}; border-radius: 3px; transition: width .5s cubic-bezier(.32,.72,0,1)"></span></span>
+</button>
+</sc-for>
+</div>
+</sc-if>
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
 <sc-for list="{{quick}}" as="q" hint-placeholder-count="3">
 <button type="button" class="nz-press" onClick="{{q.go}}" style="border: 0; border-radius: 18px; background: #16142a; color: #efeefe; cursor: pointer; min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-size: 12px; font-weight: 600">
@@ -331,6 +379,20 @@ input::placeholder{color:#6f6c8e}
 </span>
 </sc-for>
 </div>
+<sc-if value="{{empApp}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; color: #9a97b8; padding: 4px 4px 0">Tu empresa</span>
+<div style="border-radius: 22px; background: #16142a; padding: 4px 16px; display: flex; flex-direction: column">
+<sc-for list="{{empRows}}" as="a" hint-placeholder-count="7">
+<button type="button" class="nz-press" onClick="{{a.go}}" style="display: flex; align-items: center; gap: 12px; min-height: 54px; border: 0; background: none; color: #efeefe; cursor: pointer; padding: 0; text-align: left; border-top: {{a.bt}}">
+<span style="width: 32px; height: 32px; border-radius: 10px; flex: none; display: grid; place-items: center; background: rgba(61,220,159,.14); color: #7ff0c3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.d}}"></path></svg></span>
+<span style="flex: 1; font-size: 14px; font-weight: 600">{{a.n}}</span>
+<span style="font-size: 13px; color: #9a97b8; max-width: 150px; text-align: right">{{a.v}}</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6f6c8e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+</button>
+</sc-for>
+</div>
+<span style="font-size: 13px; color: #9a97b8; padding: 4px 4px 0">Ajustes</span>
+</sc-if>
 <div style="border-radius: 22px; background: #16142a; padding: 4px 16px; display: flex; flex-direction: column">
 <sc-for list="{{ajustes}}" as="a" hint-placeholder-count="7">
 <button type="button" class="nz-press" onClick="{{a.go}}" style="display: flex; align-items: center; gap: 12px; min-height: 54px; border: 0; background: none; color: #efeefe; cursor: pointer; padding: 0; text-align: left; border-top: {{a.bt}}">
@@ -519,6 +581,19 @@ input::placeholder{color:#6f6c8e}
 </div>
 </sc-if>
 
+<sc-if value="{{shAprob}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{aprobs}}" as="a" hint-placeholder-count="2">
+<div class="nz-in" style="border-radius: 18px; background: #0b0a14; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 600">{{a.t}}</span><span style="font-size: 13px; color: #9a97b8; line-height: 1.4">{{a.h}}</span></span>
+<span style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button type="button" class="nz-press" onClick="{{a.no}}" style="min-height: 42px; border: 0; border-radius: 21px; font-size: 14px; font-weight: 600; cursor: pointer; color: #ffb0bd; background: rgba(255,107,139,.12)">Rechazar</button>
+<button type="button" class="nz-press" onClick="{{a.ok}}" style="min-height: 42px; border: 0; border-radius: 21px; font-size: 14px; font-weight: 700; cursor: pointer; color: #0b0a14; background: #3ddc9f">Aprobar</button>
+</span>
+</div>
+</sc-for>
+<sc-if value="{{noAprobs}}" hint-placeholder-val="{{ false }}"><span style="text-align: center; color: #9a97b8; font-size: 14px; padding: 12px 0">No queda nada por aprobar.</span></sc-if>
+</sc-if>
+
 <sc-if value="{{shTipo}}" hint-placeholder-val="{{ false }}">
 <span style="font-size: 13px; color: #9a97b8; margin-top: -6px">Orbe cambia las pestañas y los ejemplos al momento. No se pierde nada.</span>
 <sc-for list="{{types}}" as="t" hint-placeholder-count="5">
@@ -564,8 +639,8 @@ input::placeholder{color:#6f6c8e}
 </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"pantalla": {"editor": "enum", "options": ["empezar", "app"], "default": "empezar"}, "pais": {"editor": "enum", "options": ["AR", "BO", "BR", "CA", "CL", "CO", "CR", "EC", "SV", "ES", "US", "FR", "GT", "HN", "IT", "MX", "NI", "PA", "PY", "PE", "PT", "DO", "GB", "UY", "VE"], "default": "VE"}, "tipo": {"editor": "enum", "options": ["tienda", "comida", "citas", "online", "indep"], "default": "tienda"}, "$preview": {"width": 390, "height": 844}}'>
-var DEF = {"pantalla": "empezar", "pais": "VE", "tipo": "tienda"};
+<script type="text/x-dc" data-dc-script data-props='{"pantalla": {"editor": "enum", "options": ["empezar", "app"], "default": "empezar"}, "escala": {"editor": "enum", "options": ["negocio", "empresa"], "default": "negocio"}, "pais": {"editor": "enum", "options": ["AR", "BO", "BR", "CA", "CL", "CO", "CR", "EC", "SV", "ES", "US", "FR", "GT", "HN", "IT", "MX", "NI", "PA", "PY", "PE", "PT", "DO", "GB", "UY", "VE"], "default": "VE"}, "tipo": {"editor": "enum", "options": ["tienda", "comida", "citas", "online", "indep"], "default": "tienda"}, "$preview": {"width": 390, "height": 844}}'>
+var DEF = {"pantalla": "empezar", "pais": "VE", "tipo": "tienda", "escala": "negocio"};
 var RVE = 875.68;
 var GEN = ['Efectivo', 'Tarjeta', 'Transferencia'];
 var PAISES = [
@@ -648,6 +723,16 @@ var HL = ['8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6', '7', '8'];
 var GCATS = ['Alquiler', 'Luz y agua', 'Sueldos', 'Mercancía', 'Transporte', 'Otro'];
 var DUES = ['En 7 días', 'En 15 días', 'Fin de mes'];
 var DURS = ['30 min', '45 min', '1 hora', '2 horas'];
+var SUCS = ['Centro', 'Norte', 'Este', 'Oeste'];
+var SUCC = ['#8f84ff', '#3ddc9f', '#f0a020', '#5fb3ff'];
+var EMPN = { tienda: 'Comercial La Esquina', comida: 'Grupo Sabor Express', citas: 'Estudios Bella', online: 'Estampa Store', indep: 'Ruiz y Asociados' };
+var SUF = { VE: 'C.A.', CO: 'S.A.S.', MX: 'S.A. de C.V.', ES: 'S.L.', US: 'LLC', PE: 'S.A.C.', AR: 'S.R.L.', CL: 'SpA', BR: 'Ltda.' };
+var FISCAL = { VE: ['RIF', 'J-50123456-7'], CO: ['NIT', '900.123.456-7'], MX: ['RFC', 'CLE010203AB1'], PE: ['RUC', '20123456789'], AR: ['CUIT', '30-71234567-8'], CL: ['RUT', '76.123.456-7'], ES: ['NIF', 'B12345678'], US: ['EIN', '12-3456789'], BR: ['CNPJ', '12.345.678/0001-90'], EC: ['RUC', ''], DO: ['RNC', ''], BO: ['NIT', ''], PA: ['RUC', ''], PY: ['RUC', ''], UY: ['RUT', ''], GT: ['NIT', ''], HN: ['RTN', ''], SV: ['NIT', ''], NI: ['RUC', ''], CR: ['Cédula jurídica', ''], PT: ['NIF', ''], IT: ['Partita IVA', ''], FR: ['SIRET', ''], GB: ['VAT number', ''], CA: ['Business number', ''] };
+var EMPD = [['Constructora Andina', 1250, 32], ['Hotel Miramar', 840, 12], ['Colegio San José', 460, 5], ['Carmen Díaz', 38, 2]];
+var EMP_SOON = ['Inventario por sucursal y traslados', 'Roles, permisos y aprobaciones', 'Compras con orden y aprobación', 'Crédito a empresas y estados de cuenta', 'Factura electrónica', 'Reportes por sucursal y para el contador'];
+var BLD = 'M3 21h18M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M15 9h4a2 2 0 012 2v10M9 7h2M9 11h2M9 15h2';
+var SUCOPT = [['1', 1], ['2 a 3', 3], ['4 a 10', 6], ['Más de 10', 12]];
+function shares(n) { var w = []; for (var i = 0; i < n; i++) w.push(1 / (i + 1.6)); var t = w.reduce((a, b) => a + b, 0); return w.map(x => x / t); }
 function pais(id) { return PAISES.filter(p => p.id === id)[0] || PAISES[PAISES.length - 1]; }
 function tipo(id) { return TIPOS.filter(t => t.id === id)[0] || TIPOS[0]; }
 function sel(on, warm) { return { bg: on ? (warm ? 'rgba(240,160,32,.16)' : 'rgba(143,132,255,.18)') : 'rgba(239,238,254,.07)', ring: on ? (warm ? '#f0a020' : '#8f84ff') : 'transparent', fg: on ? '#efeefe' : '#c9c5e8', on: on ? 'true' : 'false' }; }
@@ -655,25 +740,27 @@ function sw(on) { return { track: on ? '#3ddc9f' : '#3a3756', knob: on ? '21px' 
 class Component extends DCLogic {
   constructor(p) {
     super(p);
-    var pid = this.props.pais ?? DEF.pais, tid = this.props.tipo ?? DEF.tipo, start = this.props.pantalla ?? DEF.pantalla;
-    this.state = Object.assign({ screen: start === 'app' ? 'app' : 'ob0', pais: start === 'app' ? pid : '', tipo: start === 'app' ? tid : '', tab: 'hoy', sheet: '', closing: false, toast: '', pin: true, offline: false, pending: 0, recibo: 128 }, this.seed(pid, tid));
+    var pid = this.props.pais ?? DEF.pais, tid = this.props.tipo ?? DEF.tipo, start = this.props.pantalla ?? DEF.pantalla, esc = this.props.escala ?? DEF.escala;
+    this.state = Object.assign({ screen: start === 'app' ? 'app' : 'ob0', pais: start === 'app' ? pid : '', tipo: start === 'app' ? tid : '', tab: 'hoy', sheet: '', closing: false, toast: '', pin: true, offline: false, pending: 0, recibo: 128, escala: esc, sucN: 3, suc: 0, razon: '', fiscal: '' }, this.seed(pid, tid, esc));
   }
-  seed(pid, tid) {
+  seed(pid, tid, esc) {
     var P = pais(pid), C = CFG[tid];
+    var E = (esc || (this.state && this.state.escala)) === 'empresa', k = E ? 6.5 : 1, kb = E ? 4 : 1;
     var L = this.mk(P);
     var pays = P.pays.slice();
     var prods = PRODS[tid].map((x, i) => ({ id: tid + i, ab: x[0], n: x[1], p: L.price(x[2]), c: L.price(x[3]), q: x[4], min: x[5], dur: x[6] || 0, cnt: x[7] || 0 }));
-    var sales = L.toL(C.sales), byPay = {};
+    var sales = L.toL(C.sales * k), byPay = {};
     var share = [0.45, 0.3, 0.25];
     pays.slice(0, 3).forEach((k, i) => { byPay[k] = L.round(sales * share[i]); });
     var debtUsd = tid === 'indep' ? [120, 80, 45] : tid === 'citas' ? [24, 12, 8.5, 15] : [12.4, 8.75, 21, 4.2];
     var names = ['María Pérez', 'José Rivas', 'Carmen Díaz', 'Luis Gómez'], days = [2, 9, 16, 1];
     return {
-      nombre: C.nom, pays: pays, taxOn: P.tax[1] > 0, taxIncl: true, prods: prods, cart: {}, pay: pays[0], pay2: pays[1] || pays[0], mixto: false, part: 0.5, given: 0, who: 0,
-      byPay: byPay, salesN: C.n, profit: L.round(sales * 0.3), fiadoHoy: L.round(L.toL(6.3)), gastoHoy: 0, cerrada: false, counted: {},
-      debts: debtUsd.map((v, i) => ({ id: i, n: names[i], amt: L.price(v), days: days[i] })),
-      bills: [{ id: 'a', n: 'Alquiler del local', v: L.price(250), due: 'Vence el 1 de noviembre', dc: '#f0a020' }, { id: 'b', n: tid === 'indep' || tid === 'citas' ? 'Tarjeta de crédito' : 'Distribuidora Central', v: L.price(84), due: 'Vence mañana', dc: '#ff8fa6' }],
-      gastos: [{ n: 'Luz y agua', h: 'Ayer · ' + pays[0], v: L.price(38) }, { n: 'Sueldo ayudante', h: '25 oct · ' + (pays[2] || pays[0]), v: L.price(120) }, { n: 'Transporte', h: '24 oct · ' + (pays[1] || pays[0]), v: L.price(6) }],
+      nombre: E ? EMPN[tid] : C.nom, pays: pays, taxOn: P.tax[1] > 0, taxIncl: true, prods: prods, cart: {}, pay: pays[0], pay2: pays[1] || pays[0], mixto: false, part: 0.5, given: 0, who: 0,
+      byPay: byPay, salesN: Math.round(C.n * (E ? 5 : 1)), profit: L.round(sales * 0.3), fiadoHoy: L.round(L.toL(6.3)), gastoHoy: 0, cerrada: false, counted: {},
+      debts: E ? EMPD.map((x, i) => ({ id: i, n: x[0], amt: L.price(x[1]), days: x[2] })) : debtUsd.map((v, i) => ({ id: i, n: names[i], amt: L.price(v), days: days[i] })),
+      aprobs: [{ id: 1, t: 'Descuento de 15 % en una venta', h: 'Jorge Lira · Sucursal Norte · ' + L.m(L.price(42)) }, { id: 2, t: 'Orden de compra OC-0042', h: 'Carla Méndez · Distribuidora Central · ' + L.m(L.price(1240)) }],
+      bills: [{ id: 'a', n: 'Alquiler del local', v: L.price(250 * kb), due: 'Vence el 1 de noviembre', dc: '#f0a020' }, { id: 'b', n: tid === 'indep' || tid === 'citas' ? 'Tarjeta de crédito' : 'Distribuidora Central', v: L.price(84 * kb), due: 'Vence mañana', dc: '#ff8fa6' }],
+      gastos: [{ n: 'Luz y agua', h: 'Ayer · ' + pays[0], v: L.price(38 * kb) }, { n: 'Sueldo ayudante', h: '25 oct · ' + (pays[2] || pays[0]), v: L.price(120 * kb) }, { n: 'Transporte', h: '24 oct · ' + (pays[1] || pays[0]), v: L.price(6 * kb) }],
       gm: '', gcat: 'Mercancía', later: false, due: 0, gpay: pays[0], ab: 0, abPart: 1, rem: 0, pn: '', pp: '', dur: 0, last: null
     };
   }
@@ -685,7 +772,7 @@ class Component extends DCLogic {
     var L = {
       dec: dec, ve: ve, ar: ar, dual: ve || ar,
       toL: u => u * P.r, price: u => nice(u * P.r), round: v => dec ? Math.round(v * 100) / 100 : Math.round(v),
-      m: v => P.eur ? nf.format(v) + ' €' : P.s + (P.s.length > 1 ? ' ' : '') + nf.format(v),
+      m: v => (v < -0.004 ? '−' : '') + (P.eur ? nf.format(Math.abs(v)) + ' €' : P.s + (P.s.length > 1 ? ' ' : '') + nf.format(Math.abs(v))),
       s: v => ve ? 'Bs ' + nf2.format(v * RVE) : ar ? 'US$ ' + nf2.format(v / P.r) : '',
       step: dec ? (P.r >= 10 ? 10 : 1) : (P.r >= 1000 ? 1000 : 100),
       bills: t => { var b = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000].map(x => x * (P.r >= 1000 ? 10 : 1)); var out = [t]; b.forEach(u => { var v = Math.ceil(t / u) * u; if (v > t + 1e-9 && out.indexOf(v) < 0 && out.length < 4 && u >= t / 20) out.push(v); }); out.sort((a, c) => a - c); return out.slice(0, 4); }
@@ -699,7 +786,9 @@ class Component extends DCLogic {
   renderVals() {
     var s = this.state, self = this;
     var P = pais(s.pais || 'VE'), T = tipo(s.tipo || 'tienda'), C = CFG[T.id], L = this.mk(P);
-    var ob = ['ob1', 'ob2', 'ob3', 'ob4'].indexOf(s.screen);
+    var OBS = ['ob1', 'ob2', 'obT', 'ob3', 'ob4'], ob = OBS.indexOf(s.screen);
+    var E = s.escala === 'empresa', FI = FISCAL[P.id] || ['Número fiscal', ''];
+    var sucL = E ? SUCS.slice(0, Math.min(s.sucN, 4)) : [], sh = shares(sucL.length || 1), fs = E && s.suc > 0 ? sh[s.suc - 1] : 1;
     var isApp = s.screen === 'app';
     var fiadoN = T.id === 'tienda' || T.id === 'comida' ? 'Fiado' : 'Por cobrar';
     var allPays = s.pays.concat([fiadoN]);
@@ -724,6 +813,7 @@ class Component extends DCLogic {
     var fecha = 'Lun 27 oct';
     var mesVen = L.toL(C.sales * 22.5), mesCos = mesVen * 0.62, mesGas = s.gastos.reduce((a, g) => a + g.v, 0) + L.toL(410);
     var todo = [];
+    if (E && s.aprobs.length) todo.push({ t: s.aprobs.length + (s.aprobs.length === 1 ? ' aprobación espera' : ' aprobaciones esperan') + ' por ti', h: s.aprobs.map(a => a.t).join(' · '), d: I.shield, c: '#7ff0c3', bg: 'rgba(61,220,159,.16)', go: () => this.open('aprob') });
     if (s.debts.length) todo.push({ t: s.debts.length + ' clientes te deben ' + L.m(owed), h: 'Mándales el recordatorio por WhatsApp', d: I.bell, c: '#f5c26b', bg: 'rgba(240,160,32,.16)', go: goTab('clientes') });
     if (low.length) todo.push({ t: low.length + (low.length === 1 ? ' producto' : ' productos') + ' por debajo del mínimo', h: low.map(p => p.n).slice(0, 2).join(', '), d: I.box, c: '#9fd0ff', bg: 'rgba(95,179,255,.16)', go: goTab('inv') });
     if (s.bills.length) todo.push({ t: s.bills[s.bills.length - 1].n + ': ' + L.m(s.bills[s.bills.length - 1].v), h: s.bills[s.bills.length - 1].due, d: I.cal, c: '#ffb0bd', bg: 'rgba(255,122,144,.16)', go: goTab('mas') });
@@ -751,7 +841,7 @@ class Component extends DCLogic {
       clearTimeout(this._c); this._c = setTimeout(() => this.setState(Object.assign(st, { sheet: 'listo', closing: false })), 260);
     };
     var last = s.last || { items: [], tax: '', taxN: '', tot: '', pays: [], fiado: false };
-    var shTitles = { cobrar: C.sell === 'Pedido' ? 'Cobrar pedido' : 'Cobrar', listo: last.fiado ? 'Anotado' : 'Venta guardada', gasto: 'Anotar gasto', recordar: 'Recordar pago', abono: 'Anotar abono', cierre: 'Cierre del día', tipo: 'Tipo de negocio', producto: C.inv ? 'Nuevo producto' : 'Nuevo servicio' };
+    var shTitles = { cobrar: C.sell === 'Pedido' ? 'Cobrar pedido' : 'Cobrar', listo: last.fiado ? 'Anotado' : 'Venta guardada', gasto: 'Anotar gasto', recordar: 'Recordar pago', abono: 'Anotar abono', cierre: 'Cierre del día', tipo: 'Tipo de negocio', producto: C.inv ? 'Nuevo producto' : 'Nuevo servicio', aprob: 'Aprobaciones' };
     var ab = s.debts.filter(d => d.id === s.ab)[0] || { n: '', amt: 0 };
     var abVal = L.round(ab.amt * s.abPart);
     var rem = s.debts.filter(d => d.id === s.rem)[0] || { n: '', amt: 0 };
@@ -763,24 +853,32 @@ class Component extends DCLogic {
     if (sheet === 'recordar') { foot.main = 'Abrir WhatsApp'; foot.bg = '#25D366'; foot.fg = '#0b0a14'; foot.go = () => this.close(() => this.flash('Mensaje listo para ' + rem.n.split(' ')[0])); }
     if (sheet === 'abono') { foot.main = 'Anotar abono de ' + L.m(abVal); foot.go = () => this.close(() => { var bp = Object.assign({}, s.byPay); bp[s.gpay] = (bp[s.gpay] || 0) + abVal; var left = L.round(ab.amt - abVal); this.setState({ byPay: bp, debts: left > 0 ? s.debts.map(d => d.id === ab.id ? Object.assign({}, d, { amt: left }) : d) : s.debts.filter(d => d.id !== ab.id) }); this.flash(left > 0 ? ab.n.split(' ')[0] + ' abonó ' + L.m(abVal) : ab.n.split(' ')[0] + ' ya no debe nada'); }); }
     if (sheet === 'cierre') { foot.main = 'Cerrar el día y enviarme el resumen'; foot.go = () => this.close(() => { this.setState({ cerrada: true }); this.flash('Día cerrado. Resumen listo en WhatsApp'); }); }
+    if (sheet === 'aprob') { foot.main = 'Listo'; foot.go = () => this.close(); }
     if (sheet === 'tipo') { foot.main = 'Listo'; foot.go = () => this.close(); }
     if (sheet === 'producto') { foot.main = 'Guardar'; foot.go = () => { var v = parseFloat(String(s.pp).replace(',', '.')) || L.price(5); var nm = s.pn || (C.inv ? 'Producto nuevo' : 'Servicio nuevo'); this.close(() => { this.setState({ prods: s.prods.concat([{ id: 'x' + Date.now(), ab: nm.slice(0, 2).toUpperCase(), n: nm, p: v, c: L.round(v * 0.6), q: C.inv ? 10 : 0, min: C.inv ? 4 : 0, dur: [30, 45, 60, 120][s.dur], cnt: 0 }]), pn: '', pp: '' }); this.flash('Guardado: ' + nm); }); }; }
     var durTxt = m => m >= 60 ? (m % 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : (m / 60) + (m === 60 ? ' hora' : ' horas')) : m + ' min';
-    var obCtas = ['Continuar', 'Continuar', 'Continuar', 'Abrir mi negocio'];
+    var obCtas = ['Continuar', 'Continuar', 'Continuar', 'Continuar', E ? 'Abrir mi empresa' : 'Abrir mi negocio'];
     var obOk = ob === 0 ? !!s.pais : ob === 1 ? !!s.tipo : true;
     return {
       appT: sheet && !closing ? 'scale(.94) translateY(8px)' : 'none', appR: sheet && !closing ? '28px' : '0px',
-      ob0: s.screen === 'ob0', obStep: ob >= 0, ob1: ob === 0, ob2: ob === 1, ob3: ob === 2, ob4: ob === 3, isApp: isApp,
+      ob0: s.screen === 'ob0', obStep: ob >= 0, ob1: ob === 0, ob2: ob === 1, obT: ob === 2, ob3: ob === 3, ob4: ob === 4, isApp: isApp,
       welcome: [
         { t: 'Vende y cobra con las formas de pago de tu país', d: I.cart, c: '#c9c0ff', bg: 'rgba(143,132,255,.18)', dl: '150ms' },
         { t: 'Sabe quién te debe, qué tienes y cuánto ganas de verdad', d: I.rate, c: '#7ff0c3', bg: 'rgba(61,220,159,.16)', dl: '230ms' },
         { t: 'Funciona sin internet y guarda copias solo', d: I.wifi, c: '#f5c26b', bg: 'rgba(240,160,32,.16)', dl: '310ms' }
       ],
       goOb1: () => this.setState({ screen: 'ob1' }),
-      obBars: [0, 1, 2, 3].map(i => ({ c: i <= ob ? '#8f84ff' : '#2a2745' })),
-      obBack: () => this.setState({ screen: ob === 0 ? 'ob0' : 'ob' + ob }),
+      obBars: [0, 1, 2, 3, 4].map(i => ({ c: i <= ob ? '#8f84ff' : '#2a2745' })),
+      obBack: () => this.setState({ screen: ob === 0 ? 'ob0' : OBS[ob - 1] }),
       obCta: obCtas[Math.max(0, ob)], obDis: obOk ? 'false' : 'true', obBg: obOk ? '#6a5cf2' : '#2a2745', obFg: obOk ? '#ffffff' : '#6f6c8e',
-      obNext: () => { if (!obOk) return; if (ob === 3) { this.setState({ screen: 'app', tab: 'hoy' }); this.flash('¡Bienvenido a Orbe Negocios!'); } else this.setState({ screen: 'ob' + (ob + 2) }); },
+      obNext: () => { if (!obOk) return; if (ob === 4) { this.setState({ screen: 'app', tab: 'hoy', suc: 0 }); this.flash('¡Bienvenido a Orbe Negocios!'); } else this.setState({ screen: OBS[ob + 1] }); },
+      sizes: [{ id: 'negocio', n: 'Negocio', sub: 'Hasta 10 personas, uno o dos locales', d: I[T.id], ic: '#c9c0ff', ib: 'rgba(143,132,255,.18)', feats: ['Vender, clientes, gastos y cierre del día', 'Dueño y algunos empleados', 'En el teléfono y en la computadora'] }, { id: 'empresa', n: 'Empresa', sub: 'Varias sucursales o un equipo grande', d: BLD, ic: '#7ff0c3', ib: 'rgba(61,220,159,.16)', feats: ['Sucursales e inventario por sucursal', 'Roles, permisos y aprobaciones', 'Compras, crédito a empresas y facturas', 'Reportes por sucursal y para el contador'] }].map((z, i) => { var on = s.escala === z.id; return Object.assign(z, { dl: dl(i), on: on ? 'true' : 'false', bg: on ? 'rgba(143,132,255,.12)' : '#16142a', ring: on ? '#8f84ff' : 'transparent', pick: () => this.setState(Object.assign({ escala: z.id }, this.seed(s.pais || 'VE', s.tipo || 'tienda', z.id))) }); }),
+      isEmp: E, ob3T: E ? 'Tu empresa' : 'Tu negocio', nomLbl: E ? 'Nombre comercial' : 'Nombre del negocio',
+      razon: s.razon, razonPh: s.nombre + ' ' + (SUF[P.id] || 'S.A.'), setRazon: e => this.setState({ razon: e.target.value }),
+      fiscalN: FI[0], fiscalPh: FI[1] || 'Tu número fiscal', fiscal: s.fiscal, setFiscal: e => this.setState({ fiscal: e.target.value }),
+      sucOpts: SUCOPT.map(o => Object.assign({ n: o[0], pick: () => this.setState({ sucN: o[1] }) }, sel(s.sucN === o[1]))),
+      armadoTxt: E ? 'Armado para tu empresa de ' + T.n.toLowerCase() + ' en ' + P.n + (s.sucN > 1 ? ', con ' + (s.sucN > 10 ? 'más de 10' : s.sucN) + ' sucursales.' : '.') : 'Armado para ' + T.n.toLowerCase() + ' en ' + P.n + '.',
+      soonT: E ? 'Para tu empresa, llegan pronto' : 'Llegan pronto para tu tipo de negocio',
       countries: PAISES.map(c => { var on = s.pais === c.id; return { f: c.f, n: c.n, m: c.id === 'VE' ? 'Dólares y bolívares, con la tasa BCV' : c.id === 'AR' ? 'Pesos argentinos y dólares' : c.cur.charAt(0).toUpperCase() + c.cur.slice(1) + ' · ' + c.pays.slice(0, 2).join(', '), on: on ? 'true' : 'false', bg: on ? 'rgba(143,132,255,.12)' : '#16142a', ring: on ? '#8f84ff' : 'transparent', dot: on ? '#8f84ff' : '#2a2745', pick: () => this.setState(Object.assign({ pais: c.id }, this.seed(c.id, s.tipo || 'tienda'))) }; }),
       types: TIPOS.map((t, i) => { var on = s.tipo === t.id; return { n: t.n, ex: t.ex, d: I[t.id], ic: t.ic, ib: t.ib, dl: dl(i), on: on ? 'true' : 'false', bg: on ? 'rgba(143,132,255,.12)' : '#16142a', bg2: on ? 'rgba(143,132,255,.12)' : '#0b0a14', ring: on ? '#8f84ff' : 'transparent', pick: () => { var pays = s.pays, taxOn = s.taxOn, incl = s.taxIncl; this.setState(Object.assign(this.seed(s.pais || 'VE', t.id), { tipo: t.id, tab: s.screen === 'app' ? 'hoy' : s.tab }, s.screen === 'app' ? { pays: pays, taxOn: taxOn, taxIncl: incl } : {})); if (s.screen === 'app') this.flash('Ahora: ' + t.n); } }; }),
       paisN: P.n, paisF: P.f,
@@ -795,20 +893,33 @@ class Component extends DCLogic {
       taxInclY: () => this.setState({ taxIncl: true }), taxInclN: () => this.setState({ taxIncl: false }),
       tipoLower: T.n.toLowerCase(),
       modsOn: [{ n: C.sell === 'Cobrar' ? 'Cobrar con ' + s.pays.slice(0, 2).join(', ') + '…' : 'Vender con ' + s.pays.slice(0, 2).join(', ') + '…', d: I.cart }, { n: 'Clientes y lo que te deben', d: I.users }, C.inv ? { n: T.id === 'comida' ? 'Inventario de lo que preparas' : 'Inventario y stock mínimo', d: I.box } : { n: 'Servicios con precio y duración', d: I.list }, { n: 'Gastos y cuentas por pagar', d: I.minus }, { n: 'Cierre del día', d: I.lock }, { n: 'Copias y modo sin conexión', d: I.save }].map((m, i) => Object.assign(m, { dl: (120 + i * 60) + 'ms' })),
-      modsSoon: C.soon,
+      modsSoon: E ? EMP_SOON : C.soon,
       pinA: sw(s.pin).a, pinTrack: sw(s.pin).track, pinKnob: sw(s.pin).knob, togglePin: () => this.setState({ pin: !s.pin }),
       ini: s.nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'MN',
-      fecha: fecha, tipoN: T.n,
+      fecha: fecha, tipoN: E ? (s.suc ? 'Sucursal ' + sucL[s.suc - 1] : 'Todas las sucursales') : T.n,
+      empApp: E, sucChips: E && sucL.length > 1, sucCard: E && sucL.length > 1 && s.suc === 0,
+      sucs: ['Todas'].concat(sucL).map((n, i) => Object.assign({ n: n, pick: () => this.setState({ suc: i }) }, sel(s.suc === i))),
+      sucRows: sucL.map((n, i) => ({ n: n, v: L.m(sales * sh[i]), w: Math.round(sh[i] / sh[0] * 100) + '%', c: SUCC[i % 4], pick: () => this.setState({ suc: i + 1 }) })),
+      aprobs: s.aprobs.map(a => ({ t: a.t, h: a.h, ok: () => { this.setState({ aprobs: s.aprobs.filter(x => x.id !== a.id) }); this.flash('Aprobado: ' + a.t); }, no: () => { this.setState({ aprobs: s.aprobs.filter(x => x.id !== a.id) }); this.flash('Rechazado. Se le avisa a quien lo pidió'); } })), noAprobs: s.aprobs.length === 0, shAprob: sheet === 'aprob',
+      empRows: [
+        { n: 'Sucursales', v: (s.sucN > 10 ? 'Más de 10' : s.sucN) + (s.sucN === 1 ? ' activa' : ' activas'), d: BLD },
+        { n: 'Equipo y permisos', v: '12 personas', d: I.users },
+        { n: 'Compras', v: s.aprobs.length ? '1 por aprobar' : 'Al día', d: I.cart },
+        { n: 'Facturas', v: 'Con tu ' + FI[0], d: I.doc },
+        { n: 'Reportes', v: 'Por sucursal', d: I.rate },
+        { n: 'Registro de cambios', v: 'Quién hizo qué', d: I.list },
+        { n: 'En la computadora', v: 'orbe.app', d: I.card }
+      ].map((a, i) => Object.assign(a, { bt: i ? '1px solid #221f3a' : '0', go: () => this.flash(a.n + ': se ve completo en la computadora') })),
       netTxt: s.offline ? (s.pending ? 'Sin conexión · ' + s.pending + ' por subir' : 'Sin conexión') : 'En línea',
       netC: s.offline ? '#f5c26b' : '#3ddc9f', netBg: s.offline ? 'rgba(240,160,32,.14)' : 'rgba(61,220,159,.14)',
       toggleNet: () => { if (s.offline) { var n = s.pending; this.setState({ offline: false, pending: 0 }); this.flash(n ? n + (n === 1 ? ' venta subida' : ' ventas subidas') + ' a la nube' : 'Conectado otra vez'); } else { this.setState({ offline: true }); this.flash('Sin internet: todo se guarda en el teléfono'); } },
       rateTxt: L.ve ? 'BCV ' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2 }).format(RVE) : L.ar ? 'Dólar ' + new Intl.NumberFormat('es-AR').format(P.r) : '',
       tHoy: s.tab === 'hoy', tVender: s.tab === 'vender', tClientes: s.tab === 'clientes', tInv: s.tab === 'inv', tServ: s.tab === 'serv', tMas: s.tab === 'mas',
-      hoyLabel: C.hoy, salesMain: L.m(sales), salesSec: L.dual ? L.s(sales) : '', vsAyer: Math.max(1, Math.round((sales / (L.toL(C.sales) * 0.88) - 1) * 100)) + ' %',
+      hoyLabel: C.hoy, salesMain: L.m(sales * fs), salesSec: L.dual ? L.s(sales * fs) : '', vsAyer: Math.max(1, Math.round((sales / (L.toL(C.sales) * 0.88) - 1) * 100)) + ' %',
       hours: HOURS.map((h, i) => ({ px: Math.max(3, Math.round(h / 16 * 46)) + 'px', c: i === 11 ? '#8f84ff' : 'rgba(143,132,255,.35)', l: HL[i] })),
       kpis: [
-        { n: 'Ganancia', v: L.m(s.profit), s: 'ya sin el costo', c: '#3ddc9f', dl: dl(1) },
-        { n: C.inv ? 'Ventas' : 'Clientes', v: String(s.salesN), s: 'promedio ' + L.m(sales / Math.max(1, s.salesN)), c: '#efeefe', dl: dl(2) },
+        { n: 'Ganancia', v: L.m(s.profit * fs), s: 'ya sin el costo', c: '#3ddc9f', dl: dl(1) },
+        { n: C.inv ? 'Ventas' : 'Clientes', v: String(Math.round(s.salesN * fs)), s: 'promedio ' + L.m(sales / Math.max(1, s.salesN)), c: '#efeefe', dl: dl(2) },
         { n: 'Te deben', v: L.m(owed), s: s.debts.length + ' clientes', c: '#f0a020', dl: dl(3) }
       ],
       quick: [
@@ -864,7 +975,7 @@ class Component extends DCLogic {
         { n: 'Copias', v: 'Hoy 8:00 am', d: I.save, go: () => this.flash('Copia guardada en el teléfono') },
         { n: 'Sin conexión', v: s.offline ? 'Ahora sin internet' : 'Siempre lista', d: I.wifi, go: () => this.flash('Toca «En línea» arriba para probarlo') }
       ].map((a, i) => Object.assign(a, { bt: i ? '1px solid #221f3a' : '0' })),
-      restart: () => this.setState(Object.assign({ screen: 'ob0', pais: '', tipo: '', tab: 'hoy' }, this.seed('VE', 'tienda'))),
+      restart: () => this.setState(Object.assign({ screen: 'ob0', pais: '', tipo: '', tab: 'hoy', escala: 'negocio', suc: 0 }, this.seed('VE', 'tienda', 'negocio'))),
       tabs: tabs.map(t => { var on = s.tab === t.id; return { n: t.n, d: t.d, cur: on ? 'page' : 'false', c: on ? '#c9c0ff' : '#8a87a8', bg: on ? 'rgba(143,132,255,.16)' : 'transparent', go: () => this.setState({ tab: t.id }) }; }),
       toast: s.toast,
       sheetOpen: !!sheet, shTitle: shTitles[sheet] || '', dimO: closing ? '0' : '1', shT: closing ? 'translateY(100%)' : 'translateY(0)',
