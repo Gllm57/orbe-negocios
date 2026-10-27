@@ -1,7 +1,9 @@
 // Vender (teléfono) y Caja (computadora). En la computadora: lector de códigos, F12 cobra, Esc vacía.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { Icono, avisar, TONOS } from '../ui.js';
+import { Icono, avisar, TONOS, hora } from '../ui.js';
+import { resumen, inicioDia } from '../datos.js';
+import { Reparto, Monto, color } from '../graficos.js';
 
 export function totales(items, neg, P) {
   const sub = items.reduce((a, it) => a + it.q * it.p, 0), tasa = P.tax[1] / 100;
@@ -13,7 +15,7 @@ export function totales(items, neg, P) {
 let carritoGuardado = {};
 
 export function Vender() {
-  const { S, P, T, D, tel, abrir } = useApp();
+  const { S, P, T, D, tel, abrir, suc, puede } = useApp();
   const [cart, setCartRaw] = useState(carritoGuardado);
   const setCart = c => { carritoGuardado = c; setCartRaw(c); };
   const [q, setQ] = useState('');
@@ -56,7 +58,7 @@ export function Vender() {
       ${p.q === 0 && html`<span class="sin">Agotado</span>`}
     </button>`; })}</div>`;
 
-  const Lineas = html`<div class="lista" style="min-height:${tel ? 0 : 120}px">${items.length ? items.map(it => html`<div class="item entra" key=${it.pid}>
+  const Lineas = html`<div class="lista lineas" style="min-height:${tel ? 0 : 120}px">${items.length ? items.map(it => html`<div class="item entra" key=${it.pid}>
     <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px;font-weight:600">${it.n}</b><span class="sub faint num">${D.m(it.p)} c/u</span></span>
     <span class="fila" style="gap:4px">
       <button type="button" class="icono-btn chico toca" style="width:30px;height:30px" aria-label=${'Quitar uno de ' + it.n} onClick=${() => sumar(prods.find(p => p.id === it.pid), -1)}><${Icono} n="menos1" t=${14} g=${2.6} /></button>
@@ -81,6 +83,28 @@ export function Vender() {
     <div class="tarjeta pila entra">${n ? Lineas : null}${Total}</div>
     ${Boton}`;
 
+  // Panel «Hoy en esta caja»: aprovecha el espacio debajo de los productos con lo que el cajero necesita a mano.
+  function HoyCaja() {
+    const hoy0 = inicioDia(Date.now()), r = resumen(hoy0, Date.now() + 1, suc);
+    const ultimas = S.ventas.filter(v => v.t >= hoy0 && (!suc || v.suc === suc)).slice(-6).reverse();
+    const pagos = Object.keys(r.porPago).map((k, i) => ({ n: k, v: r.porPago[k], c: k === 'Fiado' ? 'var(--c3)' : color(i) }));
+    return html`<div class="mitades">
+      <section class="tarjeta entra" style="--i:3"><div class="tarjeta-tit">Hoy${suc ? ' en ' + suc : ' en la caja'}<span class="sub">${r.n} ventas</span></div>
+        <div class="rejilla-3" style="margin-bottom:14px">
+          <div class="cifra"><span class="sub">Vendido</span><${Monto} v=${r.total} f=${D.m} clase="v" /></div>
+          <div class="cifra"><span class="sub">Ticket promedio</span><${Monto} v=${r.ticket} f=${D.m} clase="v" /></div>
+          <div class="cifra"><span class="sub">Fiado</span><${Monto} v=${r.fiado} f=${D.m} clase="v amber" /></div>
+        </div>
+        ${pagos.length ? html`<${Reparto} segs=${pagos} f=${D.m} titulo="Cómo te pagaron" tam=${104} grosor=${9} hueco=${3} />` : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
+      </section>
+      <section class="tarjeta entra" style="--i:4;padding-bottom:6px"><div class="tarjeta-tit">Últimas ventas<span class="sub">toca para ver el recibo</span></div>
+        <div class="lista">${ultimas.length ? ultimas.map((v, i) => html`<button type="button" key=${v.id} class="item toca entra" style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('recibo', { venta: v })}>
+          <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px;font-weight:600">#${v.n} · ${v.items.map(it => it.q + ' × ' + it.n).join(', ')}</b><span class="sub faint">${hora(v.t)} · ${v.pagos.map(p => p.m).join(' + ')}</span></span>
+          <b class=${'num' + (v.fiado ? ' amber' : '')}>${D.m(v.total)}</b></button>`) : html`<p class="vacio">Aquí aparecen las ventas de hoy.</p>`}</div>
+      </section>
+    </div>`;
+  }
+
   return html`<div class="caja-pc">
     <div class="pila" style="gap:14px;min-width:0">
       <label class="buscador" style="width:100%;min-height:54px;border-radius:18px;background:var(--surface);border:1.5px solid var(--line)">
@@ -89,6 +113,7 @@ export function Vender() {
         <span class="tecla">F1</span>
       </label>
       ${Grilla}
+      ${HoyCaja()}
       <div class="chips sub">${[['F1', 'Buscar'], ['Enter', 'Agregar'], ['F12', 'Cobrar'], ['Esc', 'Vaciar']].map(k => html`<span class="fila" style="gap:6px"><span class="tecla">${k[0]}</span>${k[1]}</span>`)}</div>
     </div>
     <div class="tarjeta pila ticket">

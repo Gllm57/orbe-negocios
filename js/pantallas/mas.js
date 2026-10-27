@@ -45,7 +45,7 @@ function Ajustes() {
     </div>`, 0);
   const apariencia = tarjetas[5];
   const lista = [perfil].concat(puede('ajustes') ? tarjetas : [apariencia]);
-  return tel ? html`<div class="pila">${lista}</div>` : html`<div class="tres">${lista}</div>`;
+  return tel ? html`<div class="pila">${lista}</div>` : html`<div class="ajustes-pc">${lista}</div>`;
 }
 
 export function Mas() {

@@ -69,8 +69,8 @@ export function Reportes() {
       ${pagos.length ? html`<${Reparto} key=${'pg' + dias + suc} segs=${pagos} f=${D.m} titulo=${'Vendido en ' + (per === 'mes' ? 'el mes' : dias + ' días')} />` : html`<p class="vacio">Sin ventas.</p>`}</section>`,
     productos: html`<section class="tarjeta entra" style="--i:7"><div class="tarjeta-tit">Lo que más vendes<span class="sub">por ventas</span></div>
       <${BarrasH} datos=${prods.slice(0, 6).map(p => ({ n: p.n, v: p.v, txt: D.m(p.v), sub: p.q + ' vendidos · ganas ' + D.m(p.g) }))} /></section>`,
-    semana: html`<section class="tarjeta entra" style="--i:8"><div class="tarjeta-tit">Tu mejor día<span class="sub">${mejor.l}, en promedio ${D.m(mejor.v)}</span></div>
-      <${Barras} key=${'sem' + dias + suc} datos=${semana} alto=${tel ? 120 : 170} resaltar=${semana.indexOf(mejor)} /></section>`,
+    semana: html`<section class="tarjeta entra llena" style="--i:8"><div class="tarjeta-tit">Tu mejor día<span class="sub">${mejor.l}, en promedio ${D.m(mejor.v)}</span></div>
+      <${Barras} key=${'sem' + dias + suc} datos=${semana} alto=${tel ? 120 : 170} resaltar=${semana.indexOf(mejor)} llenar=${!tel} /></section>`,
     sucursales: E && !suc ? html`<section class="tarjeta entra" style="--i:9"><div class="tarjeta-tit">Por sucursal</div>
       <${BarrasH} datos=${S.negocio.sucursales.map((s, i) => ({ n: s, v: r.porSuc[s] || 0, txt: D.m(r.porSuc[s] || 0), c: color(i) }))} /></section>` : null
   };
@@ -85,6 +85,6 @@ export function Reportes() {
     <div class="fila"><${Chips} opciones=${PERIODOS} valor=${per} onCambio=${setPer} chico /><span style="flex:1"></span>${Acciones}</div>
     <div class="cifras">${Cifras.map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="fila" style="gap:8px"><span class="simb-c" style=${{ '--c': k[3] === 'var(--ink)' ? 'var(--c1)' : k[3] }}><${Icono} n=${k[5]} t=${14} g=${2.2} /></span><span class="sub">${k[0]}</span></span><${Monto} v=${k[1]} f=${D.m} clase="v" /><span class="sub" style=${{ color: k[4] || 'var(--faint)' }}>${k[2]}</span></div>`)}</div>
     <div class="dos-uno">${bloques.linea}${bloques.resultado}</div>
-    <div class="tres">${bloques.pagos}${bloques.productos}${bloques.semana}</div>
+    <div class="tres estira">${bloques.pagos}${bloques.productos}${bloques.semana}</div>
     ${bloques.sucursales}`;
 }

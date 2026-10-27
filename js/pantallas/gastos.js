@@ -45,6 +45,12 @@ export function BloqueGastos({ compacto }) {
 }
 
 export function Gastos() {
+  const { D } = useApp();
   const b = BloqueGastos({});
-  return html`<div class="dos-uno"><div class="pila">${b.PorPagar}${b.Recientes}</div>${b.Mes}</div>`;
+  const gm = gastosEntre(inicioMes(), Date.now() + 1), pp = porPagar();
+  const tot = gm.reduce((a, g) => a + g.v, 0), dias = new Date().getDate();
+  const cifras = [['Gastado este mes', tot, gm.length + ' gastos', 'var(--out)', 'dinero'], ['Por pagar', pp.reduce((a, g) => a + g.v, 0), pp.length + (pp.length === 1 ? ' cuenta' : ' cuentas'), 'var(--amber)', 'calendario'],
+    ['Próximo vencimiento', pp.length ? pp[0].v : 0, pp.length ? pp[0].n + ' · ' + venceTxt(pp[0].vence).toLowerCase() : 'Nada pendiente', 'var(--ink)', 'reloj'], ['Promedio por día', tot / Math.max(1, dias), 'en ' + dias + ' días del mes', 'var(--ink)', 'grafico']];
+  return html`<div class="cifras">${cifras.map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="fila" style="gap:8px"><span class="simb-c" style=${{ '--c': k[3] === 'var(--ink)' ? 'var(--c1)' : k[3] }}><${Icono} n=${k[4]} t=${14} g=${2.2} /></span><span class="sub">${k[0]}</span></span><${Monto} v=${k[1]} f=${D.m} clase="v" /><span class="sub faint corta">${k[2]}</span></div>`)}</div>
+    <div class="tres estira">${b.PorPagar}${b.Recientes}${b.Mes}</div>`;
 }

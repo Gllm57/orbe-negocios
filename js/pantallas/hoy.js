@@ -116,8 +116,8 @@ export function Hoy() {
         ${(E && !suc ? sucs : pagos).length ? html`<${Reparto} segs=${E && !suc ? sucs : pagos} f=${D.m} titulo="Vendido hoy" tam=${132} />` : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
       </section>
     </div>
-    <div class="tres">
-      <section class="tarjeta entra" style="--i:6"><div class="tarjeta-tit">Ventas por hora<span class="sub">hoy</span></div><${Barras} datos=${horas} alto=${180} resaltar=${ahoraH - 7} /></section>
+    <div class="tres estira">
+      <section class="tarjeta entra llena" style="--i:6"><div class="tarjeta-tit">Ventas por hora<span class="sub">hoy</span></div><${Barras} datos=${horas} alto=${180} resaltar=${ahoraH - 7} llenar /></section>
       <div class="entra" style="--i:7">${Pendientes}</div>
       <div class="entra" style="--i:8">${Recientes}</div>
     </div>`;
