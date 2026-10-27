@@ -254,8 +254,6 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width
 .barras-h .bh { display: flex; flex-direction: column; gap: 6px; }
 
 /* cargando */
-.cargando { position: fixed; inset: 0; display: grid; place-items: center; }
-.cargando svg { animation: latido 1.1s var(--spring) infinite alternate; }
 
 /* ---------- orbes (anillos concéntricos, como en Orbe personal) ---------- */
 @keyframes rgDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -299,3 +297,25 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width
 .permiso-btn.on { background: var(--in-soft); color: var(--in); }
 .permiso-btn.off { background: var(--fill); color: var(--faint); }
 .permiso-btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+/* ---------- pantalla de carga ---------- */
+.splash { position: fixed; inset: 0; z-index: 300; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px; text-align: center; transition: opacity .45s ease, transform .5s var(--spring); }
+.splash.sale { opacity: 0; transform: scale(1.04); pointer-events: none; }
+.sp-logo { width: 128px; height: 128px; margin-bottom: 20px; overflow: visible; }
+.sp-gira { transform-origin: 46px 44px; animation: spGira 12s linear 1.5s infinite; }
+@keyframes spGira { to { transform: rotate(360deg); } }
+.sp-c { fill: none; stroke-width: 6.5; stroke-linecap: round; stroke-dasharray: 100 100; animation: spDibuja 1s var(--spring) backwards; }
+.sp-c1 { stroke: #8f84ff; }
+.sp-c2 { stroke: #3ddc9f; animation-delay: .15s; }
+.sp-c3 { stroke: #f0a020; animation-delay: .3s; }
+@keyframes spDibuja { from { stroke-dasharray: 0 100; opacity: .2; } }
+.sp-nombre { font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; animation: spSube .6s var(--spring) .7s backwards; }
+.sp-frase { color: var(--muted); font-size: 15px; animation: spSube .6s var(--spring) .85s backwards; }
+.sp-negocio { margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--accent-text); background: var(--accent-soft); border-radius: 999px; padding: 6px 14px; animation: spSube .5s var(--spring) 1s backwards; }
+@keyframes spSube { from { opacity: 0; transform: translateY(12px); } }
+.sp-barra { width: 104px; height: 3px; border-radius: 99px; background: var(--fill); overflow: hidden; margin-top: 26px; animation: spSube .4s ease 1s backwards; }
+.sp-barra i { display: block; width: 40%; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #8f84ff, #3ddc9f, #f0a020); animation: spCarga 1.2s cubic-bezier(.45, 0, .2, 1) 1s infinite; }
+@keyframes spCarga { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+.sp-error { max-width: 300px; color: var(--muted); font-size: 14px; line-height: 1.45; margin: 18px 0 0; }
+.splash.con-error .sp-barra { display: none; }
+@media (prefers-reduced-motion: reduce) { .sp-gira, .sp-c, .sp-nombre, .sp-frase, .sp-negocio, .sp-barra, .sp-barra i { animation: none; } }

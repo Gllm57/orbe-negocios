@@ -163,4 +163,6 @@ function subtitulo(s, { S, E, suc, T }) {
 }
 
 render(html`<${App} />`, document.getElementById('app'));
+// La pantalla de carga se va cuando la app ya se dibujó.
+requestAnimationFrame(() => { if (window.__listo) window.__listo(); });
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
