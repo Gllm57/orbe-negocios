@@ -44,7 +44,8 @@ function curva(x1, y1, x2, y2) {
   return x => { let t = x; for (let k = 0; k < 6; k++) { const d = dX(t); if (Math.abs(d) < 1e-6) break; t -= (X(t) - x) / d; } return Y(Math.min(1, Math.max(0, t))); };
 }
 const resorte = curva(0.32, 0.72, 0, 1);
-const fijo = el => { for (let p = el; p && p !== document.body; p = p.parentElement) if (getComputedStyle(p).position === 'fixed' && !p.classList.contains('app-fondo')) return true; return false; };
+// Lo que no se mueve al desplazar la pantalla: barra de arriba (pegada), menú lateral y barra de abajo.
+const fijo = el => { for (let p = el; p && p !== document.body; p = p.parentElement) { const pos = getComputedStyle(p).position; if ((pos === 'fixed' || pos === 'sticky') && !p.classList.contains('app-fondo')) return true; } return false; };
 function contenedor(el) {
   for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
     const o = getComputedStyle(p).overflowY;
@@ -142,6 +143,12 @@ export function Recorrido({ onFin }) {
         }
       }
       const real = rectDe(r, dy); setVista(Object.assign(ubicar(real), { real }));
+      // Al terminar el movimiento se mide de verdad y, si algo no coincide, se corrige.
+      setTimeout(() => {
+        if (!vivo) return;
+        const ok = rectDe(el.getBoundingClientRect(), 0);
+        if (Math.abs(ok.top - real.top) > 2 || Math.abs(ok.left - real.left) > 2 || Math.abs(ok.h - real.h) > 2 || Math.abs(ok.w - real.w) > 2) setVista(Object.assign(ubicar(ok), { real: ok }));
+      }, (quieto() ? 0 : DUR) + 40);
       // Si algo cambia de tamaño después (un gráfico que se acomoda), la luz se ajusta sola.
       if (window.ResizeObserver) {
         let primero = true;
@@ -193,7 +200,7 @@ export function Recorrido({ onFin }) {
   const { luz, flecha } = vista, vw = window.visualViewport ? visualViewport.width : innerWidth, vh = window.visualViewport ? visualViewport.height : innerHeight, ancho = Math.min(380, vw - 32);
   const estiloLuz = luz ? { transform: 'translate(' + luz.left + 'px,' + luz.top + 'px)', width: luz.w + 'px', height: luz.h + 'px' } : { transform: 'translate(' + vw / 2 + 'px,' + vh / 2 + 'px)', width: '0px', height: '0px' };
   const estiloCaja = { width: ancho + 'px', maxHeight: vista.max ? vista.max + 'px' : null, transform: 'translate(' + (vista.left == null ? (vw - ancho) / 2 : vista.left) + 'px,' + (vista.top == null ? vh / 2 - 100 : vista.top) + 'px)' };
-  return html`<div class=${'tour' + (saliendo ? ' sale' : '')} role="dialog" aria-modal="true" aria-label="Recorrido guiado">
+  return html`<div class=${'tour' + (saliendo ? ' sale' : '')} role="dialog" aria-modal="true" aria-label="Recorrido guiado" data-sel=${paso.sel || ''}>
     <div class="tour-tapa"></div>
     <div class=${'tour-luz' + (luz ? '' : ' sin')} style=${estiloLuz}><i class="tour-pulso" key=${'p' + i}></i></div>
     <div class="tour-caja" ref=${caja} style=${estiloCaja} onTouchStart=${empieza} onTouchEnd=${suelta}>
