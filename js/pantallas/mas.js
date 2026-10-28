@@ -3,7 +3,7 @@ import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { cambiarAjustes, cambiarNegocio, exportar, resumen, gastosEntre, inicioDia, salir } from '../datos.js';
 import { Monto } from '../graficos.js';
-import { Icono, Interruptor, Chips, avisar, iniciales, TONOS, hace } from '../ui.js';
+import { Icono, Interruptor, Chips, avisar, iniciales, TONOS, hace, Bandera } from '../ui.js';
 import { nombreTasa } from '../paises.js';
 import { BloqueGastos, inicioMes } from './gastos.js';
 import { descargar, ventasCSV } from './reportes.js';
@@ -24,7 +24,7 @@ function Ajustes() {
     Tarjeta(n.sucursales.length > 1 ? 'Locales y sucursales' : 'Tu local', 'edificio', html`
       ${n.sucursales.length > 1 ? n.sucursales.map((x, k) => Dato('Local ' + (k + 1), x)) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Tienes un solo local, así que Orbe no te muestra sucursales. Si abres otro, agrégalo aquí.</p>`}
       <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('locales')}>${n.sucursales.length > 1 ? 'Cambiar o agregar' : '+ Agregar otro local'}</button></div>`, 1),
-    Tarjeta('País y moneda', 'mundo', html`${Dato('País', P.f + ' ' + P.n)}${Dato('Moneda', P.id === 'VE' ? 'Dólares y bolívares' : P.usd2 ? P.cur.charAt(0).toUpperCase() + P.cur.slice(1) + ' y dólares' : P.cur)}
+    Tarjeta('País y moneda', 'mundo', html`${Dato('País', html`<span class="fila" style="gap:6px;justify-content:flex-end"><${Bandera} id=${P.id} t=${16} />${P.n}</span>`)}${Dato('Moneda', P.id === 'VE' ? 'Dólares y bolívares' : P.usd2 ? P.cur.charAt(0).toUpperCase() + P.cur.slice(1) + ' y dólares' : P.cur)}
       ${D.dual ? html`${Dato(nombreTasa(P, S.tasa), (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa) + ' · ' + (S.tasa.modo === 'manual' ? 'a mano' : S.tasa.fecha || 'sin leer'))}
         <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('tasa')}>${S.tasa.modo === 'manual' ? 'Cambiar la tasa' : 'Tasa automática · cambiar'}</button>
           <button type="button" class="btn2 chico toca" onClick=${() => abrir('ceros')}>Quitar ceros</button></div>

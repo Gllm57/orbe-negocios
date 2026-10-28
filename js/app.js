@@ -6,7 +6,7 @@ import { Recorrido } from './recorrido.js';
 import { ChipTasa } from './pantallas/tasas.js';
 import { puede, rolDe } from './permisos.js';
 import { pais, tipo, dinero, leerTasa } from './paises.js';
-import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS } from './ui.js';
+import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera } from './ui.js';
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
 import { Vender } from './pantallas/vender.js';
@@ -126,7 +126,7 @@ function App() {
         <div class="fila" style="gap:10px;padding:0 6px"><${LogoOrbe} t=${30} /><b style="font-size:16px;letter-spacing:-0.02em">Orbe Negocios</b></div>
         <div class="tarjeta fila" style="padding:12px;gap:10px">
           <span class="logo marca">${iniciales(S.negocio.nombre)}</span>
-          <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px">${S.negocio.nombre}</b><span class="sub corta">${P.f} ${(S.negocio.escala === 'empresa' ? 'Empresa' : T.n) + (E ? ' · ' + S.negocio.sucursales.length + ' locales' : '')}</span></span>
+          <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px">${S.negocio.nombre}</b><span class="sub corta fila" style="gap:5px"><${Bandera} id=${P.id} t=${14} />${(S.negocio.escala === 'empresa' ? 'Empresa' : T.n) + (E ? ' · ' + S.negocio.sucursales.length + ' locales' : '')}</span></span>
         </div>
         <nav style="display:flex;flex-direction:column;gap:10px">
           ${grupos.map(g => html`<div class="grupo"><small>${g[0]}</small>

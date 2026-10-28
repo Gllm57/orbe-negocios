@@ -82,7 +82,7 @@ export function Grupo({ d, cerrar }) {
       <div class="campo"><span>Marca lo que va en este grupo · ${marcados.length} ${marcados.length === 1 ? 'marcado' : 'marcados'}</span>
         <label class="buscador" style="width:100%;background:var(--fill2)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} placeholder=${'Buscar entre ' + prods.length} aria-label="Buscar productos" onInput=${e => setQ(e.target.value)} /></label>
         <div class="lista">${visibles.slice(0, 80).map(p => { const on = marcados.includes(p.id), og = otro(p); return html`<button type="button" key=${p.id} class="item toca" role="checkbox" aria-checked=${on ? 'true' : 'false'} style="color:var(--ink)" onClick=${() => toca(p)}>
-          <span class=${'marca' + (on ? ' on' : '')}>${on && html`<${Icono} n="check" t=${13} g=${3} />`}</span>
+          <span class=${'casilla' + (on ? ' on' : '')}>${on && html`<${Icono} n="check" t=${13} g=${3} />`}</span>
           <span class="crece" style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="corta" style="font-size:14px">${p.n}</span>${og && html`<span class="sub faint">Ahora en ${og.n}${on ? ' · se mueve aquí' : ''}</span>`}</span>
           <span class="sub num">${D.m(p.p)}</span></button>`; })}
           ${visibles.length > 80 ? html`<p class="sub" style="padding:8px 0">Hay ${visibles.length - 80} más: búscalos por nombre.</p>` : null}

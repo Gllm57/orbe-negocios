@@ -60,6 +60,9 @@ export function Icono({ n, t = 20, g = 2, c = 'currentColor', estilo }) {
 
 // Logo de Orbe Negocios: los círculos se dibujan al aparecer; al tocarlo (o pasar el ratón) da una vuelta.
 // «orbita» lo hace girar despacio todo el tiempo (para los logos grandes).
+// Bandera del país, circular (SVG guardado en la app, funciona sin internet y en Windows también).
+export const Bandera = ({ id, t = 20 }) => html`<img class="bandera" src=${'icons/banderas/' + String(id || 'VE').toLowerCase() + '.svg'} width=${t} height=${t} alt="" aria-hidden="true" decoding="async" />`;
+
 export function LogoOrbe({ t = 42, orbita = false }) {
   const [vuelta, setVuelta] = useState(0);
   const girar = () => setVuelta(v => v + 1);
@@ -67,9 +70,9 @@ export function LogoOrbe({ t = 42, orbita = false }) {
     <rect width="92" height="92" rx="26" fill="#16142a"></rect>
     <g key=${vuelta} class=${'lo-g' + (vuelta ? ' gira' : '')}>
       <g class="lo-orbita">
-        <circle class="lo-c lo-c1" cx="35" cy="37" r="23" pathLength="100"></circle>
-        <circle class="lo-c lo-c2" cx="57" cy="37" r="23" pathLength="100"></circle>
-        <circle class="lo-c lo-c3" cx="46" cy="56" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c1" cx="35" cy="39.7" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c2" cx="57" cy="39.7" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c3" cx="46" cy="58.7" r="23" pathLength="100"></circle>
       </g>
     </g>
   </svg>`;
