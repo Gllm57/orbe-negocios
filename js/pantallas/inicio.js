@@ -30,7 +30,7 @@ export function Inicio({ tel }) {
   const marco = contenido => html`<div style=${tel ? '' : 'min-height:100vh;display:grid;place-items:center;padding:32px 16px'}>
     <div class=${tel ? '' : 'tarjeta'} style=${tel ? 'min-height:100dvh;display:flex;flex-direction:column' : 'width:min(520px,100%);height:min(820px,calc(100vh - 64px));padding:0;display:flex;flex-direction:column;overflow:hidden;border-radius:28px'}>${contenido}</div></div>`;
 
-  if (paso === -1) return marco(html`<div class="entra" style="flex:1;display:flex;flex-direction:column;gap:16px;padding:calc(72px + env(safe-area-inset-top)) 26px calc(28px + env(safe-area-inset-bottom))">
+  if (paso === -1) return marco(html`<div class="entra" style="flex:1;display:flex;flex-direction:column;gap:16px;padding:calc(72px + var(--sa-top)) 26px calc(28px + var(--sa-bottom))">
     <span class="entra"><${LogoOrbe} t=${88} orbita /></span>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px"><h1 style="font-size:34px">Orbe Negocios</h1><span style="font-size:18px;color:var(--muted)">Tú vendes. Orbe hace lo repetitivo.</span></div>
     <div class="pila" style="margin-top:14px;gap:14px">
@@ -98,7 +98,7 @@ export function Inicio({ tel }) {
   </div>`;
 
   return marco(html`
-    <div class="fila" style="padding:calc(14px + env(safe-area-inset-top)) 14px 0;gap:10px">
+    <div class="fila" style="padding:calc(14px + var(--sa-top)) 14px 0;gap:10px">
       <button type="button" class="icono-btn toca" aria-label="Atrás" onClick=${atras}><${Icono} n="atras" /></button>
       <div style="flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding-right:54px">${PASOS.map((_, k) => html`<span style=${{ height: '4px', borderRadius: '2px', background: k <= i ? 'var(--accent)' : 'var(--line)', transition: 'background-color .35s ease' }}></span>`)}</div>
     </div>
@@ -106,7 +106,7 @@ export function Inicio({ tel }) {
       <div style="padding:20px 22px 12px;display:flex;flex-direction:column;gap:6px"><h1 style="font-size:26px">${titulos[0]}</h1><span style="font-size:15px;color:var(--muted);line-height:1.4">${titulos[1]}</span></div>
       <div style="flex:1;overflow-y:auto;padding:6px 18px 130px">${cuerpo}</div>
     </div>
-    <div style=${{ position: tel ? 'fixed' : 'relative', left: 0, right: 0, bottom: 0, marginTop: tel ? 0 : '-110px', padding: '16px 18px calc(24px + env(safe-area-inset-bottom))', background: 'linear-gradient(to top, var(' + (tel ? '--bg' : '--surface') + ') 70%, transparent)' }}>
+    <div style=${{ position: tel ? 'fixed' : 'relative', left: 0, right: 0, bottom: 0, marginTop: tel ? 0 : '-110px', padding: '16px 18px calc(24px + var(--sa-bottom))', background: 'linear-gradient(to top, var(' + (tel ? '--bg' : '--surface') + ') 70%, transparent)' }}>
       <button type="button" class=${'btn toca' + (puede ? '' : ' apagado')} aria-disabled=${puede ? 'false' : 'true'} onClick=${siguiente}>${paso === 'listo' ? (E ? 'Abrir mi empresa' : 'Abrir mi negocio') : 'Continuar'}</button>
     </div>`);
 }

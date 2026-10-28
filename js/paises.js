@@ -73,8 +73,8 @@ export const dosMonedas = P => P.id === 'VE' || !!P.usd2;
 // Nombre corto de la otra moneda.
 export const otraMoneda = P => P.id === 'VE' ? 'Bs' : 'US$';
 const URLS = {
-  VE: { oficial: [['https://ve.dolarapi.com/v1/dolares/oficial', j => j.promedio], ['https://pydolarve.org/api/v2/dollar?page=bcv&monitor=usd', j => j.price]], paralela: [['https://ve.dolarapi.com/v1/dolares/paralelo', j => j.promedio]] },
-  AR: { oficial: [['https://dolarapi.com/v1/dolares/oficial', j => j.venta]], blue: [['https://dolarapi.com/v1/dolares/blue', j => j.venta]], bolsa: [['https://dolarapi.com/v1/dolares/bolsa', j => j.venta]], paralela: [['https://dolarapi.com/v1/dolares/blue', j => j.venta]], usdt: [['https://dolarapi.com/v1/dolares/cripto', j => j.venta]] }
+  VE: { oficial: [['https://ve.dolarapi.com/v1/dolares/oficial', j => j.promedio], ['https://pydolarve.org/api/v2/dollar?page=bcv&monitor=usd', j => j.price]], paralela: [['https://ve.dolarapi.com/v1/dolares/paralelo', j => j.promedio]], euro: [['https://ve.dolarapi.com/v1/euros/oficial', j => j.promedio], ['https://pydolarve.org/api/v2/euro?page=bcv&monitor=eur', j => j.price]] },
+  AR: { oficial: [['https://dolarapi.com/v1/dolares/oficial', j => j.venta]], blue: [['https://dolarapi.com/v1/dolares/blue', j => j.venta]], bolsa: [['https://dolarapi.com/v1/dolares/bolsa', j => j.venta]], paralela: [['https://dolarapi.com/v1/dolares/blue', j => j.venta]], usdt: [['https://dolarapi.com/v1/dolares/cripto', j => j.venta]], euro: [['https://dolarapi.com/v1/cotizaciones/eur', j => j.venta]] }
 };
 export async function leerTasa(paisId, fuente) {
   const fuentes = (URLS[paisId] || {})[fuente || 'oficial'] || [];
@@ -90,7 +90,11 @@ export async function leerTasa(paisId, fuente) {
 }
 export const nombreTasa = (P, t) => P.id === 'VE' ? 'Tasa BCV' : P.id === 'AR' ? 'Dólar ' + ((FUENTES_AR.find(f => f.v === (t && t.fuente)) || FUENTES_AR[0]).n).toLowerCase() : 'Dólar';
 // Formas de pago en divisas (en Venezuela pagan IGTF si el negocio lo cobra).
-export const esDivisa = m => /Efectivo \$|Zelle|USDT|Binance|Dólar|Divisa/i.test(m);
+export const esDivisa = m => /Efectivo \$|Zelle|USDT|Binance|Dólar|Divisa|€|Euro/i.test(m);
+// Formas de pago en euros.
+export const esEuro = m => /€|Euro/i.test(m);
+// Euro por dólar de referencia, si todavía no se leyó la tasa del euro.
+export const EUR_USD = 1.16;
 // Formas de pago electrónicas: se les puede pedir el número de referencia.
 export const esElectronico = m => !/Efectivo|Fiado|Por cobrar|Saldo a favor/i.test(m);
 
@@ -99,6 +103,7 @@ const BILLETES = { TRY: [5, 10, 20, 50, 100, 200], NGN: [100, 200, 500, 1000], E
 const COD = { TR: 'TRY', NG: 'NGN', EG: 'EGP', LB: 'LBP', ZW: 'ZWG', PL: 'PLN', CH: 'CHF', AU: 'AUD', IN: 'INR', PH: 'PHP', ZA: 'ZAR', MA: 'MAD', KE: 'KES', AR: 'ARS', BO: 'BOB', BR: 'BRL', CA: 'CAD', CL: 'CLP', CO: 'COP', CR: 'CRC', GB: 'GBP', GT: 'GTQ', HN: 'HNL', MX: 'MXN', NI: 'NIO', PY: 'PYG', PE: 'PEN', DO: 'DOP', UY: 'UYU' };
 // Moneda de una forma de pago en efectivo: en Venezuela «Efectivo Bs» es bolívares y «Efectivo $» dólares.
 export function monedaEfectivo(P, m) {
+  if (/€|Euro/i.test(m) && !P.eur) return { cod: 'EUR', s: '€', otra: true, eur: true };
   if (P.id === 'VE') return /Bs/.test(m) ? { cod: 'VES', s: 'Bs', otra: true } : { cod: 'USD', s: '$', otra: false };
   if (/US\$|USD|Dólar|Efectivo \$/i.test(m)) return { cod: 'USD', s: 'US$', otra: true };
   return { cod: P.eur ? 'EUR' : COD[P.id] || 'USD', s: P.s, otra: false };
@@ -107,7 +112,7 @@ export const billetesDe = cod => BILLETES[cod] || BILLETES.USD;
 
 // Formato de dinero según el país. Los montos se guardan en la moneda principal del negocio
 // (en Venezuela, dólares; la segunda moneda se calcula con la tasa).
-export function dinero(P, tasa) {
+export function dinero(P, tasa, tasaEur) {
   const ve = P.id === 'VE', ar = !!P.usd2, dec = P.r >= 100 ? 0 : 2;
   const nf = new Intl.NumberFormat(P.loc, { minimumFractionDigits: dec, maximumFractionDigits: dec });
   const nfc = new Intl.NumberFormat(P.loc, { notation: 'compact', maximumFractionDigits: 1 });
@@ -120,6 +125,11 @@ export function dinero(P, tasa) {
     corto: v => P.eur ? nfc.format(v) + ' €' : sim + nfc.format(v),
     s: v => ve ? 'Bs ' + nf2.format(v * (tasa || TASA_VE_RESPALDO)) : ar ? 'US$ ' + nf2.format(v / (tasa || P.r)) : '',
     tasa: tasa || (ve ? TASA_VE_RESPALDO : P.r),
+    // Euro: en Venezuela, bolívares por euro; en los de moneda local + dólar, moneda local por euro.
+    tasaEur: tasaEur || (ve ? (tasa || TASA_VE_RESPALDO) * EUR_USD : P.r * EUR_USD),
+    aEur: (v, te) => ve ? v * (tasa || TASA_VE_RESPALDO) / (te || tasaEur || (tasa || TASA_VE_RESPALDO) * EUR_USD) : v / (te || tasaEur || P.r * EUR_USD),
+    deEur: (x, te) => ve ? x * (te || tasaEur || (tasa || TASA_VE_RESPALDO) * EUR_USD) / (tasa || TASA_VE_RESPALDO) : x * (te || tasaEur || P.r * EUR_USD),
+    e: v => '€ ' + nf2.format(ve ? v * (tasa || TASA_VE_RESPALDO) / (tasaEur || (tasa || TASA_VE_RESPALDO) * EUR_USD) : v / (tasaEur || P.r * EUR_USD)),
     // Pasa un monto a la otra moneda (Bs o US$) con una tasa dada, y al revés.
     aOtra: (v, t) => ve ? v * (t || tasa || TASA_VE_RESPALDO) : ar ? v / (t || tasa || P.r) : v,
     deOtra: (v, t) => ve ? v / (t || tasa || TASA_VE_RESPALDO) : ar ? v * (t || tasa || P.r) : v,

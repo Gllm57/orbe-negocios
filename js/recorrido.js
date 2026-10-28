@@ -69,27 +69,44 @@ export function Recorrido({ onFin }) {
 
   // Ubica la tarjeta según lo iluminado y su propio alto: debajo, encima, al costado (computadora)
   // o, si lo iluminado es muy alto, se ilumina solo su parte de arriba y la tarjeta va debajo.
+  // Lo que de verdad se ve: alto visible (en Safari cambia con la barra de abajo), zona segura
+  // (isla dinámica arriba, indicador de inicio abajo) y dónde empieza la barra de navegación.
+  function bordes() {
+    let sonda = document.getElementById('tour-sonda');
+    if (!sonda) { sonda = document.createElement('div'); sonda.id = 'tour-sonda'; sonda.setAttribute('aria-hidden', 'true'); sonda.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;padding-top:var(--sa-top);padding-bottom:var(--sa-bottom)'; document.body.appendChild(sonda); }
+    const cs = getComputedStyle(sonda), vv = window.visualViewport;
+    const vh = vv ? vv.height : innerHeight, vw = vv ? vv.width : innerWidth;
+    const arriba = parseFloat(cs.paddingTop) || 0, abajo = parseFloat(cs.paddingBottom) || 0;
+    const nav = tel && document.querySelector('.nav-tel');
+    const navTop = nav ? nav.getBoundingClientRect().top : vh - abajo;
+    return { vw, vh, arriba, abajo, sup: arriba + 10, inf: Math.min(navTop, vh - abajo) - 10 };
+  }
+  // Ubica la tarjeta según lo iluminado y su propio alto: debajo, encima, al costado (computadora)
+  // o, si lo iluminado es muy alto, se ilumina solo su parte de arriba y la tarjeta va debajo.
+  // Nunca queda debajo de la isla dinámica, del indicador de inicio ni de la barra de navegación.
   function ubicar(luz) {
-    const vw = innerWidth, vh = innerHeight, ancho = Math.min(380, vw - 32), m = 14;
-    const alto = caja.current ? caja.current.offsetHeight : 200, abajoLibre = tel ? 96 : 16;
-    if (!luz) return { luz: null, top: Math.max(16, (vh - alto) / 2), left: (vw - ancho) / 2, flecha: null };
-    const left = tel ? 16 : Math.min(Math.max(16, luz.left + luz.w / 2 - ancho / 2), vw - ancho - 16);
+    const B = bordes(), vw = B.vw, ancho = Math.min(380, vw - 32), m = 14;
+    const alto = Math.min(caja.current ? caja.current.offsetHeight : 200, B.inf - B.sup), sup = B.sup, inf = B.inf;
+    if (!luz) return { luz: null, top: sup + Math.max(0, (inf - sup - alto) / 2), left: (vw - ancho) / 2, flecha: null, max: inf - sup };
+    const left = tel ? (vw - ancho) / 2 : Math.min(Math.max(16, luz.left + luz.w / 2 - ancho / 2), vw - ancho - 16);
     const x = Math.min(Math.max(luz.left + luz.w / 2 - left, 26), ancho - 26);
-    if (vh - (luz.top + luz.h) - abajoLibre >= alto + m) return { luz, top: luz.top + luz.h + m, left, flecha: { lado: 'arriba', x } };
-    if (luz.top >= alto + m + 16) return { luz, top: luz.top - m - alto, left, flecha: { lado: 'abajo', x } };
+    if (luz.top + luz.h + m + alto <= inf) return { luz, top: luz.top + luz.h + m, left, flecha: { lado: 'arriba', x }, max: inf - sup };
+    if (luz.top - m - alto >= sup) return { luz, top: luz.top - m - alto, left, flecha: { lado: 'abajo', x }, max: inf - sup };
     if (!tel) {
-      const top = Math.min(Math.max(16, luz.top + Math.min(luz.h, vh - luz.top) / 2 - alto / 2), vh - alto - 16);
-      const y = Math.min(Math.max(luz.top + Math.min(luz.h, vh - luz.top) / 2 - top, 26), alto - 26);
-      if (vw - (luz.left + luz.w) >= ancho + m + 16) return { luz, top, left: luz.left + luz.w + m, flecha: { lado: 'izq', y } };
-      if (luz.left >= ancho + m + 16) return { luz, top, left: luz.left - m - ancho, flecha: { lado: 'der', y } };
+      const vis = Math.min(luz.h, inf - luz.top), top = Math.min(Math.max(sup, luz.top + vis / 2 - alto / 2), inf - alto);
+      const y = Math.min(Math.max(luz.top + vis / 2 - top, 26), alto - 26);
+      if (vw - (luz.left + luz.w) >= ancho + m + 16) return { luz, top, left: luz.left + luz.w + m, flecha: { lado: 'izq', y }, max: inf - sup };
+      if (luz.left >= ancho + m + 16) return { luz, top, left: luz.left - m - ancho, flecha: { lado: 'der', y }, max: inf - sup };
     }
-    const h = Math.max(56, vh - abajoLibre - alto - m - luz.top);
+    // Muy alto: se ilumina la parte de arriba y la tarjeta va justo debajo.
+    const h = Math.max(48, inf - alto - m - luz.top);
     const corta = Object.assign({}, luz, { h: Math.min(luz.h, h) });
-    return { luz: corta, top: corta.top + corta.h + m, left, flecha: { lado: 'arriba', x } };
+    const top = Math.min(corta.top + corta.h + m, inf - alto);
+    return { luz: corta, top, left, flecha: top >= corta.top + corta.h ? { lado: 'arriba', x } : null, max: inf - sup };
   }
   const rectDe = (r, dy) => {
-    const pad = 8, vh = innerHeight, t = Math.max(8, r.top - dy - pad), b = Math.min(vh - 8, r.bottom - dy + pad);
-    return { top: t, left: Math.max(8, r.left - pad), w: Math.min(innerWidth - 16, r.width + pad * 2), h: Math.max(24, b - t) };
+    const B = bordes(), pad = 8, t = Math.max(B.arriba + 4, r.top - dy - pad), b = Math.min(B.vh - 4, r.bottom - dy + pad);
+    return { top: t, left: Math.max(6, r.left - pad), w: Math.min(B.vw - 12, r.width + pad * 2), h: Math.max(24, b - t) };
   };
 
   // Cada paso: cambia de sección si hace falta, espera a que la pantalla nueva esté dibujada,
@@ -112,10 +129,10 @@ export function Recorrido({ onFin }) {
       const r = el.getBoundingClientRect(), c = fijo(el) ? null : contenedor(el);
       let dy = 0;
       if (c) {
-        const cr = c.getBoundingClientRect(), sup = document.querySelector('.barra-sup');
-        const areaTop = cr.top + (sup && c.contains(sup) ? sup.offsetHeight : 0), areaBot = Math.min(cr.bottom, innerHeight) - (tel ? 96 : 0);
+        const cr = c.getBoundingClientRect(), sup = document.querySelector('.barra-sup'), B = bordes();
+        const areaTop = Math.max(cr.top + (sup && c.contains(sup) ? sup.offsetHeight : 0), B.sup), areaBot = Math.min(cr.bottom, B.inf);
         const alto = caja.current ? caja.current.offsetHeight : 200, areaH = areaBot - areaTop;
-        const deseado = tel ? areaTop + 20 : r.height + alto + 40 < areaH ? areaTop + (areaH - (r.height + 14 + alto)) / 2 : areaTop + 20;
+        const deseado = tel ? areaTop + 10 : r.height + alto + 40 < areaH ? areaTop + (areaH - (r.height + 14 + alto)) / 2 : areaTop + 20;
         const desde = c.scrollTop, hasta = Math.max(0, Math.min(c.scrollHeight - c.clientHeight, desde + r.top - deseado));
         dy = hasta - desde;
         if (Math.abs(dy) > 1) {
@@ -134,7 +151,8 @@ export function Recorrido({ onFin }) {
     })();
     const re = () => { const el = paso.sel && document.querySelector(paso.sel), real = el ? rectDe(el.getBoundingClientRect(), 0) : null; setVista(Object.assign(ubicar(real), { real })); };
     addEventListener('resize', re);
-    return () => { vivo = false; cancelAnimationFrame(anim.current); if (ro) ro.disconnect(); removeEventListener('resize', re); };
+    if (window.visualViewport) visualViewport.addEventListener('resize', re);
+    return () => { vivo = false; cancelAnimationFrame(anim.current); if (ro) ro.disconnect(); removeEventListener('resize', re); if (window.visualViewport) visualViewport.removeEventListener('resize', re); };
   }, [i]);
   // Si el texto nuevo cambia el alto de la tarjeta, se reubica antes de pintarse.
   useLayoutEffect(() => {
@@ -172,14 +190,14 @@ export function Recorrido({ onFin }) {
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) mover(dx < 0 ? 1 : -1);
   };
 
-  const { luz, flecha } = vista, vw = innerWidth, vh = innerHeight, ancho = Math.min(380, vw - 32);
+  const { luz, flecha } = vista, vw = window.visualViewport ? visualViewport.width : innerWidth, vh = window.visualViewport ? visualViewport.height : innerHeight, ancho = Math.min(380, vw - 32);
   const estiloLuz = luz ? { transform: 'translate(' + luz.left + 'px,' + luz.top + 'px)', width: luz.w + 'px', height: luz.h + 'px' } : { transform: 'translate(' + vw / 2 + 'px,' + vh / 2 + 'px)', width: '0px', height: '0px' };
-  const estiloCaja = { width: ancho + 'px', transform: 'translate(' + (vista.left == null ? (vw - ancho) / 2 : vista.left) + 'px,' + (vista.top == null ? vh / 2 - 100 : vista.top) + 'px)' };
+  const estiloCaja = { width: ancho + 'px', maxHeight: vista.max ? vista.max + 'px' : null, transform: 'translate(' + (vista.left == null ? (vw - ancho) / 2 : vista.left) + 'px,' + (vista.top == null ? vh / 2 - 100 : vista.top) + 'px)' };
   return html`<div class=${'tour' + (saliendo ? ' sale' : '')} role="dialog" aria-modal="true" aria-label="Recorrido guiado">
     <div class="tour-tapa"></div>
     <div class=${'tour-luz' + (luz ? '' : ' sin')} style=${estiloLuz}><i class="tour-pulso" key=${'p' + i}></i></div>
-    <div class="tour-caja" ref=${caja} style=${estiloCaja} onTouchStart=${empieza} onTouchEnd=${suelta}><div class="tour-dentro">
-      ${flecha && html`<i class=${'tour-flecha ' + flecha.lado} style=${flecha.y != null ? { top: flecha.y + 'px' } : { left: flecha.x + 'px' }}></i>`}
+    <div class="tour-caja" ref=${caja} style=${estiloCaja} onTouchStart=${empieza} onTouchEnd=${suelta}>
+      ${flecha && html`<i class=${'tour-flecha ' + flecha.lado} style=${flecha.y != null ? { top: flecha.y + 'px' } : { left: flecha.x + 'px' }}></i>`}<div class="tour-dentro">
       <div class=${'tour-contenido ' + (dir.current > 0 ? 'de-der' : 'de-izq')} key=${i}>
         ${paso.icono && html`<div style="display:flex;justify-content:center;margin-bottom:4px"><${LogoOrbe} t=${56} orbita=${!paso.fin} /></div>`}
         <span class="sub" style="font-size:12px;font-weight:600;color:var(--accent)">Paso ${i + 1} de ${pasos.length}</span>

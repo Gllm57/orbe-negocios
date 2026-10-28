@@ -34,7 +34,7 @@ export function Acceso({ tel }) {
   // Un solo perfil sin PIN: entra directo.
   useEffect(() => { if (activos.length === 1 && !activos[0].pin) entrar(activos[0].id); }, []);
   const tocar = p => { if (!p.pin) { entrar(p.id); avisar('Hola, ' + p.n.split(' ')[0]); } else setElegido(p); };
-  const caja = contenido => html`<div style=${tel ? 'min-height:100dvh;display:flex;flex-direction:column;padding:calc(56px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom))' : 'min-height:100vh;display:grid;place-items:center;padding:32px 16px'}>
+  const caja = contenido => html`<div style=${tel ? 'min-height:100dvh;display:flex;flex-direction:column;padding:calc(56px + var(--sa-top)) 22px calc(24px + var(--sa-bottom))' : 'min-height:100vh;display:grid;place-items:center;padding:32px 16px'}>
     <div class=${tel ? 'pila' : 'tarjeta pila'} style=${tel ? 'flex:1;gap:18px' : 'width:min(480px,100%);padding:32px;gap:18px;border-radius:28px'}>${contenido}</div></div>`;
 
   if (elegido) return caja(html`

@@ -47,9 +47,9 @@ function Cobrar({ d, cerrar }) {
   const clientes = deudores(), cliObj = clientes.find(x => x.id === cli), saldoCli = cliObj ? cliObj.saldo : 0;
   const metodos = S.negocio.pays.concat(puede('fiado') ? [fiadoN] : [], saldoCli > 0 ? ['Saldo a favor'] : []);
   const total = D.redondo(d.tt.total);
-  const fp = usePagos(total, metodos);
+  const fp = usePagos(total, metodos, undefined, m => P.id === 'VE' && S.negocio.igtf && esDivisa(m) ? 1.03 : 1);
   const [recibe, setRecibe] = useState(0);
-  const [vueltoEn, setVueltoEn] = useState('p');
+  const [vueltoElegido, setVueltoEn] = useState(null);
   const [comoSaldo, setComoSaldo] = useState(false);
   // Con pagos combinados también se puede fiar solo una parte.
   const partes0 = fp.pagos().map(p => p.m === fiadoN ? Object.assign({}, p, { m: 'Fiado' }) : p);
@@ -61,6 +61,14 @@ function Cobrar({ d, cerrar }) {
   const fiado = partes.some(p => p.m === 'Fiado'), parteFiada = partes.reduce((a, p) => a + (p.m === 'Fiado' ? p.v : 0), 0);
   const usaSaldo = partes.reduce((a, p) => a + (p.m === 'Saldo a favor' ? p.v : 0), 0);
   const efectivo = fp.efectivo;
+  // Billetes en la moneda de esa forma de pago: euros para «Efectivo €», bolívares para «Efectivo Bs».
+  const monEf = efectivo ? monedaEfectivo(P, fp.m) : null;
+  const conv = monEf && monEf.otra ? (monEf.eur ? { a: x => D.aEur(x), de: x => D.deEur(x) } : { a: x => D.aOtra(x, tasaMetodo(fp.m)), de: x => D.deOtra(x, tasaMetodo(fp.m)) }) : null;
+  const opcionesPago = conv ? (() => { const t0 = Math.round(conv.a(totalCobrar) * 100) / 100, out = [t0];
+      billetesDe(monEf.cod).forEach(u => { const x = Math.ceil(t0 / u - 1e-9) * u; if (x > t0 + 1e-9 && !out.includes(x) && out.length < 4) out.push(x); });
+      return out.sort((a, b) => a - b).map((x, i) => ({ v: i ? conv.de(x) : totalCobrar, ver: i ? monEf.s + ' ' + x.toLocaleString(P.loc) : 'Exacto' })); })()
+    : D.billetes(totalCobrar).map((v, i) => ({ v, ver: i ? D.m(v) : 'Exacto' }));
+  const vueltoEn = vueltoElegido || (monEf && monEf.eur ? 'e' : monEf && monEf.otra ? 's' : 'p');
   const dado = recibe >= totalCobrar ? recibe : totalCobrar;
   const vuelto = efectivo ? D.redondo(dado - totalCobrar) : fp.vuelto;
   const pideCli = fiado || usaSaldo > 0 || verCli || comoSaldo;
@@ -72,7 +80,7 @@ function Cobrar({ d, cerrar }) {
     const venta = vender({ items, pagos: partes, cli, suc: suc || S.negocio.sucursales[0], fiado: fiado || usaSaldo > 0, total, igtf });
     venta.recibido = vuelto > 0 ? totalCobrar + vuelto : 0; venta.imp = d.tt.imp; venta.impTxt = d.tt.txt; if (d.tt.desglose && d.tt.desglose.length > 1) venta.impDesglose = d.tt.desglose;
     if (vuelto > 0 && comoSaldo && cli) { venta.vueltoSaldo = vuelto; abonar(cli, [{ m: efectivo ? fp.m : (partes.find(p => esEfectivo(p.m)) || partes[0]).m, v: vuelto }], 'Vuelto como saldo a favor'); }
-    else if (vuelto > 0 && vueltoEn === 's') venta.vueltoEn = 's';
+    else if (vuelto > 0 && vueltoEn !== 'p') venta.vueltoEn = vueltoEn;
     d.onListo && d.onListo();
     c(() => abrir('recibo', { venta, nueva: true }));
   };
@@ -82,15 +90,15 @@ function Cobrar({ d, cerrar }) {
   const fmt2 = x => new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(x);
   return html`<${Hoja} titulo=${T.vender === 'Pedido' ? 'Cobrar pedido' : 'Cobrar'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><b class="num" style="font-size:40px;letter-spacing:-0.02em">${D.m(totalCobrar)}</b>${D.dual && html`<span class="sub num">${D.s(totalCobrar)}</span>`}${d.tt.txt && html`<span class="sub faint num">${d.tt.txt}: ${D.m(d.tt.imp)}</span>`}${igtf > 0 && html`<span class="sub num entra" style="color:var(--amber-text)">Incluye IGTF 3 % por pago en divisas: ${D.m(igtf)}</span>`}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><b class="num" style="font-size:40px;letter-spacing:-0.02em">${D.m(totalCobrar)}</b>${D.dual && html`<span class="sub num">${D.s(totalCobrar)}${S.negocio.euro ? ' · ' + D.e(totalCobrar) : ''}</span>`}${d.tt.txt && html`<span class="sub faint num">${d.tt.txt}: ${D.m(d.tt.imp)}</span>`}${igtf > 0 && html`<span class="sub num entra" style="color:var(--amber-text)">Incluye IGTF 3 % por pago en divisas: ${D.m(igtf)}</span>`}</div>
       ${fp.vista({ desliza: tel, calido: v => v === fiadoN || v === 'Saldo a favor', ayuda: 'Ej.: una parte por ' + (S.negocio.pays[0] || '') + ' y otra por ' + (S.negocio.pays[S.negocio.pays.length - 1] || '') + (puede('fiado') ? ', o una parte fiada' : '') })}
       ${efectivo && html`<div class="campo entra"><span>¿Con cuánto te paga?</span>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">${D.billetes(totalCobrar).map((v, i) => html`<button type="button" class=${'chip toca' + (v === dado ? ' on' : '')} style="justify-content:center;padding:0 4px;color:var(--ink)" onClick=${() => setRecibe(v)}>${i === 0 ? 'Exacto' : D.m(v)}</button>`)}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">${opcionesPago.map(o => html`<button type="button" class=${'chip toca' + (Math.abs(o.v - dado) < 0.005 ? ' on' : '')} style="justify-content:center;padding:0 4px;color:var(--ink)" onClick=${() => setRecibe(o.v)}>${o.ver}</button>`)}</div>
       </div>`}
       ${vuelto > 0 && html`<div class="pila entra" style="gap:8px">
-        <div class="fila" style="border-radius:16px;background:var(--in-soft);padding:12px 14px"><span class="crece in" style="font-size:14px;font-weight:600">${comoSaldo ? 'Queda a favor del cliente' : 'Vuelto'}</span><span style="display:flex;flex-direction:column;align-items:flex-end"><${Monto} v=${vueltoEn === 's' && !comoSaldo ? D.aOtra(vuelto, tasaMetodo('Efectivo Bs')) : vuelto} f=${vueltoEn === 's' && !comoSaldo ? (x => (P.id === 'VE' ? 'Bs ' : 'US$ ') + fmt2(x)) : D.m} clase="in" />${D.dual && !comoSaldo && html`<span class="sub num">${vueltoEn === 's' ? '= ' + D.m(vuelto) : '= ' + (P.id === 'VE' ? 'Bs ' : 'US$ ') + fmt2(D.aOtra(vuelto, tasaMetodo('Efectivo Bs')))}</span>`}</span></div>
+        <div class="fila" style="border-radius:16px;background:var(--in-soft);padding:12px 14px"><span class="crece in" style="font-size:14px;font-weight:600">${comoSaldo ? 'Queda a favor del cliente' : 'Vuelto'}</span><span style="display:flex;flex-direction:column;align-items:flex-end"><${Monto} v=${comoSaldo ? vuelto : vueltoEn === 's' ? D.aOtra(vuelto, tasaMetodo('Efectivo Bs')) : vueltoEn === 'e' ? D.aEur(vuelto) : vuelto} f=${comoSaldo ? D.m : vueltoEn === 's' ? (x => (P.id === 'VE' ? 'Bs ' : 'US$ ') + fmt2(x)) : vueltoEn === 'e' ? (x => '€ ' + fmt2(x)) : D.m} clase="in" />${D.dual && !comoSaldo && html`<span class="sub num">${vueltoEn !== 'p' ? '= ' + D.m(vuelto) : '= ' + (P.id === 'VE' ? 'Bs ' : 'US$ ') + fmt2(D.aOtra(vuelto, tasaMetodo('Efectivo Bs')))}</span>`}</span></div>
         <div class="chips">
-          ${D.dual && [['p', 'Vuelto en ' + (P.id === 'VE' ? '$' : P.s)], ['s', 'Vuelto en ' + (P.id === 'VE' ? 'Bs' : 'US$')]].map(o => html`<button type="button" class=${'chip chico toca' + (!comoSaldo && vueltoEn === o[0] ? ' on' : '')} onClick=${() => { setComoSaldo(false); setVueltoEn(o[0]); }}>${o[1]}</button>`)}
+          ${D.dual && [['p', 'Vuelto en ' + (P.id === 'VE' ? '$' : P.s)], ['s', 'Vuelto en ' + (P.id === 'VE' ? 'Bs' : 'US$')]].concat(S.negocio.euro ? [['e', 'Vuelto en €']] : []).map(o => html`<button type="button" class=${'chip chico toca' + (!comoSaldo && vueltoEn === o[0] ? ' on' : '')} onClick=${() => { setComoSaldo(false); setVueltoEn(o[0]); }}>${o[1]}</button>`)}
           <button type="button" class=${'chip chico toca' + (comoSaldo ? ' on' : '')} onClick=${() => setComoSaldo(!comoSaldo)}>Dejar como saldo a favor</button>
         </div>
       </div>`}
@@ -141,7 +149,7 @@ function Recibo({ d, cerrar }) {
         ${v.igtf > 0 && html`<span class="fila" style="justify-content:space-between;color:#625f7d"><span>IGTF 3 % (divisas)</span><span>${D.m(v.igtf)}</span></span>`}
         ${v.pagos.map(p => html`<span class="fila" style="justify-content:space-between;color:#625f7d;gap:8px"><span>${p.m}${p.ref ? ' · Ref ' + p.ref : ''}${p.ok ? ' ✓' : ''}</span><span>${D.m(p.v)}</span></span>`)}
         ${v.vueltoSaldo > 0 && html`<span class="fila" style="justify-content:space-between;color:#625f7d"><span>Vuelto a favor del cliente</span><span>${D.m(v.vueltoSaldo)}</span></span>`}
-        ${v.recibido > 0 && !v.vueltoSaldo && html`<span class="fila" style="justify-content:space-between;color:#625f7d"><span>Recibido ${D.m(v.recibido)} · vuelto</span><span>${v.vueltoEn === 's' ? (P.id === 'VE' ? 'Bs ' : 'US$ ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.aOtra(v.recibido - v.total - (v.igtf || 0), v.tasa)) : D.m(v.recibido - v.total - (v.igtf || 0))}</span></span>`}
+        ${v.recibido > 0 && !v.vueltoSaldo && html`<span class="fila" style="justify-content:space-between;color:#625f7d"><span>Recibido ${D.m(v.recibido)} · vuelto</span><span>${v.vueltoEn === 's' ? (P.id === 'VE' ? 'Bs ' : 'US$ ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.aOtra(v.recibido - v.total - (v.igtf || 0), v.tasa)) : v.vueltoEn === 'e' ? '€ ' + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.aEur(v.recibido - v.total - (v.igtf || 0), v.tasaEur)) : D.m(v.recibido - v.total - (v.igtf || 0))}</span></span>`}
       </div>
       ${corregir && html`<div class="chips" style="justify-content:center">${quedan ? html`<button type="button" class="btn2 chico toca" onClick=${() => c(() => abrir('devolver', { vid: v.id }))}><${Icono} n="deshacer" t=${14} />Devolver productos</button>` : null}<button type="button" class="btn2 chico rojo toca" onClick=${() => c(() => abrir('anular', { vid: v.id }))}>Anular venta</button></div>`}`,
     pie: html`${!v.anulada && html`<button type="button" class="btn wa toca" onClick=${enviar}>Enviar por WhatsApp</button>`}
@@ -292,7 +300,7 @@ function Cierre({ d, cerrar }) {
     const mon = monedaEfectivo(P, k), bk = Object.assign({}, billetes[k] || {}); bk[b] = Math.max(0, (bk[b] || 0) + dd);
     const suma = Object.keys(bk).reduce((a, x) => a + Number(x) * bk[x], 0);
     setBilletes(Object.assign({}, billetes, { [k]: bk }));
-    setContado(Object.assign({}, contado, { [k]: D.redondo(mon.otra ? D.deOtra(suma, tasaMetodo(k)) : suma) }));
+    setContado(Object.assign({}, contado, { [k]: D.redondo(mon.eur ? D.deEur(suma) : mon.otra ? D.deOtra(suma, tasaMetodo(k)) : suma) }));
   };
   const dif = metodos.filter(esEfectivo).reduce((a, k) => a + (contado[k] - D.redondo(r.porPago[k])), 0);
   return html`<${Hoja} titulo="Cierre del día" onCerrar=${cerrar} contenido=${c => ({
@@ -542,6 +550,7 @@ function Tasa({ d, cerrar }) {
   const [valor, setValor] = useState(S.tasa.valor ? String(S.tasa.valor).replace('.', ',') : '');
   const [otras, setOtras] = useState(() => extras.reduce((o, x) => (o[x.k] = S.tasas[x.k] && S.tasas[x.k].valor ? String(S.tasas[x.k].valor).replace('.', ',') : '', o), {}));
   const [porPago, setPorPago] = useState(Object.assign({}, S.negocio.tasaPago));
+  const [euro, setEuro] = useState(S.tasas.euro && S.tasas.euro.valor ? String(S.tasas.euro.valor).replace('.', ',') : '');
   const [leyendo, setLeyendo] = useState('');
   const nf = new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const t = numero(valor);
@@ -549,7 +558,7 @@ function Tasa({ d, cerrar }) {
     if (!enLinea) { avisar('Sin internet: escríbela a mano'); return; }
     setLeyendo(k); const v = await leerTasa(P.id, k === 'principal' ? (fu || fuente) : k); setLeyendo('');
     if (!v) { avisar('No se pudo leer. Prueba más tarde o escríbela a mano'); return; }
-    if (k === 'principal') setValor(String(v).replace('.', ',')); else setOtras(o => Object.assign({}, o, { [k]: String(v).replace('.', ',') }));
+    if (k === 'principal') setValor(String(v).replace('.', ',')); else if (k === 'euro') setEuro(String(v).replace('.', ',')); else setOtras(o => Object.assign({}, o, { [k]: String(v).replace('.', ',') }));
     avisar('Leída: ' + mon + nf.format(v));
   };
   const guardar = c => {
@@ -557,6 +566,7 @@ function Tasa({ d, cerrar }) {
     const leida = modo === 'auto' && t && (fuente === S.tasa.fuente || t !== S.tasa.valor);
     guardarTasa(modo === 'manual' || leida ? { modo, fuente, valor: t } : { modo, fuente, fecha: '' }, D.bonito);
     extras.forEach(x => { const v = numero(otras[x.k]); if (v && v !== (S.tasas[x.k] || {}).valor) guardarTasaExtra(x.k, { valor: v, modo: 'manual' }); });
+    const ev = numero(euro); if (ev && ev !== (S.tasas.euro || {}).valor) guardarTasaExtra('euro', { valor: ev, modo: 'manual' });
     cambiarNegocio({ tasaPago: porPago });
     c(() => avisar('Tasas guardadas'));
   };
@@ -575,6 +585,10 @@ function Tasa({ d, cerrar }) {
       ${P.id === 'AR' && html`<div class="campo"><span>¿Qué dólar muestras?</span><${Chips} opciones=${FUENTES_AR} valor=${fuente} onCambio=${v => { setFuente(v); if (modo === 'auto') leerYa('principal', v); }} /></div>`}
       ${modo === 'manual' ? html`<label class="campo entra"><span>Tasa (${ve ? 'bolívares' : P.cur} por dólar)</span><input class="grande num" type="text" inputmode="decimal" value=${valor} placeholder="0" onInput=${e => setValor(e.target.value)} /></label>`
         : html`<button type="button" class=${'btn2 acento toca' + (leyendo === 'principal' ? ' apagado' : '')} onClick=${() => leerYa('principal')}>${leyendo === 'principal' ? 'Leyendo…' : 'Leer ahora'}</button>`}
+      ${S.negocio.euro && html`<div class="campo"><span>Euro</span>
+        <div class="fila" style="gap:8px"><span class="crece sub num">${numero(euro) ? '1 € = ' + mon + nf.format(numero(euro)) + (ve ? ' · 1 € = $ ' + nf.format(numero(euro) / (t || D.tasa)) : ' · 1 € = US$ ' + nf.format(numero(euro) / (t || D.tasa))) : 'Sin leer: se estima con el dólar'}</span>
+          <div class="pago-monto" style="width:150px;min-height:44px"><span class="pago-moneda" style="display:grid;place-items:center">${mon.trim()}</span><input class="num" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value=${euro} aria-label="Tasa del euro" onInput=${e => setEuro(e.target.value)} /></div>
+          ${conFuente ? html`<button type="button" class="icono-btn chico toca" aria-label="Leer tasa del euro" title="Leer de internet" onClick=${() => leerYa('euro')}><${Icono} n="descarga" t=${14} /></button>` : html`<span style="width:36px"></span>`}</div></div>`}
       ${extras.length > 0 && html`<div class="campo"><span>Otras tasas que usas</span>
         <div class="pila" style="gap:8px">${extras.map(x => html`<div class="fila" style="gap:8px"><span class="crece" style="font-size:14px;font-weight:600">${x.n}</span>
           <div class="pago-monto" style="width:150px;min-height:44px"><span class="pago-moneda" style="display:grid;place-items:center">${mon.trim()}</span><input class="num" type="text" inputmode="decimal" autocomplete="off" placeholder="—" value=${otras[x.k]} aria-label=${'Tasa ' + x.n} onInput=${e => setOtras(Object.assign({}, otras, { [x.k]: e.target.value }))} /></div>

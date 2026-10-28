@@ -25,6 +25,11 @@ Lo marcado con ✅ ya está hecho.
   - Referencias de pago y conciliación con el banco.
   - Arqueo por billetes.
   - Quitar ceros a la moneda.
+- **Euro:**
+  - Tasa del euro (BCV en Venezuela, oficial en Argentina) automática o a mano, con historial.
+  - Formas de pago «Efectivo €» y «Transferencia en €»; cada parte de un pago combinado en $, Bs o €.
+  - Billetes y vuelto en euros; IGTF también en euros.
+  - Total en € al cobrar, reportes en € con la tasa de cada día y arqueo con billetes de euro.
 - **43 países:** se suman Turquía, Nigeria, Egipto, Líbano y Zimbabue (moneda local + dólar, con tasa a mano), y Bolivia también con dos monedas. Además, Alemania, Austria, Bélgica, Irlanda, Países Bajos, Polonia, Suiza, Australia, India, Filipinas, Kenia, Marruecos y Sudáfrica.
 - **Impuestos:**
   - Tasa por producto: general, reducida del país o exento.
@@ -63,7 +68,7 @@ Lo marcado con ✅ ya está hecho.
 - ✅ **Tasa propia del negocio.** Muchos cobran a una tasa distinta de la oficial (promedio, paralela, USDT). Se elige cuál se muestra al cliente y cuál se usa para la contabilidad.
 - ✅ **Reportes con la tasa histórica.** Que "vendí Bs 1.000.000 este mes" se vea en dólares según la tasa de cada día, no la de hoy. Si no, las ganancias mienten.
 - ✅ **Historial y gráfico de la tasa**, con aviso cuando sube más de X % en el día.
-- 🟡 **Cualquier moneda dura como base**, no solo el dólar: euro (Cuba), USDT o lira (Turquía).
+- 🟡 (✅ el euro ya se acepta como segunda divisa) **Cualquier moneda dura como base**, no solo el dólar: euro (Cuba), USDT o lira (Turquía).
 - ✅ **Redenominación:** cuando el gobierno le quita ceros a la moneda (Venezuela lo hizo tres veces), un botón convierte todo sin perder el historial.
 
 ### Precios que se mueven todos los días

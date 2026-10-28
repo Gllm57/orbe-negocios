@@ -11,6 +11,8 @@ import { descargar, ventasCSV } from './reportes.js';
 function Ajustes() {
   const { S, P, T, D, abrir, tel, puede, yo, rol, ir, verRecorrido } = useApp();
   const n = S.negocio;
+  // Formas de pago del país, más las de euros si el negocio los acepta.
+  const todasPays = P.pays.concat(n.euro && !P.eur ? ['Efectivo €', 'Transferencia en €'] : []);
   const Tarjeta = (titulo, icono, hijos, i, dt) => html`<section class="tarjeta entra" data-tour=${dt} style=${{ '--i': i }}>
     <div class="fila" style="gap:10px;margin-bottom:6px"><span class="ic t-vio" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${icono} t=${16} g=${2.2} /></span><b style="font-size:15px">${titulo}</b></div>${hijos}</section>`;
   const Dato = (a, b) => html`<div class="fila" style="justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:13px"><span class="muted">${a}</span><b style="font-weight:600;text-align:right">${b}</b></div>`;
@@ -26,11 +28,12 @@ function Ajustes() {
       ${D.dual ? html`${Dato(nombreTasa(P, S.tasa), (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa) + ' · ' + (S.tasa.modo === 'manual' ? 'a mano' : S.tasa.fecha || 'sin leer'))}
         <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('tasa')}>${S.tasa.modo === 'manual' ? 'Cambiar la tasa' : 'Tasa automática · cambiar'}</button>
           <button type="button" class="btn2 chico toca" onClick=${() => abrir('ceros')}>Quitar ceros</button></div>
+        <${Interruptor} on=${!!n.euro} onCambio=${v => cambiarNegocio(Object.assign({ euro: v }, v && !n.pays.includes('Efectivo €') ? { pays: n.pays.concat(['Efectivo €']) } : {}), (v ? 'Empezó' : 'Dejó') + ' a aceptar euros')} titulo="Aceptar euros" sub=${'Cobra en € con la tasa del euro' + (P.id === 'VE' ? ' del BCV' : '') + ' y ve tus reportes en €'} />
         ${P.id === 'VE' && html`<${Interruptor} on=${!!n.igtf} onCambio=${v => cambiarNegocio({ igtf: v }, (v ? 'Activó' : 'Desactivó') + ' el IGTF')} titulo="Cobrar IGTF 3 %" sub="En pagos en divisas: efectivo $, Zelle, USDT, Binance" />`}
         ${P.id !== 'VE' && html`<${Interruptor} on=${!!n.fiadoUsd} onCambio=${v => cambiarNegocio({ fiadoUsd: v }, (v ? 'Activó' : 'Desactivó') + ' el fiado en dólares')} titulo="Fiado en dólares" sub="Lo que te deben no pierde valor si sube el dólar" />`}` : null}`, 1),
     Tarjeta('Formas de pago', 'tarjeta', html`<${Interruptor} on=${!!n.pedirRef} onCambio=${v => cambiarNegocio({ pedirRef: v })} titulo="Pedir referencia" sub="Al cobrar por transferencia, Pago Móvil, Zelle… para conciliar con el banco" />
       ${n.pedirRef && html`<div class="chips" style="margin:2px 0 8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('conciliar')}>Conciliar con el banco</button></div>`}
-      <div class="chips" style="margin-top:6px">${P.pays.map(x => { const on = n.pays.includes(x); return html`<button type="button" class=${'chip chico toca' + (on ? ' on' : '')} aria-pressed=${on ? 'true' : 'false'} onClick=${() => { if (on && n.pays.length === 1) return; cambiarNegocio({ pays: on ? n.pays.filter(y => y !== x) : P.pays.filter(y => y === x || n.pays.includes(y)) }); }}>${x}</button>`; })}</div>`, 2),
+      <div class="chips" style="margin-top:6px">${todasPays.map(x => { const on = n.pays.includes(x); return html`<button type="button" class=${'chip chico toca' + (on ? ' on' : '')} aria-pressed=${on ? 'true' : 'false'} onClick=${() => { if (on && n.pays.length === 1) return; cambiarNegocio({ pays: on ? n.pays.filter(y => y !== x) : todasPays.filter(y => y === x || n.pays.includes(y)) }); }}>${x}</button>`; })}</div>`, 2),
     Tarjeta('Impuesto', 'porciento', html`
       <${Interruptor} on=${!!n.taxOn} onCambio=${v => cambiarNegocio({ taxOn: v })} titulo=${'Cobrar ' + P.tax[0] + ' ' + (n.taxGen != null ? n.taxGen : P.tax[1]) + ' %'} sub=${P.tax[1] ? 'Sale en el recibo' : 'En tu país varía según la zona: escribe la tuya'} />
       ${n.taxOn && html`<div class="segmento" style="width:100%">${[[true, 'En el precio'], [false, 'Aparte']].map(o => html`<button type="button" style="flex:1" class=${n.taxIncl === o[0] ? 'on' : ''} onClick=${() => cambiarNegocio({ taxIncl: o[0] })}>${o[1]}</button>`)}</div>

@@ -1,7 +1,7 @@
 // Reportes: ventas, ganancia real, formas de pago, productos y días de la semana.
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { resumen, serieDias, gastosEntre, inicioDia, leer, gastoAlt } from '../datos.js';
+import { resumen, serieDias, gastosEntre, inicioDia, leer, gastoAlt, gastoEur } from '../datos.js';
 import { Barras, Linea, Reparto, BarrasH, Monto, color } from '../graficos.js';
 import { Icono, Chips, avisar, fechaCorta } from '../ui.js';
 import { inicioMes } from './gastos.js';
@@ -31,17 +31,18 @@ export function Reportes() {
   const [per, setPer] = useState(30);
   // Venezuela y Argentina: ver los números en la otra moneda con la tasa del día de cada venta (si no, la inflación engaña).
   const [mon, setMon] = useState('p');
-  const alt = D.dual && mon === 's', simb2 = P.id === 'VE' ? 'Bs' : 'US$';
+  const alt = D.dual && mon === 's', enEur = D.dual && mon === 'e', simb2 = P.id === 'VE' ? 'Bs' : 'US$';
   const nf2 = new Intl.NumberFormat(P.loc, { minimumFractionDigits: P.id === 'VE' ? 0 : 2, maximumFractionDigits: P.id === 'VE' ? 0 : 2 });
-  const fm = alt ? (v => (v < 0 ? '−' : '') + simb2 + ' ' + nf2.format(Math.abs(v))) : D.m;
+  const nfE = new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fm = alt ? (v => (v < 0 ? '−' : '') + simb2 + ' ' + nf2.format(Math.abs(v))) : enEur ? (v => (v < 0 ? '−' : '') + '€ ' + nfE.format(Math.abs(v))) : D.m;
   const hoy0 = inicioDia(Date.now());
   const dias = per === 'mes' ? Math.round((hoy0 - inicioMes()) / DIA) + 1 : per;
   const desde = hoy0 - (dias - 1) * DIA, hasta = Date.now() + 1;
   const r = resumen(desde, hasta, suc), serie = serieDias(dias, suc);
   const ant = resumen(desde - dias * DIA, desde, suc);
-  const gv = g => alt ? gastoAlt(g) : g.v;
+  const gv = g => alt ? gastoAlt(g) : enEur ? gastoEur(g) : g.v;
   const gastos = gastosEntre(desde, hasta).filter(g => !suc || g.suc === suc).reduce((a, g) => a + gv(g), 0);
-  const tot = x => alt ? x.totalAlt : x.total, gan = x => alt ? x.ganAlt : x.ganancia;
+  const tot = x => alt ? x.totalAlt : enEur ? x.totalEur : x.total, gan = x => alt ? x.ganAlt : enEur ? x.ganEur : x.ganancia;
   const real = gan(r) - gastos;
   const cambio = ant.total ? Math.round((tot(r) / tot(ant) - 1) * 100) : 0;
   const gastosAnt = gastosEntre(desde - dias * DIA, desde).filter(g => !suc || g.suc === suc).reduce((a, g) => a + gv(g), 0);
@@ -59,7 +60,7 @@ export function Reportes() {
     { l: 'Te queda', v: Math.max(0, real), tip: 'Ganancia real · ' + fm(real), segs: [{ v: Math.max(0, real), c: 'var(--c2)' }] }
   ];
   const nombreArchivo = 'orbe-ventas-' + new Date(desde).toISOString().slice(0, 10) + '.csv';
-  const Moneda = D.dual ? html`<div class="segmento" role="group" aria-label="Moneda de los reportes">${[['p', P.id === 'VE' ? '$' : P.s], ['s', simb2]].map(o => html`<button type="button" class=${mon === o[0] ? 'on' : ''} aria-pressed=${mon === o[0] ? 'true' : 'false'} onClick=${() => setMon(o[0])}>${o[1]}</button>`)}</div>` : null;
+  const Moneda = D.dual ? html`<div class="segmento" role="group" aria-label="Moneda de los reportes">${[['p', P.id === 'VE' ? '$' : P.s], ['s', simb2]].concat(S.negocio.euro ? [['e', '€']] : []).map(o => html`<button type="button" class=${mon === o[0] ? 'on' : ''} aria-pressed=${mon === o[0] ? 'true' : 'false'} onClick=${() => setMon(o[0])}>${o[1]}</button>`)}</div>` : null;
   const Acciones = html`<div class="chips">
     <button type="button" class="btn2 chico toca" onClick=${() => { descargar(nombreArchivo, ventasCSV(desde, hasta), 'text/csv;charset=utf-8'); avisar('Excel descargado'); }}><${Icono} n="descarga" t=${15} />Excel</button>
     <button type="button" class="btn2 chico toca" onClick=${() => window.print()}><${Icono} n="doc" t=${15} />PDF</button>
@@ -70,11 +71,11 @@ export function Reportes() {
 
   const bloques = {
     linea: html`<section class="tarjeta entra llena" style="--i:4"><div class="tarjeta-tit">Ventas por día<span class="sub">${r.n} ventas · ticket ${D.m(r.ticket)}</span></div>
-      ${alt && html`<span class="sub" style="display:block;margin:-6px 0 8px">En ${simb2}, con la tasa de cada día</span>`}
-      <${Linea} key=${dias + suc + mon} datos=${serie.map(d => ({ l: fechaCorta(d.t), v: alt ? d.totalAlt : d.total, tip: fm(alt ? d.totalAlt : d.total) }))} alto=${tel ? 170 : 220} id=${'rep' + dias} etiquetas=${tel ? 4 : 7} llenar=${!tel} /></section>`,
+      ${(alt || enEur) && html`<span class="sub" style="display:block;margin:-6px 0 8px">En ${enEur ? 'euros' : simb2}, con la tasa de cada día</span>`}
+      <${Linea} key=${dias + suc + mon} datos=${serie.map(d => ({ l: fechaCorta(d.t), v: alt ? d.totalAlt : enEur ? d.totalEur : d.total, tip: fm(alt ? d.totalAlt : enEur ? d.totalEur : d.total) }))} alto=${tel ? 170 : 220} id=${'rep' + dias} etiquetas=${tel ? 4 : 7} llenar=${!tel} /></section>`,
     resultado: html`<section class="tarjeta entra llena" style="--i:5"><div class="tarjeta-tit">De lo que vendes, te queda<b class="num in" style="font-size:14px">${r.total ? Math.round(real / r.total * 100) : 0} %</b></div>
       <${Barras} key=${'res' + dias + suc + mon} datos=${resultado} alto=${tel ? 150 : 200} hueco=${tel ? 14 : 22} llenar=${!tel} />
-      ${!alt && r.ganReposicion < r.ganancia - 0.01 && html`<span class="sub" style="display:block;margin-top:10px;line-height:1.45;color:var(--amber-text)">Si repones lo vendido a lo que cuesta hoy, la ganancia bruta sería ${D.m(r.ganReposicion)} (${D.m(r.ganancia - r.ganReposicion)} menos).</span>`}</section>`,
+      ${!alt && !enEur && r.ganReposicion < r.ganancia - 0.01 && html`<span class="sub" style="display:block;margin-top:10px;line-height:1.45;color:var(--amber-text)">Si repones lo vendido a lo que cuesta hoy, la ganancia bruta sería ${D.m(r.ganReposicion)} (${D.m(r.ganancia - r.ganReposicion)} menos).</span>`}</section>`,
     pagos: html`<section class="tarjeta entra" style="--i:6"><div class="tarjeta-tit">Formas de pago</div>
       ${pagos.length ? html`<${Reparto} key=${'pg' + dias + suc} segs=${pagos} f=${D.m} titulo=${'Vendido en ' + (per === 'mes' ? 'el mes' : dias + ' días')} />` : html`<p class="vacio">Sin ventas.</p>`}</section>`,
     productos: html`<section class="tarjeta entra" style="--i:7"><div class="tarjeta-tit">Lo que más vendes<span class="sub">por ventas</span></div>

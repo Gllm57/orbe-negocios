@@ -1,7 +1,7 @@
 // Datos de Orbe Negocios. Todo se guarda primero en el aparato (funciona sin internet).
 // Regla de Orbe: si algo se daña al cargar, se aparta y nunca se borra.
 import { useState, useEffect } from './lib/preact-htm.js';
-import { pais, tipo, dinero, TASA_VE_RESPALDO, esDivisa } from './paises.js';
+import { pais, tipo, dinero, TASA_VE_RESPALDO, esDivisa, EUR_USD } from './paises.js';
 import { ROLES_BASE } from './permisos.js';
 import { encadenar, revisar, firmaVenta, firmaRegistro, firmaCierre } from './hash.js';
 
@@ -290,6 +290,8 @@ export function tasaDe(k) {
   return (S.tasas[k] && S.tasas[k].valor) || prin;
 }
 export const tasaMetodo = m => tasaDe(((S.negocio && S.negocio.tasaPago) || {})[m]);
+// Tasa del euro (bolívares o moneda local por euro). Si no se ha leído, se estima con el dólar.
+export const tasaEuro = () => (S.tasas.euro && S.tasas.euro.valor) || tasaDe() * EUR_USD;
 const dolarDe = (v, t) => S.negocio.pais === 'VE' ? v : v / (t || tasaDe());
 const anotarHistorial = (s, f, v) => { const dia = diaClave(Date.now()), h = (s.historialTasas || []).filter(x => !(x.dia === dia && x.f === f)); return h.concat([{ dia, f, v }]).slice(-600); };
 const juntar = pagos => pagos.map(p => p.m).join(' + ');
@@ -304,6 +306,7 @@ export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto, igtf
   const total = conImpuesto || items.reduce((a, it) => a + it.q * it.p, 0);
   const venta = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 };
   if (igtf) venta.igtf = igtf;
+  if (S.negocio.euro) venta.tasaEur = tasaEuro();
   // Fiado en dólares (Argentina): la deuda se guarda también en dólares para que no pierda valor.
   if (S.negocio.fiadoUsd) venta.pagos = pagos.map(p => p.m === 'Fiado' || p.m === 'Saldo a favor' ? Object.assign({}, p, { fu: dolarDe(p.v) }) : p);
   cambiar(s => ({ ventas: s.ventas.concat([venta]), productos: stockMas(s.productos, porLinea(items), -1) }));
@@ -481,13 +484,15 @@ export function resumen(desde, hasta, suc) {
   return m('re' + desde + hasta + suc, () => {
     const vs = ventasEntre(desde, hasta, suc);
     const porPago = {}, porHora = new Array(24).fill(0), porSuc = {}, porProd = {}, porPersona = {};
-    let total = 0, cost = 0, fiado = 0, totalAlt = 0, ganAlt = 0, repo = 0;
+    let total = 0, cost = 0, fiado = 0, totalAlt = 0, ganAlt = 0, repo = 0, totalEur = 0, ganEur = 0;
     // En Venezuela y Argentina: lo mismo en la otra moneda (Bs o US$) con la tasa del día de cada venta.
     const ve = S.negocio.pais === 'VE', alt = (x, t) => ve ? x * (t || tasaDe()) : x / (t || tasaDe());
+    // En euros, con la tasa del euro de su día (o, si no se guardó, la del dólar de ese día por la relación de hoy).
+    const rel = tasaEuro() / tasaDe(), eur = (x, v) => { const te = v.tasaEur || (v.tasa || tasaDe()) * rel; return ve ? x * (v.tasa || tasaDe()) / te : x / te; };
     const costoHoy = {}; S.productos.forEach(p => { costoHoy[p.id] = p.c; });
     vs.forEach(v => {
       total += v.total; cost += costo(v);
-      totalAlt += alt(v.total, v.tasa); ganAlt += alt(v.total - costo(v), v.tasa);
+      totalAlt += alt(v.total, v.tasa); ganAlt += alt(v.total - costo(v), v.tasa); totalEur += eur(v.total, v); ganEur += eur(v.total - costo(v), v);
       v.items.forEach(it => { repo += it.q * (it.p - (costoHoy[it.pid] != null ? costoHoy[it.pid] : it.c)); });
       fiado += fiadoDe(v);
       v.pagos.forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; });
@@ -497,7 +502,7 @@ export function resumen(desde, hasta, suc) {
       v.items.forEach(it => { const x = porProd[it.pid] || (porProd[it.pid] = { n: it.n, q: 0, v: 0, g: 0 }); x.q += it.q; x.v += it.q * it.p; x.g += it.q * (it.p - it.c); });
     });
     const n = vs.filter(v => !v.dev).length;
-    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0, totalAlt, ganAlt, ganReposicion: repo };
+    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0, totalAlt, ganAlt, totalEur, ganEur, ganReposicion: repo };
   });
 }
 
@@ -506,7 +511,7 @@ export function serieDias(dias, suc) {
     const hoy0 = inicioDia(Date.now()), out = [];
     for (let d = dias - 1; d >= 0; d--) {
       const a = hoy0 - d * DIA, r = resumen(a, a + DIA, suc);
-      out.push({ t: a, total: r.total, ganancia: r.ganancia, porSuc: r.porSuc, n: r.n, totalAlt: r.totalAlt });
+      out.push({ t: a, total: r.total, ganancia: r.ganancia, porSuc: r.porSuc, n: r.n, totalAlt: r.totalAlt, totalEur: r.totalEur });
     }
     return out;
   });
@@ -538,6 +543,7 @@ export function deudores() {
 export function porPagar() { return m('pp', () => S.gastos.filter(g => !g.pagado).sort((a, b) => a.vence - b.vence)); }
 // Un gasto en la otra moneda, con la tasa de su día.
 export const gastoAlt = g => S.negocio.pais === 'VE' ? g.v * (g.tasa || tasaDe()) : g.v / (g.tasa || tasaDe());
+export const gastoEur = g => { const t = g.tasa || tasaDe(), te = t * tasaEuro() / tasaDe(); return S.negocio.pais === 'VE' ? g.v * t / te : g.v / te; };
 export function gastosEntre(desde, hasta) { return m('ge' + desde + hasta, () => S.gastos.filter(g => g.pagado && g.t >= desde && g.t < hasta)); }
 // Productos que se venden por debajo de lo que cuesta reponerlos (o casi sin ganancia).
 export function bajoCosto() { return m('bc', () => listaProductos().filter(p => p.c > 0 && p.p < p.c * 1.05)); }
