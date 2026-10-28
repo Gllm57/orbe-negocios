@@ -3,15 +3,18 @@
 // si no está, se crea su ficha con el código y, si se encuentra en internet, con el nombre puesto.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { listaProductos, ajustarStock } from '../datos.js';
+import { listaProductos, ajustarStock, asignarCodigo } from '../datos.js';
 import { Hoja, Icono, avisar } from '../ui.js';
 import { buscar, normal } from '../buscar.js';
 import { textosProducto, grupoDe, colorGrupo } from './grupos.js';
 
 const BASE = new URL('../lib/', import.meta.url).href;
 const cargar = src => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + src)); document.head.appendChild(s); });
-const FORMATOS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code'];
-export const mismoCodigo = (a, b) => !!a && !!b && String(a).replace(/\s+/g, '') === String(b).replace(/\s+/g, '');
+// Solo los códigos de los productos de tienda: ITF y Codabar dan lecturas falsas con la cámara.
+const FORMATOS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
+// Mismo código aunque uno venga como UPC (12 dígitos) y otro como EAN (13, con un 0 delante).
+const limpio = c => { const x = String(c || '').replace(/\s+/g, ''); return /^\d+$/.test(x) ? x.replace(/^0+/, '') : x.toUpperCase(); };
+export const mismoCodigo = (a, b) => !!limpio(a) && limpio(a) === limpio(b);
 
 // Lector de códigos: el del sistema cuando existe (Android) o ZXing (iPhone y el resto), que se carga al usarlo.
 async function crearLector() {
@@ -23,7 +26,7 @@ async function crearLector() {
   }
   if (!window.ZXing) await cargar(BASE + 'zxing.min.js');
   const Z = window.ZXing, F = Z.BarcodeFormat, pistas = new Map();
-  pistas.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.CODABAR, F.QR_CODE]);
+  pistas.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.QR_CODE]);
   pistas.set(Z.DecodeHintType.TRY_HARDER, true);
   const lector = new Z.MultiFormatReader(); lector.setHints(pistas);
   const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
@@ -91,7 +94,14 @@ export function Escaner({ d, cerrar }) {
   const [luz, setLuz] = useState(null); // null: el teléfono no tiene linterna
   const [leyendo, setLeyendo] = useState(null); // progreso del lector de nombres (0 a 1)
   const [ultimo, setUltimo] = useState(null); // en la caja: lo último que se agregó
-  const video = useRef(null), flujo = useRef(null), pausa = useRef(false), modoRef = useRef(modo), lector = useRef(null), visto = useRef({ c: '', t: 0 });
+  const [asignar, setAsignar] = useState(false); // código nuevo: elegir un producto que ya existe
+  const [qa, setQa] = useState('');
+  // Al volver de crear el producto se muestra ya reconocido.
+  useEffect(() => {
+    const p = d.mostrar && listaProductos().find(x => mismoCodigo(x.cod, d.mostrar)); if (!p) return;
+    if (vender) { if (d.onAgregar && d.onAgregar(p) !== false) setUltimo({ p, t: Date.now() }); } else setRes({ tipo: 'esta', pid: p.id, cod: d.mostrar, nuevo: true });
+  }, []);
+  const video = useRef(null), flujo = useRef(null), pausa = useRef(false), modoRef = useRef(modo), lector = useRef(null), visto = useRef({ c: '', t: 0 }), previo = useRef({ c: '', t: 0 });
   modoRef.current = modo;
   pausa.current = !!res || leyendo != null;
 
@@ -115,7 +125,10 @@ export function Escaner({ d, cerrar }) {
           if (modoRef.current === 'codigo' && !pausa.current && lector.current && v.readyState >= 2) {
             const c = await lector.current(v).catch(() => '');
             // Mientras el mismo código siga a la vista no cuenta otra vez: hay que sacarlo y volver a pasarlo.
-            if (c && vivo) { const igual = c === visto.current.c && Date.now() - visto.current.t < 1000; visto.current = { c, t: Date.now() }; if (!igual) encontrado(c); }
+            // Se acepta cuando dos lecturas seguidas dan lo mismo: así un cuadro borroso no inventa un código.
+            const ahora = Date.now(), seguro = c && c === previo.current.c && ahora - previo.current.t < 900;
+            previo.current = { c, t: ahora };
+            if (seguro && vivo) { const igual = mismoCodigo(c, visto.current.c) && ahora - visto.current.t < 1000; visto.current = { c, t: ahora }; if (!igual) encontrado(c); }
           }
           reloj = setTimeout(vuelta, 160);
         };
@@ -142,7 +155,14 @@ export function Escaner({ d, cerrar }) {
     setRes({ tipo: 'nuevo', cod, n: '', buscando: true });
     nombreEnInternet(cod).then(n => setRes(r => r && r.tipo === 'nuevo' && r.cod === cod ? Object.assign({}, r, { n, buscando: false }) : r));
   }
-  const otro = () => { visto.current = { c: '', t: 0 }; setRes(null); setCuanto(1); };
+  const otro = () => { visto.current = { c: '', t: 0 }; previo.current = { c: '', t: 0 }; setRes(null); setCuanto(1); setAsignar(false); setQa(''); };
+  // Ponerle el código leído a un producto que ya existe (por ejemplo, uno guardado sin código).
+  const ponerCodigo = p => {
+    asignarCodigo(p.id, res.cod); pitido(); avisar(p.n + ': código guardado');
+    setAsignar(false); setQa('');
+    if (vender) { if (d.onAgregar && d.onAgregar(p) !== false) setUltimo({ p, t: Date.now() }); otro(); return; }
+    setRes({ tipo: 'esta', pid: p.id, cod: res.cod, nuevo: true });
+  };
   const buscarManual = () => { const c = manual.trim(); if (!c) { avisar('Escribe el código'); return; } setManual(''); if (document.activeElement) document.activeElement.blur(); encontrado(c); };
 
   // Leer el nombre: se toma una foto del recuadro y se busca en la lista de productos.
@@ -176,6 +196,7 @@ export function Escaner({ d, cerrar }) {
         <span class="escaner-ic" style=${g ? { background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 18%, transparent)', color: colorGrupo(g) } : null}><${Icono} n="check" t=${20} g=${2.6} /></span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="corta" style="font-size:16px">${p.n}</b><span class="sub corta">${[g && g.n, D.m(p.p), p.cod].filter(Boolean).join(' · ')}</span></span>
       </div>
+      ${res.nuevo && !hecho && html`<span class="pildora t-ver entra" style="align-self:flex-start"><${Icono} n="check" t=${12} g=${3} /> Listo: la próxima vez lo reconoce con su código</span>`}
       ${T.inv && p.q != null ? html`
         <div class="escaner-stock"><span class="sub">Tienes</span><b class=${'num' + (hecho ? ' latido' : '')} key=${hecho ? hecho.t : 0}>${p.q}</b><span class="sub">${p.min ? 'mínimo ' + p.min : 'unidades'}</span></div>
         ${puedeStock ? html`
@@ -193,14 +214,26 @@ export function Escaner({ d, cerrar }) {
     </div>`;
   };
 
-  const Nuevo = c => html`<div class="escaner-res entra">
+  const Nuevo = c => {
+    const lista = listaProductos(), elegibles = qa.trim() ? buscar(lista, qa, textosProducto(S)).slice(0, 6) : lista.filter(p => !p.cod).slice(0, 6);
+    return html`<div class="escaner-res entra">
     <div class="fila" style="gap:12px">
       <span class="escaner-ic" style="background:var(--amber-soft);color:var(--amber-text)"><${Icono} n="codigo" t=${20} /></span>
-      <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">No está en tu ${T.inv ? 'inventario' : 'lista'}</b><span class="sub num corta">Código ${res.cod}</span></span>
+      <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><b style="font-size:16px">Producto nuevo</b><span class="sub num corta">Código ${res.cod} · no está en tu ${T.inv ? 'inventario' : 'lista'}</span></span>
     </div>
     ${res.buscando ? html`<span class="sub fila" style="gap:8px"><i class="girando"></i>Buscando el nombre en internet…</span>` : res.n ? html`<span class="sub">Lo encontré como <b style="color:var(--ink)">${res.n}</b></span>` : null}
-    ${puedeCrear ? html`<button type="button" class="btn toca" onClick=${() => c(() => abrir('producto', { cod: res.cod, n: res.n || '' }))}>Crear su ficha</button>` : html`<p class="sub">Pídele a quien maneja los productos que lo registre.</p>`}
+    ${!puedeCrear ? html`<p class="sub">Pídele a quien maneja los productos que lo registre.</p>`
+      : !asignar ? html`<button type="button" class="btn toca" onClick=${() => c(() => abrir('producto', { cod: res.cod, n: res.n || '', escaner: { para: d.para, onAgregar: d.onAgregar } }))}><${Icono} n="mas1" t=${18} g=${2.6} />Agregar producto</button>
+        <button type="button" class="enlace-tasa toca" style="align-self:center" onClick=${() => setAsignar(true)}>¿Ya lo tienes guardado? Ponle este código</button>`
+      : html`<div class="pila entra" style="gap:8px">
+        <span class="sub">¿A cuál de tus productos le pongo el código ${res.cod}?</span>
+        <label class="buscador" style="width:100%;background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${qa} placeholder="Buscar el producto" aria-label="Buscar el producto para el código" onInput=${e => setQa(e.target.value)} /></label>
+        <div class="lista">${elegibles.map(p => html`<button type="button" key=${p.id} class="item toca" style="color:var(--ink)" onClick=${() => ponerCodigo(p)}><span class="crece corta">${p.n}</span><span class="sub num">${p.cod ? 'tiene otro código' : 'sin código'}</span></button>`)}
+          ${elegibles.length ? null : html`<p class="vacio">${qa.trim() ? 'No encontré «' + qa + '».' : 'Todos tienen código: búscalo por nombre.'}</p>`}</div>
+        <button type="button" class="enlace-tasa toca" style="align-self:center" onClick=${() => { setAsignar(false); setQa(''); }}>Mejor lo agrego como nuevo</button>
+      </div>`}
   </div>`;
+  };
 
   const Texto = c => {
     const lista = listaProductos(), prods = res.ids.map(id => lista.find(p => p.id === id)).filter(Boolean);
@@ -222,7 +255,7 @@ export function Escaner({ d, cerrar }) {
   return html`<${Hoja} titulo=${vender ? 'Escanear para vender' : 'Escanear productos'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <div class="segmento" style="width:100%">${[['codigo', 'Código de barras', 'codigo'], ['nombre', 'Nombre', 'texto']].map(o => html`<button type="button" style="flex:1" class=${modo === o[0] ? 'on' : ''} onClick=${() => { setModo(o[0]); otro(); }}><${Icono} n=${o[2]} t=${14} />${o[1]}</button>`)}</div>
-      <div class=${'escaner-visor ' + modo + (camara === 'lista' ? ' viva' : '') + (pausa.current ? ' quieta' : '')}>
+      <div class=${'escaner-visor ' + modo + (camara === 'lista' ? ' viva' : '') + (pausa.current ? ' quieta' : '') + (res ? ' chica' : '')}>
         <video ref=${video} playsinline muted autoplay aria-label="Cámara"></video>
         ${camara === 'abriendo' && html`<span class="escaner-aviso"><i class="girando"></i>Abriendo la cámara…</span>`}
         ${camara === 'sin' && html`<span class="escaner-aviso"><${Icono} n="camara" t=${28} />Sin cámara</span>`}

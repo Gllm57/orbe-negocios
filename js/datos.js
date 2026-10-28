@@ -398,6 +398,11 @@ export function reponer(pid, cuanto, costo) {
   const cambio = p0 && costo > 0 && Math.abs(costo - p0.c) > 0.004;
   cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }, cambio ? { c: costo, cAntes: p.c } : {}) : p) }, cambio ? nota(s, 'Costo de «' + p0.n + '» pasó de ' + p0.c + ' a ' + costo) : {}));
 }
+// Ponerle (o cambiarle) el código de barras a un producto desde el escáner.
+export function asignarCodigo(pid, cod) {
+  const p0 = S.productos.find(p => p.id === pid); if (!p0) return;
+  cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid ? Object.assign({}, p, { cod }) : p) }, nota(s, 'Puso el código ' + cod + ' a «' + p0.n + '»' + (p0.cod ? ' (antes ' + p0.cod + ')' : ''))));
+}
 // Ajuste rápido de existencia (escáner): suma o resta unidades sin tocar el costo, y queda anotado.
 export function ajustarStock(pid, cuanto) {
   const p0 = S.productos.find(p => p.id === pid); if (!p0 || !cuanto) return 0;

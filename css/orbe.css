@@ -502,7 +502,7 @@ html.tel .oferta-btns .btn2 { flex: 1; min-height: 44px; }
 .escanear-ic { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; flex: none; background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(106,92,242,.35); }
 .escanear-mini { width: 46px; height: 46px; border-radius: 23px; background: var(--primary); color: #fff; box-shadow: 0 6px 16px rgba(106,92,242,.3); }
 .segmento button svg { vertical-align: -2px; margin-right: 6px; }
-.escaner-visor { position: relative; width: 100%; height: min(44vh, 330px); border-radius: 22px; overflow: hidden; background: #0d0b1c; flex: none; }
+.escaner-visor { position: relative; width: 100%; height: min(44vh, 330px); transition: height .45s var(--spring); border-radius: 22px; overflow: hidden; background: #0d0b1c; flex: none; }
 .escaner-visor video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .45s ease; }
 .escaner-visor.viva video { opacity: 1; }
 .escaner-marco { position: absolute; left: 8%; right: 8%; top: 28%; bottom: 28%; border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(8,6,20,.42); transition: top .4s var(--spring), bottom .4s var(--spring), left .4s var(--spring), right .4s var(--spring); pointer-events: none;
@@ -526,3 +526,5 @@ html.tel .oferta-btns .btn2 { flex: 1; min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .escaner-linea { animation: none; } }
 .pila.sacude { animation: sacude .45s var(--spring); }
 .pin-campo { letter-spacing: .5em; text-align: center; font-size: 20px; }
+.escaner-visor.chica { height: 120px; }
+.escaner-visor.chica .escaner-marco { top: 18%; bottom: 18%; }

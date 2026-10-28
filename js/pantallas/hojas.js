@@ -9,7 +9,7 @@ import { Monto, Linea } from '../graficos.js';
 import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
 import { infoTasas } from './tasas.js';
 import { Grupos, Grupo, colorGrupo, textosProducto, iniciales2 } from './grupos.js';
-import { Escaner } from './escaner.js';
+import { Escaner, mismoCodigo } from './escaner.js';
 import { buscar, parecidos } from '../buscar.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
@@ -374,9 +374,11 @@ function Producto({ d, cerrar }) {
   const guardar = c => {
     if (!f.n.trim() || !p) { avisar('Escribe el nombre y el precio'); return; }
     const cod = f.cod.trim();
-    if (cod && listaProductos().some(x => x.cod === cod && (!p0 || x.id !== p0.id))) { avisar('Ese código ya lo tiene otro producto'); return; }
+    const otroCon = cod && listaProductos().find(x => mismoCodigo(x.cod, cod) && (!p0 || x.id !== p0.id));
+    if (otroCon) { avisar('Ese código ya lo tiene ' + otroCon.n); return; }
     guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: iniciales2(f.n.trim()), p, c: co, q: T.inv ? Math.round(numero(f.q)) : null, min: T.inv ? Math.round(numero(f.min)) : 0, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp, g: grupoNuevo && grupoNuevo.trim() ? guardarGrupo({ n: grupoNuevo.trim() }) : grupo });
-    c(() => avisar('Guardado: ' + f.n.trim()));
+    // Si se creó desde el escáner, se vuelve a él con el producto ya reconocido.
+    c(() => { avisar('Guardado: ' + f.n.trim()); if (d.escaner && cod) abrir('escaner', Object.assign({}, d.escaner, { mostrar: cod })); });
   };
   const borrar = c => c(() => abrir('confirmar', { titulo: '¿Borrar ' + p0.n + '?', texto: 'Ya no sale para vender ni en el inventario. Las ventas que tuvo se quedan en los reportes.', boton: 'Sí, borrar', si: () => { borrarProducto(p0.id); avisar('Borrado: ' + p0.n); } }));
   return html`<${Hoja} titulo=${(p0 ? 'Editar ' : 'Nuevo ') + (T.inv ? 'producto' : 'servicio')} onCerrar=${cerrar} contenido=${c => ({
