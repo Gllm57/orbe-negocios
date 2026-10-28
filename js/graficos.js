@@ -71,12 +71,14 @@ export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resa
 }
 
 // Línea con área. datos: [{ l, v, tip }]
-export function Linea({ datos, alto: alto0 = 200, c = 'var(--c1)', etiquetas = 6, id = 'ln', llenar = false }) {
+// ajustar: la escala empieza cerca del mínimo (para valores que cambian poco, como una tasa).
+export function Linea({ datos, alto: alto0 = 200, c = 'var(--c1)', etiquetas = 6, id = 'ln', llenar = false, ajustar = false }) {
   const [refLibre, libre] = useAltoLibre(llenar, alto0);
   const alto = llenar ? libre - 18 : alto0;
   const ancho = 600, pad = 8;
-  const max = Math.max(1e-9, ...datos.map(d => d.v)) * 1.1;
-  const pts = datos.map((d, i) => [pad + i * (ancho - 2 * pad) / Math.max(1, datos.length - 1), alto - 24 - d.v / max * (alto - 40)]);
+  const vmax = Math.max(1e-9, ...datos.map(d => d.v)), vmin = ajustar ? Math.min(...datos.map(d => d.v)) : 0;
+  const piso = ajustar ? vmin - (vmax - vmin) * 0.15 : 0, max = ajustar ? vmax + (vmax - vmin) * 0.1 - piso || 1 : vmax * 1.1;
+  const pts = datos.map((d, i) => [pad + i * (ancho - 2 * pad) / Math.max(1, datos.length - 1), alto - 24 - (d.v - piso) / max * (alto - 40)]);
   const linea = useMemo(() => pts.map((p, i) => {
     if (!i) return 'M' + p[0] + ',' + p[1];
     const a = pts[i - 1], cx = (a[0] + p[0]) / 2;

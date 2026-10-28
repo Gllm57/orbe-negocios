@@ -6,11 +6,18 @@ import { resumen, inicioDia, listaProductos, sigNumero } from '../datos.js';
 import { FilaVenta } from './hojas.js';
 import { Reparto, Monto, color } from '../graficos.js';
 
+// Impuestos: cada producto puede tener su tasa (general, reducida o exento). Se suman por tasa.
+export const tasaGeneral = (neg, P) => neg.taxGen != null ? neg.taxGen : P.tax[1];
 export function totales(items, neg, P) {
-  const sub = items.reduce((a, it) => a + it.q * it.p, 0), tasa = P.tax[1] / 100;
-  if (!neg.taxOn || !tasa) return { sub, imp: 0, total: sub, txt: '' };
-  if (neg.taxIncl) { const imp = sub - sub / (1 + tasa); return { sub, imp, total: sub, txt: 'Incluye ' + P.tax[0] + ' ' + P.tax[1] + ' %' }; }
-  const imp = sub * tasa; return { sub, imp, total: sub + imp, txt: '+ ' + P.tax[0] + ' ' + P.tax[1] + ' %' };
+  const sub = items.reduce((a, it) => a + it.q * it.p, 0), gen = tasaGeneral(neg, P);
+  if (!neg.taxOn) return { sub, imp: 0, total: sub, txt: '', desglose: [] };
+  const grupos = {}; items.forEach(it => { const r = it.imp != null ? it.imp : gen; grupos[r] = (grupos[r] || 0) + it.q * it.p; });
+  const tasas = Object.keys(grupos).map(Number).sort((a, b) => b - a);
+  if (tasas.every(r => !r)) return { sub, imp: 0, total: sub, txt: '', desglose: [] };
+  let imp = 0;
+  const desglose = tasas.map(r => { const base = grupos[r], i = r ? (neg.taxIncl ? base - base / (1 + r / 100) : base * r / 100) : 0; imp += i; return { r, base, imp: i }; });
+  const lista = tasas.map(r => r ? r + ' %' : 'exento').join(', ');
+  return { sub, imp, total: neg.taxIncl ? sub : sub + imp, txt: (neg.taxIncl ? 'Incluye ' : '+ ') + P.tax[0] + ' ' + lista, desglose };
 }
 
 let carritoGuardado = {};
@@ -22,7 +29,7 @@ export function Vender() {
   const [q, setQ] = useState('');
   const lector = useRef(null);
   const prods = listaProductos();
-  const items = prods.filter(p => cart[p.id]).map(p => ({ pid: p.id, n: p.n, q: cart[p.id], p: p.p, c: p.c }));
+  const items = prods.filter(p => cart[p.id]).map(p => Object.assign({ pid: p.id, n: p.n, q: cart[p.id], p: p.p, c: p.c }, p.imp != null ? { imp: p.imp } : {}));
   const n = items.reduce((a, it) => a + it.q, 0);
   const tt = totales(items, S.negocio, P);
   const total = D.redondo(tt.total);

@@ -1,6 +1,6 @@
 # Orbe Negocios para todo el mundo
 
-Qué falta para vender Orbe Negocios en cualquier país. Revisión del 28 oct 2026.
+Qué falta para vender Orbe Negocios en cualquier país. Revisión del 28 oct 2026. Actualizada el mismo día con lo ya construido (✅).
 
 Hay dos mundos muy distintos:
 
@@ -12,6 +12,46 @@ Lo marcado con ✅ ya está hecho.
 
 ---
 
+## Ya construido (28 oct 2026)
+- **Venezuela y Argentina:**
+  - Tasas oficial, paralela, USDT y propia, cada forma de pago con la suya.
+  - Historial de la tasa y alerta cuando salta.
+  - IGTF del 3 %.
+  - Reportes en Bs o US$ con la tasa de cada día.
+  - Remarcar precios en bloque y precios atados al dólar.
+  - Costo de reposición.
+  - Fiado en dólares.
+  - Vuelto en Bs y saldo a favor.
+  - Referencias de pago y conciliación con el banco.
+  - Arqueo por billetes.
+  - Quitar ceros a la moneda.
+- **42 países:** se suman Turquía, Nigeria, Egipto, Líbano y Zimbabue (moneda local + dólar, con tasa a mano), y Bolivia también con dos monedas. Además, Alemania, Austria, Bélgica, Irlanda, Países Bajos, Polonia, Suiza, Australia, India, Filipinas, Kenia, Marruecos y Sudáfrica.
+- **Impuestos:**
+  - Tasa por producto: general, reducida del país o exento.
+  - Desglose por tasa en el recibo.
+  - Tasa general propia (sales tax de EE. UU., Brasil).
+- **Integridad:**
+  - Cada venta, cierre y cambio firmado con SHA-256 y encadenado; la app revisa si algo se alteró.
+  - Cierre Z numerado con historial.
+- **Privacidad:** permiso del cliente para guardar sus datos, exportarlos y borrarlos (quedan anónimos).
+
+## Necesita una decisión o una cuenta externa
+- **Factura electrónica** (México, Colombia, Perú, Chile, Brasil, Argentina, Venezuela, España VeriFactu…): hay que elegir un proveedor autorizado por país y abrir una cuenta (con credenciales y costo por factura).
+- **Sales tax automático de EE. UU.** (Avalara o TaxJar): cuenta de pago.
+- **Cobros con terminal de tarjeta** (Stripe Terminal, SumUp, Mercado Pago Point, Clip): cuenta de comercio en cada proveedor.
+- **Pix, SPEI, Bizum o UPI con confirmación automática:** cuenta en un proveedor de pagos de cada país.
+- **Conciliación bancaria automática** (Belvo, Fintoc, Plaid): cuenta de pago.
+- **Cobrar la suscripción de Orbe** (Paddle, Lemon Squeezy o Stripe): cuenta de la empresa y precios por país.
+- **Supabase:** al final, como acordamos.
+- **Certificaciones europeas** (NF525, TSE, Portugal AT): proceso formal con cada país.
+- **Apps en Google Play y App Store:** cuentas de desarrollador.
+
+## Próximo bloque grande sin dependencias externas
+- Inglés y portugués en toda la app.
+- Impresión térmica de 80 mm, lector por cámara, descuentos, categorías, productos por peso y con variantes (tanda 2).
+
+---
+
 ## A. Países con descontrol monetario
 
 ### Monedas y tasas
@@ -19,28 +59,28 @@ Lo marcado con ✅ ya está hecho.
 - ✅ Tasa oficial del BCV (Venezuela); dólar oficial, blue o MEP (Argentina).
 - ✅ Pagos combinados, cada parte en su moneda (Bs 2.000 por Pago Móvil + $6,52 por Binance Pay).
 - ✅ Cada venta guarda la tasa con la que se cobró.
-- 🔴 **Varias tasas a la vez, una por forma de pago.** Ej.: Pago Móvil a tasa BCV, efectivo en dólares directo, Zelle con recargo o descuento. Hoy hay una sola tasa.
-- 🔴 **Tasa propia del negocio.** Muchos cobran a una tasa distinta de la oficial (promedio, paralela, USDT). Se elige cuál se muestra al cliente y cuál se usa para la contabilidad.
-- 🔴 **Reportes con la tasa histórica.** Que "vendí Bs 1.000.000 este mes" se vea en dólares según la tasa de cada día, no la de hoy. Si no, las ganancias mienten.
-- 🟡 **Historial y gráfico de la tasa**, con aviso cuando sube más de X % en el día.
+- ✅ **Varias tasas a la vez, una por forma de pago.** Ej.: Pago Móvil a tasa BCV, efectivo en dólares directo, Zelle con recargo o descuento. Hoy hay una sola tasa.
+- ✅ **Tasa propia del negocio.** Muchos cobran a una tasa distinta de la oficial (promedio, paralela, USDT). Se elige cuál se muestra al cliente y cuál se usa para la contabilidad.
+- ✅ **Reportes con la tasa histórica.** Que "vendí Bs 1.000.000 este mes" se vea en dólares según la tasa de cada día, no la de hoy. Si no, las ganancias mienten.
+- ✅ **Historial y gráfico de la tasa**, con aviso cuando sube más de X % en el día.
 - 🟡 **Cualquier moneda dura como base**, no solo el dólar: euro (Cuba), USDT o lira (Turquía).
-- 🟡 **Redenominación:** cuando el gobierno le quita ceros a la moneda (Venezuela lo hizo tres veces), un botón convierte todo sin perder el historial.
+- ✅ **Redenominación:** cuando el gobierno le quita ceros a la moneda (Venezuela lo hizo tres veces), un botón convierte todo sin perder el historial.
 
 ### Precios que se mueven todos los días
-- 🔴 **Remarcar precios en bloque:** subir todo X %, por categoría o por proveedor, con vista previa.
-- 🔴 **Precios atados al dólar** que se recalculan solos cuando cambia la tasa, con redondeo a billetes que existen.
-- 🔴 **Ganancia a costo de reposición:** vendiste a $10 lo que costó $6 hace un mes, pero reponerlo hoy cuesta $9. Orbe debe mostrar la ganancia real y avisar "estás vendiendo por debajo de lo que cuesta reponer".
+- ✅ **Remarcar precios en bloque:** subir todo X %, por categoría o por proveedor, con vista previa.
+- ✅ **Precios atados al dólar** que se recalculan solos cuando cambia la tasa, con redondeo a billetes que existen.
+- ✅ **Ganancia a costo de reposición:** vendiste a $10 lo que costó $6 hace un mes, pero reponerlo hoy cuesta $9. Orbe debe mostrar la ganancia real y avisar "estás vendiendo por debajo de lo que cuesta reponer".
 - 🟡 Último costo, costo promedio y costo de reposición por producto; aviso cuando el proveedor sube precios.
 
 ### Deudas y vuelto
-- 🔴 **Fiado en moneda dura:** la deuda se queda en dólares aunque el cliente pague en bolívares otro día.
+- ✅ **Fiado en moneda dura:** la deuda se queda en dólares aunque el cliente pague en bolívares otro día.
 - 🟡 Recargo o interés por pagar tarde (opcional), con límite de crédito que bloquea.
-- 🔴 **Vuelto en otra moneda:** pagó con $20 y se le da el vuelto en Bs, o parte en Bs y parte en $.
-- 🟡 **Saldo a favor del cliente** cuando no hay sencillo; se usa en la próxima compra.
-- 🟡 **Arqueo de caja por moneda y por billete:** cuántos $, cuántos Bs, billetes de cada valor; aviso de billetes rotos o dudosos.
+- ✅ **Vuelto en otra moneda:** pagó con $20 y se le da el vuelto en Bs, o parte en Bs y parte en $.
+- ✅ **Saldo a favor del cliente** cuando no hay sencillo; se usa en la próxima compra.
+- ✅ **Arqueo de caja por moneda y por billete:** cuántos $, cuántos Bs, billetes de cada valor; aviso de billetes rotos o dudosos.
 
 ### Pagos locales
-- 🔴 **Verificar Pago Móvil y transferencias:** pedir los últimos dígitos de la referencia y el banco, y luego conciliar con el estado de cuenta (subir el archivo del banco).
+- ✅ **Verificar Pago Móvil y transferencias:** pedir los últimos dígitos de la referencia y el banco, y luego conciliar con el estado de cuenta (subir el archivo del banco).
 - 🟡 **Cripto:** USDT (Binance Pay, TRC20/BEP20) con monto exacto y verificación por número de operación; tasa USDT propia.
 - 🟢 Billeteras locales: Mercado Pago QR (AR), Ualá, MODO, Yape y Plin (PE), Nequi (CO), M-Pesa (África), Papara (TR).
 
@@ -102,7 +142,7 @@ Lo marcado con ✅ ya está hecho.
 - 🔴 **Recibo legal por país:** datos obligatorios, numeración correlativa sin huecos, series por caja y sucursal, copia, QR y textos legales.
 
 ### Impuestos
-- 🔴 **Varios impuestos y tasas por producto:**
+- ✅ **Varios impuestos y tasas por producto:**
   - Tasa general, reducida, superreducida, exento, tasa 0.
   - IEPS en México, impuestos al consumo, propinas y servicio.
   - Hoy hay un solo impuesto para todo el negocio.
@@ -118,7 +158,7 @@ Lo marcado con ✅ ya está hecho.
 - 🔴 **Privacidad:**
   - Leyes: GDPR (UE), LGPD (Brasil), CCPA (California), Ley 1581 (Colombia), LFPDPPP (México), Ley 25.326 (Argentina).
   - Qué implica: consentimiento al guardar datos de clientes, exportar o borrar los datos de una persona, contrato de tratamiento de datos (DPA) y datos de clientes europeos guardados en Europa.
-- 🔴 **Registro de cambios encadenado (inmutable):**
+- ✅ **Registro de cambios encadenado (inmutable):**
   - Ya tenemos el registro y las ventas anuladas no se borran. Falta firmarlo para que no se pueda alterar, que es lo que exigen VeriFactu, NF525 y otras normas.
   - Cierre Z diario numerado.
 - 🔴 **Pagos con tarjeta:**

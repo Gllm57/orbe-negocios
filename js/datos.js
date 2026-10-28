@@ -3,6 +3,7 @@
 import { useState, useEffect } from './lib/preact-htm.js';
 import { pais, tipo, dinero, TASA_VE_RESPALDO, esDivisa } from './paises.js';
 import { ROLES_BASE } from './permisos.js';
+import { encadenar, revisar, firmaVenta, firmaRegistro, firmaCierre } from './hash.js';
 
 const CLAVE = 'orbe-negocios';
 const subs = new Set();
@@ -21,6 +22,8 @@ function migrar(d) {
   if (!d.tasas || typeof d.tasas !== 'object') d.tasas = {};
   if (!Array.isArray(d.historialTasas)) d.historialTasas = [];
   if (d.negocio && d.negocio.pedirRef === undefined) d.negocio = Object.assign({}, d.negocio, { pedirRef: d.negocio.pais === 'VE', tasaPago: d.negocio.tasaPago || {} });
+  // Datos de antes de la cadena de integridad: se firman al cargarlos (la cadena empieza ahí).
+  ['ventas', 'registro', 'cierres'].forEach((k, i) => { if (Array.isArray(d[k]) && d[k].some(x => !x.h)) encadenar(d[k], [firmaVenta, firmaRegistro, firmaCierre][i]); });
   d.v = 2;
   return d;
 }
@@ -153,7 +156,14 @@ export async function restaurar(d) {
 }
 
 export const leer = () => S;
-export function cambiar(fn) { S = Object.assign({}, S, fn(S)); memo.clear(); guardar(); subs.forEach(f => f()); }
+export function cambiar(fn) { const antes = S; S = Object.assign({}, S, fn(S)); firmarNuevos(antes); memo.clear(); guardar(); subs.forEach(f => f()); }
+// Cadena de integridad: cada venta, cierre y cambio nuevo se firma con el hash del anterior.
+function firmarNuevos(antes) {
+  if (S.ventas !== (antes && antes.ventas) && S.ventas.some(v => !v.h)) encadenar(S.ventas, firmaVenta);
+  if (S.registro !== (antes && antes.registro) && S.registro.some(v => !v.h)) encadenar(S.registro, firmaRegistro);
+  if (S.cierres !== (antes && antes.cierres) && S.cierres.some(v => !v.h)) encadenar(S.cierres, firmaCierre);
+}
+export function revisarIntegridad() { return { ventas: revisar(S.ventas, firmaVenta), cierres: revisar(S.cierres, firmaCierre), registro: revisar(S.registro, firmaRegistro), n: S.ventas.length + S.cierres.length + S.registro.length }; }
 export function useDatos() {
   const [, forzar] = useState(0);
   useEffect(() => { const f = () => forzar(x => x + 1); subs.add(f); return () => subs.delete(f); }, []);
@@ -196,6 +206,8 @@ export function crearNegocio(cfg, conEjemplo) {
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
     { id: 'u2', n: 'Luis Pino', rol: 'cajero', pin: '2222', sucs: sucursales.length > 1 ? [sucursales[0]] : [], creado: Date.now() });
   const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
+  // Países con moneda inestable sin fuente automática: la tasa arranca con la de referencia y se escribe a mano.
+  if (P.usd2 && P.id !== 'AR') base.tasa = { modo: 'manual', valor: P.r, fuente: 'oficial', fecha: diaClave(Date.now()) };
   if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D, perfiles));
   else base.historialTasas = [];
   cambiar(() => base);
@@ -255,9 +267,9 @@ function ejemplo(neg, productos, D, perfiles) {
     ['Alquiler del local', 'Alquiler', 250, ahora, false, ahora + 5 * DIA]
   ].map(g => ({ id: id(), n: g[0], cat: g[1], v: D.precio(g[2] * kb), t: g[3], pagado: g[4], vence: g[5] || 0, m: neg.pays[0], suc: neg.sucursales[0] }));
   // En Venezuela y Argentina la tasa sube un poco cada día: cada venta y gasto guarda la de su día.
-  const ve = neg.pais === 'VE', ar = neg.pais === 'AR', historialTasas = [];
+  const ve = neg.pais === 'VE', ar = !!pais(neg.pais).usd2, historialTasas = [];
   if (ve || ar) {
-    const base = S.tasa.valor || (ve ? TASA_VE_RESPALDO : 1200), ritmo = ve ? 0.006 : 0.003;
+    const base = S.tasa.valor || (ve ? TASA_VE_RESPALDO : pais(neg.pais).r), ritmo = ve ? 0.006 : 0.003;
     const tasaDia = t => Math.round(base / (1 + ritmo * Math.max(0, (hoy0 - inicioDia(t)) / DIA)) * 100) / 100;
     ventas.forEach(v => { v.tasa = tasaDia(v.t); });
     gastos.forEach(g => { g.tasa = tasaDia(g.t); });
@@ -343,7 +355,7 @@ export function borrarGasto(gid) {
   cambiar(s => Object.assign({ gastos: s.gastos.filter(x => x.id !== gid) }, nota(s, 'Borró el gasto «' + g.n + '»')));
 }
 export function pagarGasto(gid) { cambiar(s => ({ gastos: s.gastos.map(g => g.id === gid ? Object.assign({}, g, { pagado: true, t: Date.now() }) : g) })); }
-export function guardarProducto(p) { cambiar(s => ({ productos: p.id && s.productos.some(x => x.id === p.id) ? s.productos.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.productos.concat([Object.assign({ id: 'p' + id(), cod: '' }, p)]) })); }
+export function guardarProducto(p) { cambiar(s => ({ productos: p.id && s.productos.some(x => x.id === p.id) ? s.productos.map(x => { if (x.id !== p.id) return x; const n = Object.assign({}, x, p); if (p.imp === undefined) delete n.imp; return n; }) : s.productos.concat([Object.assign({ id: 'p' + id(), cod: '' }, p)]) })); }
 // Borrar producto o cliente: se ocultan, pero su historial de ventas se queda.
 export function borrarProducto(pid) {
   const p = S.productos.find(x => x.id === pid); if (!p) return;
@@ -366,7 +378,22 @@ export function borrarCliente(cid) {
   cambiar(s => Object.assign({ clientes: s.clientes.map(x => x.id === cid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró al cliente «' + c.n + '»')));
   return true;
 }
-export function cerrarDia(contado, resumen) { cambiar(s => ({ cierres: s.cierres.concat([{ id: id(), t: Date.now(), dia: diaClave(Date.now()), contado, resumen }]) })); }
+// Cierre Z: numerado y correlativo, con lo vendido por forma de pago y los impuestos del día.
+// Borrar los datos personales de un cliente: queda anónimo; sus compras siguen contando sin su nombre.
+export function anonimizarCliente(cid) {
+  const c = S.clientes.find(x => x.id === cid); if (!c || deudaDe(cid) > 0.004) return false;
+  cambiar(s => Object.assign({ clientes: s.clientes.map(x => x.id === cid ? { id: x.id, n: 'Cliente borrado', tipo: x.tipo, tel: '', limite: 0, borrado: Date.now(), anonimo: true } : x) }, nota(s, 'Borró los datos personales de un cliente')));
+  return true;
+}
+export function cerrarDia(contado, resumen) {
+  const n = (S.cierres.length ? S.cierres[S.cierres.length - 1].n || S.cierres.length : 0) + 1;
+  const hoy = S.ventas.filter(v => v.t >= inicioDia(Date.now()));
+  const z = { id: id(), n, t: Date.now(), dia: diaClave(Date.now()), contado, resumen, por: S.ajustes.perfil || '',
+    desde: hoy.length ? hoy[0].n : 0, hasta: hoy.length ? hoy[hoy.length - 1].n : 0, anuladas: hoy.filter(v => v.anulada).length,
+    impuestos: hoy.filter(v => !v.anulada).reduce((a, v) => a + (v.imp || 0), 0), igtf: hoy.filter(v => !v.anulada).reduce((a, v) => a + (v.igtf || 0), 0) };
+  cambiar(s => ({ cierres: s.cierres.concat([z]) }));
+  return z;
+}
 // ---------- perfiles y permisos ----------
 export const perfilActual = () => (S.perfiles || []).find(p => p.id === S.ajustes.perfil && !p.inactivo) || null;
 export function entrar(pid) { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, { perfil: pid }) })); }
@@ -419,7 +446,7 @@ export async function quitarCeros(n) {
     // En Venezuela los precios están en dólares: solo cambia la tasa. En los demás países se dividen todos los montos.
     if (!ve) Object.assign(out, {
       productos: s.productos.map(p => Object.assign({}, p, { p: q(p.p), c: q(p.c) })),
-      ventas: s.ventas.map(v => Object.assign({}, v, { total: q(v.total), imp: q(v.imp), igtf: q(v.igtf), recibido: q(v.recibido), items: v.items.map(it => Object.assign({}, it, { p: q(it.p), c: q(it.c) })), pagos: pagosQ(v.pagos) })),
+      ventas: s.ventas.map(v => Object.assign({}, v, { h: undefined, total: q(v.total), imp: q(v.imp), igtf: q(v.igtf), recibido: q(v.recibido), items: v.items.map(it => Object.assign({}, it, { p: q(it.p), c: q(it.c) })), pagos: pagosQ(v.pagos) })),
       abonos: s.abonos.map(a => Object.assign({}, a, { v: q(a.v), pagos: a.pagos ? pagosQ(a.pagos) : a.pagos })),
       gastos: s.gastos.map(g => Object.assign({}, g, { v: q(g.v), pagos: g.pagos ? pagosQ(g.pagos) : g.pagos })),
       clientes: s.clientes.map(c => Object.assign({}, c, { limite: q(c.limite) }))

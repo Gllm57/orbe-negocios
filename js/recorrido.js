@@ -3,10 +3,11 @@
 import { html, useState, useEffect, useLayoutEffect, useRef } from './lib/preact-htm.js';
 import { useApp } from './ctx.js';
 import { Icono, LogoOrbe } from './ui.js';
+import { pais, dosMonedas } from './paises.js';
 
 function pasosPara({ S, T, tel, puede, ver, E }) {
   const vender = T.vender === 'Pedido' ? 'pedidos' : T.vender === 'Cobrar' ? 'cobros' : 'ventas';
-  const dual = S.negocio.pais === 'VE' || S.negocio.pais === 'AR';
+  const dual = dosMonedas(pais(S.negocio.pais));
   const p = [
     { titulo: 'Bienvenido a Orbe Negocios', texto: 'Te muestro lo principal en un minuto. Puedes salir cuando quieras y verlo otra vez en Ajustes.', icono: true },
     tel
