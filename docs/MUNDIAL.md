@@ -25,7 +25,7 @@ Lo marcado con ✅ ya está hecho.
   - Referencias de pago y conciliación con el banco.
   - Arqueo por billetes.
   - Quitar ceros a la moneda.
-- **42 países:** se suman Turquía, Nigeria, Egipto, Líbano y Zimbabue (moneda local + dólar, con tasa a mano), y Bolivia también con dos monedas. Además, Alemania, Austria, Bélgica, Irlanda, Países Bajos, Polonia, Suiza, Australia, India, Filipinas, Kenia, Marruecos y Sudáfrica.
+- **43 países:** se suman Turquía, Nigeria, Egipto, Líbano y Zimbabue (moneda local + dólar, con tasa a mano), y Bolivia también con dos monedas. Además, Alemania, Austria, Bélgica, Irlanda, Países Bajos, Polonia, Suiza, Australia, India, Filipinas, Kenia, Marruecos y Sudáfrica.
 - **Impuestos:**
   - Tasa por producto: general, reducida del país o exento.
   - Desglose por tasa en el recibo.
