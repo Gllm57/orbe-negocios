@@ -1,6 +1,6 @@
 // Recorrido guiado por toda la app: ilumina cada parte y explica para qué sirve.
 // Se adapta al aparato (teléfono o computadora) y a los permisos de quien lo ve: solo muestra lo que puede usar.
-import { html, useState, useEffect, useRef } from './lib/preact-htm.js';
+import { html, useState, useEffect, useLayoutEffect, useRef } from './lib/preact-htm.js';
 import { useApp } from './ctx.js';
 import { Icono, LogoOrbe } from './ui.js';
 
@@ -35,47 +35,112 @@ function pasosPara({ S, T, tel, puede, ver, E }) {
 }
 
 const quieto = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DUR = 650;
+// La misma curva que usa toda la app (--spring), para que el desplazamiento y la luz se muevan juntos.
+function curva(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const X = t => ((ax * t + bx) * t + cx) * t, Y = t => ((ay * t + by) * t + cy) * t, dX = t => (3 * ax * t + 2 * bx) * t + cx;
+  return x => { let t = x; for (let k = 0; k < 6; k++) { const d = dX(t); if (Math.abs(d) < 1e-6) break; t -= (X(t) - x) / d; } return Y(Math.min(1, Math.max(0, t))); };
+}
+const resorte = curva(0.32, 0.72, 0, 1);
+const fijo = el => { for (let p = el; p && p !== document.body; p = p.parentElement) if (getComputedStyle(p).position === 'fixed' && !p.classList.contains('app-fondo')) return true; return false; };
+function contenedor(el) {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+  }
+  return null;
+}
+const cuadros = n => new Promise(ok => { const f = k => k ? requestAnimationFrame(() => f(k - 1)) : ok(); f(n); });
 
 export function Recorrido({ onFin }) {
   const ctx = useApp();
   const pasos = useRef(pasosPara(ctx)).current;
   const [i, setI] = useState(0);
-  const [luz, setLuz] = useState(null);
-  const [alto, setAlto] = useState(190);
+  const [vista, setVista] = useState({ luz: null, top: null, left: null, flecha: null });
   const [saliendo, setSaliendo] = useState(false);
-  const dir = useRef(1), secAntes = useRef(null), caja = useRef(null), toque = useRef(null);
+  const dir = useRef(1), caja = useRef(null), toque = useRef(null), anim = useRef(0);
   const paso = pasos[i];
+  const tel = ctx.tel;
 
-  const rectDe = el => {
-    const r = el.getBoundingClientRect(), vh = innerHeight, pad = 8;
-    const top = Math.max(8, r.top - pad), bottom = Math.min(vh - 8, r.bottom + pad);
-    return { top, left: Math.max(8, r.left - pad), w: Math.min(innerWidth - 16, r.width + pad * 2), h: Math.max(24, bottom - top) };
+  // Mientras dura el recorrido, las pantallas aparecen sin su animación de entrada (así lo iluminado no se mueve).
+  useEffect(() => { document.documentElement.classList.add('en-recorrido'); return () => document.documentElement.classList.remove('en-recorrido'); }, []);
+
+  // Ubica la tarjeta según lo iluminado y su propio alto: debajo, encima, al costado (computadora)
+  // o, si lo iluminado es muy alto, se ilumina solo su parte de arriba y la tarjeta va debajo.
+  function ubicar(luz) {
+    const vw = innerWidth, vh = innerHeight, ancho = Math.min(380, vw - 32), m = 14;
+    const alto = caja.current ? caja.current.offsetHeight : 200, abajoLibre = tel ? 96 : 16;
+    if (!luz) return { luz: null, top: Math.max(16, (vh - alto) / 2), left: (vw - ancho) / 2, flecha: null };
+    const left = tel ? 16 : Math.min(Math.max(16, luz.left + luz.w / 2 - ancho / 2), vw - ancho - 16);
+    const x = Math.min(Math.max(luz.left + luz.w / 2 - left, 26), ancho - 26);
+    if (vh - (luz.top + luz.h) - abajoLibre >= alto + m) return { luz, top: luz.top + luz.h + m, left, flecha: { lado: 'arriba', x } };
+    if (luz.top >= alto + m + 16) return { luz, top: luz.top - m - alto, left, flecha: { lado: 'abajo', x } };
+    if (!tel) {
+      const top = Math.min(Math.max(16, luz.top + Math.min(luz.h, vh - luz.top) / 2 - alto / 2), vh - alto - 16);
+      const y = Math.min(Math.max(luz.top + Math.min(luz.h, vh - luz.top) / 2 - top, 26), alto - 26);
+      if (vw - (luz.left + luz.w) >= ancho + m + 16) return { luz, top, left: luz.left + luz.w + m, flecha: { lado: 'izq', y } };
+      if (luz.left >= ancho + m + 16) return { luz, top, left: luz.left - m - ancho, flecha: { lado: 'der', y } };
+    }
+    const h = Math.max(56, vh - abajoLibre - alto - m - luz.top);
+    const corta = Object.assign({}, luz, { h: Math.min(luz.h, h) });
+    return { luz: corta, top: corta.top + corta.h + m, left, flecha: { lado: 'arriba', x } };
+  }
+  const rectDe = (r, dy) => {
+    const pad = 8, vh = innerHeight, t = Math.max(8, r.top - dy - pad), b = Math.min(vh - 8, r.bottom - dy + pad);
+    return { top: t, left: Math.max(8, r.left - pad), w: Math.min(innerWidth - 16, r.width + pad * 2), h: Math.max(24, b - t) };
   };
-  // Mientras la pantalla se desliza hasta el elemento, la luz lo va siguiendo cuadro a cuadro.
+
+  // Cada paso: cambia de sección si hace falta, espera a que la pantalla nueva esté dibujada,
+  // calcula a dónde hay que desplazar y mueve la pantalla y la luz a la vez, con la misma curva.
   useEffect(() => {
-    let vivo = true, intentos = 0, raf = 0;
-    const cambia = paso.sec && paso.sec !== secAntes.current;
-    if (paso.sec) { secAntes.current = paso.sec; ctx.ir(paso.sec); }
-    if (!paso.sel) { setLuz(null); return () => { vivo = false; }; }
-    const seguir = (el, hasta) => {
+    let vivo = true, ro = null;
+    cancelAnimationFrame(anim.current);
+    (async () => {
+      if (paso.sec && location.hash !== '#' + paso.sec) {
+        ctx.ir(paso.sec);
+        for (let k = 0; k < 60 && vivo && location.hash !== '#' + paso.sec; k++) await cuadros(1);
+        await cuadros(2);
+      }
       if (!vivo) return;
-      setLuz(rectDe(el));
-      if (performance.now() < hasta) raf = requestAnimationFrame(() => seguir(el, hasta));
-    };
-    const buscar = () => {
+      if (!paso.sel) { setVista(ubicar(null)); return; }
+      let el = null;
+      for (let k = 0; k < 40 && vivo && !(el = document.querySelector(paso.sel)); k++) await cuadros(1);
       if (!vivo) return;
-      const el = document.querySelector(paso.sel);
-      if (!el) { if (intentos++ < 15) { setTimeout(buscar, 80); return; } mover(dir.current); return; }
-      el.scrollIntoView({ block: 'center', behavior: quieto() ? 'auto' : 'smooth' });
-      seguir(el, performance.now() + 900);
-    };
-    const t = setTimeout(buscar, cambia ? 420 : 40);
-    const re = () => { const el = document.querySelector(paso.sel); if (el) setLuz(rectDe(el)); };
+      if (!el) { mover(dir.current); return; }
+      const r = el.getBoundingClientRect(), c = fijo(el) ? null : contenedor(el);
+      let dy = 0;
+      if (c) {
+        const cr = c.getBoundingClientRect(), sup = document.querySelector('.barra-sup');
+        const areaTop = cr.top + (sup && c.contains(sup) ? sup.offsetHeight : 0), areaBot = Math.min(cr.bottom, innerHeight) - (tel ? 96 : 0);
+        const alto = caja.current ? caja.current.offsetHeight : 200, areaH = areaBot - areaTop;
+        const deseado = tel ? areaTop + 20 : r.height + alto + 40 < areaH ? areaTop + (areaH - (r.height + 14 + alto)) / 2 : areaTop + 20;
+        const desde = c.scrollTop, hasta = Math.max(0, Math.min(c.scrollHeight - c.clientHeight, desde + r.top - deseado));
+        dy = hasta - desde;
+        if (Math.abs(dy) > 1) {
+          const t0 = performance.now(), dur = quieto() ? 0 : DUR;
+          const paso1 = now => { if (!vivo) return; const x = dur ? Math.min(1, (now - t0) / dur) : 1; c.scrollTop = desde + dy * resorte(x); if (x < 1) anim.current = requestAnimationFrame(paso1); };
+          anim.current = requestAnimationFrame(paso1);
+        }
+      }
+      const real = rectDe(r, dy); setVista(Object.assign(ubicar(real), { real }));
+      // Si algo cambia de tamaño después (un gráfico que se acomoda), la luz se ajusta sola.
+      if (window.ResizeObserver) {
+        let primero = true;
+        ro = new ResizeObserver(() => { if (primero) { primero = false; return; } if (vivo) { const real = rectDe(el.getBoundingClientRect(), 0); setVista(Object.assign(ubicar(real), { real })); } });
+        setTimeout(() => vivo && ro.observe(el), DUR + 50);
+      }
+    })();
+    const re = () => { const el = paso.sel && document.querySelector(paso.sel), real = el ? rectDe(el.getBoundingClientRect(), 0) : null; setVista(Object.assign(ubicar(real), { real })); };
     addEventListener('resize', re);
-    return () => { vivo = false; clearTimeout(t); cancelAnimationFrame(raf); removeEventListener('resize', re); };
+    return () => { vivo = false; cancelAnimationFrame(anim.current); if (ro) ro.disconnect(); removeEventListener('resize', re); };
   }, [i]);
-  // Alto real de la tarjeta, para ubicarla sin saltos.
-  useEffect(() => { const h = caja.current ? caja.current.offsetHeight : 0; if (h && Math.abs(h - alto) > 1) setAlto(h); });
+  // Si el texto nuevo cambia el alto de la tarjeta, se reubica antes de pintarse.
+  useLayoutEffect(() => {
+    if (!caja.current || vista.top == null) return;
+    const v = ubicar(vista.real || vista.luz);
+    if (Math.abs(v.top - vista.top) > 1 || Math.abs(v.left - vista.left) > 1 || (v.luz && vista.luz && Math.abs(v.luz.h - vista.luz.h) > 1)) setVista(Object.assign(v, { real: vista.real }));
+  });
 
   function mover(d) {
     dir.current = d;
@@ -87,7 +152,7 @@ export function Recorrido({ onFin }) {
   function terminar() {
     if (saliendo) return;
     setSaliendo(true);
-    setTimeout(() => { ctx.ir('hoy'); onFin(); }, quieto() ? 0 : 320);
+    setTimeout(() => { ctx.ir('hoy'); onFin(); }, quieto() ? 0 : 300);
   }
   useEffect(() => {
     const k = e => {
@@ -106,22 +171,14 @@ export function Recorrido({ onFin }) {
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) mover(dx < 0 ? 1 : -1);
   };
 
-  // Dónde va la tarjeta: debajo de lo iluminado si cabe; si no, encima; si tampoco, abajo de la pantalla.
-  const vh = innerHeight, vw = innerWidth, ancho = Math.min(380, vw - 32), m = 14;
-  let top = Math.max(16, (vh - alto) / 2), left = (vw - ancho) / 2, flecha = null;
-  if (luz) {
-    left = ctx.tel ? 16 : Math.min(Math.max(16, luz.left + luz.w / 2 - ancho / 2), vw - ancho - 16);
-    const centro = Math.min(Math.max(luz.left + luz.w / 2 - left, 26), ancho - 26);
-    if (vh - (luz.top + luz.h) >= alto + m + 16) { top = luz.top + luz.h + m; flecha = { lado: 'arriba', x: centro }; }
-    else if (luz.top >= alto + m + 16) { top = luz.top - m - alto; flecha = { lado: 'abajo', x: centro }; }
-    else top = vh - alto - 16;
-  }
-  const estiloLuz = luz ? { top: luz.top + 'px', left: luz.left + 'px', width: luz.w + 'px', height: luz.h + 'px' } : { top: vh / 2 + 'px', left: vw / 2 + 'px', width: '0px', height: '0px' };
+  const { luz, flecha } = vista, vw = innerWidth, vh = innerHeight, ancho = Math.min(380, vw - 32);
+  const estiloLuz = luz ? { transform: 'translate(' + luz.left + 'px,' + luz.top + 'px)', width: luz.w + 'px', height: luz.h + 'px' } : { transform: 'translate(' + vw / 2 + 'px,' + vh / 2 + 'px)', width: '0px', height: '0px' };
+  const estiloCaja = { width: ancho + 'px', transform: 'translate(' + (vista.left == null ? (vw - ancho) / 2 : vista.left) + 'px,' + (vista.top == null ? vh / 2 - 100 : vista.top) + 'px)' };
   return html`<div class=${'tour' + (saliendo ? ' sale' : '')} role="dialog" aria-modal="true" aria-label="Recorrido guiado">
-    <div class="tour-tapa" onClick=${() => mover(1)}></div>
+    <div class="tour-tapa"></div>
     <div class=${'tour-luz' + (luz ? '' : ' sin')} style=${estiloLuz}><i class="tour-pulso" key=${'p' + i}></i></div>
-    <div class="tour-caja" ref=${caja} style=${{ width: ancho + 'px', top: top + 'px', left: left + 'px' }} onTouchStart=${empieza} onTouchEnd=${suelta}>
-      ${flecha && html`<i class=${'tour-flecha ' + flecha.lado} style=${{ left: flecha.x + 'px' }}></i>`}
+    <div class="tour-caja" ref=${caja} style=${estiloCaja} onTouchStart=${empieza} onTouchEnd=${suelta}><div class="tour-dentro">
+      ${flecha && html`<i class=${'tour-flecha ' + flecha.lado} style=${flecha.y != null ? { top: flecha.y + 'px' } : { left: flecha.x + 'px' }}></i>`}
       <div class=${'tour-contenido ' + (dir.current > 0 ? 'de-der' : 'de-izq')} key=${i}>
         ${paso.icono && html`<div style="display:flex;justify-content:center;margin-bottom:4px"><${LogoOrbe} t=${56} orbita=${!paso.fin} /></div>`}
         <span class="sub" style="font-size:12px;font-weight:600;color:var(--accent)">Paso ${i + 1} de ${pasos.length}</span>
@@ -135,7 +192,7 @@ export function Recorrido({ onFin }) {
         ${i > 0 && !paso.fin ? html`<button type="button" class="icono-btn chico toca" aria-label="Paso anterior" onClick=${() => mover(-1)}><${Icono} n="atras" t=${16} /></button>` : null}
         <button type="button" class="btn2 chico lleno toca" onClick=${() => mover(1)}>${paso.fin ? 'Terminar' : i === 0 ? 'Empezar' : 'Siguiente'}${paso.fin ? null : html` <${Icono} n="sig" t=${14} g=${2.6} />`}</button>
       </div>
-    </div>
+    </div></div>
   </div>`;
 }
 
