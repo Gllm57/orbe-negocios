@@ -4,6 +4,8 @@ import { useApp } from '../ctx.js';
 import { bajoMinimo, resumen, inicioDia, listaProductos } from '../datos.js';
 import { BarrasH, Reparto, color } from '../graficos.js';
 import { Chips, Icono, TONOS, avisar } from '../ui.js';
+import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo } from './grupos.js';
+import { buscar, parecidos } from '../buscar.js';
 
 export function Inventario() {
   const { S, T, D, tel, abrir, puede } = useApp();
@@ -11,11 +13,22 @@ export function Inventario() {
   const pp = puede('productos'), vg = puede('ganancias');
   const editarP = d => pp ? abrir('producto', d) : avisar('Tu perfil no puede cambiar productos');
   const [filtro, setFiltro] = useState('Todo');
+  const [q, setQ] = useState('');
+  const [grupo, setGrupo] = useState('');
+  // Buscar (tolerante) y filtrar por grupo; con «nuevo» el producto creado entra en el grupo que se está viendo.
+  const elegir = lista => { const g = filtrarGrupo(lista, S, grupo); return q.trim() ? buscar(g, q, textosProducto(S)) : g; };
+  const Buscador = html`<div class="pila" style="gap:10px">
+    <label class="buscador entra" style=${{ width: '100%', background: 'var(--surface)', maxWidth: tel ? 'none' : '420px' }}><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder=${'Buscar entre ' + listaProductos().length} aria-label="Buscar en el inventario" /></label>
+    <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} />
+  </div>`;
+  const NoHay = (lista, base) => q.trim() && !lista.length ? html`<p class="vacio">No encontré «${q}». ${(() => { const s = parecidos(base, q, textosProducto(S)); return s.length ? '¿Quisiste decir ' + s.map(p => p.n).join(', ') + '?' : ''; })()}</p>` : null;
+  const PillGrupo = p => { const g = grupoDe(S, p); return g ? html`<span class="pildora" style=${{ background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 16%, transparent)', color: 'var(--ink)' }}><i class="punto-grupo" style=${{ background: colorGrupo(g) }}></i>${g.n}</span>` : html`<span class="faint">—</span>`; };
   const mes = resumen(inicioDia(Date.now()) - 29 * 86400000, Date.now() + 1, '');
   const top = Object.keys(mes.porProd).map(k => Object.assign({ id: k }, mes.porProd[k])).sort((a, b) => b.v - a.v);
 
   if (!T.inv) {
-    const Lista = html`<div class="pila" data-tour="productos">${listaProductos().map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
+    const servicios = elegir(listaProductos());
+    const Lista = html`<div class="pila" data-tour="productos">${NoHay(servicios, listaProductos())}${servicios.map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
       <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
         <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${p.n}</b><span class="sub">${p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min'} · ${x.q} este mes</span></span>
@@ -24,15 +37,16 @@ export function Inventario() {
     const Graf = html`<section class="tarjeta entra"><div class="tarjeta-tit">Lo que más te dejan<span class="sub">30 días</span></div>
       <${BarrasH} datos=${top.slice(0, 6).map(t => ({ n: t.n, v: t.v, txt: D.m(t.v), sub: t.q + ' veces' }))} /></section>`;
     if (tel) return html`<div class="fila entra"><h1 class="titulo crece">Servicios</h1>${pp && html`<button type="button" class="btn2 chico acento toca" onClick=${() => editarP({})}>+ Agregar</button>`}</div>
-      <span class="sub" style="margin-top:-6px">Con su precio y lo que dura. La agenda de citas llega en la Fase 2.</span>${Graf}${Lista}`;
-    return html`<div class="dos-uno"><div class="pila"><div class="fila"><span class="sub crece">La agenda de citas llega en la Fase 2.</span>${pp && html`<button type="button" class="btn2 lleno toca" onClick=${() => editarP({})}>+ Servicio</button>`}</div>${Lista}</div>${Graf}</div>`;
+      <span class="sub" style="margin-top:-6px">Con su precio y lo que dura. La agenda de citas llega en la Fase 2.</span>${Buscador}${Lista}${Graf}`;
+    return html`<div class="dos-uno"><div class="pila"><div class="fila"><span class="sub crece">La agenda de citas llega en la Fase 2.</span>${pp && html`<button type="button" class="btn2 lleno toca" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}>+ Servicio</button>`}</div>${Buscador}${Lista}</div>${Graf}</div>`;
   }
 
   const conStock = listaProductos().filter(p => p.q != null);
   const bajos = bajoMinimo();
   const valor = conStock.reduce((a, p) => a + p.q * p.c, 0);
   const margen = conStock.length ? conStock.reduce((a, p) => a + (p.p > 0 ? (p.p - p.c) / p.p : 0), 0) / conStock.length : 0;
-  const lista = (filtro === 'Por reponer' ? bajos : conStock).slice().sort((a, b) => (a.q < a.min ? 0 : 1) - (b.q < b.min ? 0 : 1));
+  const base = filtro === 'Por reponer' ? bajos : conStock;
+  const lista = q.trim() ? elegir(base) : elegir(base).slice().sort((a, b) => (a.q < a.min ? 0 : 1) - (b.q < b.min ? 0 : 1));
   const estado = p => p.q === 0 ? ['Agotado', 't-ros', 'var(--out)'] : p.q < p.min ? ['Bajo', 't-amb', 'var(--amber)'] : ['Bien', 't-ver', 'var(--in)'];
   const segs = top.slice(0, 4).map((t, i) => ({ n: t.n, v: t.v, c: color(i), i: 'etiqueta' })).concat(top.length > 4 ? [{ n: 'Otros', v: top.slice(4).reduce((a, t) => a + t.v, 0), c: 'var(--faint)', i: 'mas' }] : []);
 
@@ -59,7 +73,9 @@ export function Inventario() {
     ${bajos.length > 0 && html`<button type="button" class="tarjeta fila toca entra" style="border:0;background:var(--amber-soft);box-shadow:none;color:var(--ink);text-align:left" onClick=${() => setFiltro(filtro === 'Por reponer' ? 'Todo' : 'Por reponer')}>
       <span class="ic t-amb"><${Icono} n="alerta" t=${18} /></span><span class="crece" style="display:flex;flex-direction:column"><b style="font-size:14px;font-weight:600">${bajos.length} ${bajos.length === 1 ? 'producto' : 'productos'} por debajo del mínimo</b><span class="sub">${filtro === 'Por reponer' ? 'Toca para ver todo' : 'Toca para verlos'}</span></span></button>`}
     ${Top}
+    ${Buscador}
     <${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico />
+    ${NoHay(lista, base)}
     ${Tarjetas}`;
 
   return html`
@@ -70,17 +86,18 @@ export function Inventario() {
       <div class="tarjeta cifra entra" style="--i:3"><span class="sub">Productos</span><span class="v num">${conStock.length}</span><span class="sub faint">con existencia</span></div>
     </div>
     <div class="pila">
-        <div class="fila"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('remarcar')}><${Icono} n="etiqueta" t=${15} />Remarcar precios</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({})}>+ Producto</button>`}</div>
+        <div class="fila" style="flex-wrap:wrap;gap:10px"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('remarcar')}><${Icono} n="etiqueta" t=${15} />Remarcar precios</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}>+ Producto</button>`}</div>
+        ${Buscador}
         <div class="tabla-caja"><table class="tabla">
-          <thead><tr><th>Producto</th><th>Código</th><th class="der">Costo</th><th class="der">Precio</th><th class="der">Tienes</th><th class="der">Mínimo</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Producto</th><th>Grupo</th><th>Código</th><th class="der">Costo</th><th class="der">Precio</th><th class="der">Tienes</th><th class="der">Mínimo</th><th>Estado</th><th></th></tr></thead>
           <tbody>${lista.map((p, i) => { const e = estado(p); return html`<tr key=${p.id} style=${{ animationDelay: i * 25 + 'ms' }}>
-            <td><b style="font-weight:600">${p.n}</b>${p.usd > 0 ? html` <span class="pildora t-ver" title="Precio atado al dólar">US$ ${p.usd}</span>` : null}${vg && p.c > 0 && p.p < p.c * 1.05 ? html` <span class="pildora t-ros">Sin ganancia</span>` : null}</td><td class="muted num">${p.cod || '—'}</td>
+            <td><b style="font-weight:600">${p.n}</b>${p.usd > 0 ? html` <span class="pildora t-ver" title="Precio atado al dólar">US$ ${p.usd}</span>` : null}${vg && p.c > 0 && p.p < p.c * 1.05 ? html` <span class="pildora t-ros">Sin ganancia</span>` : null}</td><td>${PillGrupo(p)}</td><td class="muted num">${p.cod || '—'}</td>
             <td class="der num muted">${vg ? D.m(p.c) : '—'}</td><td class="der num">${D.m(p.p)}</td>
             <td class="der num"><b style=${{ color: e[2] }}>${p.q}</b></td><td class="der num muted">${p.min}</td>
             <td><span class=${'pildora ' + e[1]}>${e[0]}</span></td>
             <td class="der"><span class="fila" style="gap:6px;justify-content:flex-end">${puede('reponer') && html`<button type="button" class="btn2 chico verde toca" onClick=${() => abrir('reponer', { pid: p.id })}>Reponer</button>`}${pp && html`<button type="button" class="btn2 chico toca" onClick=${() => editarP({ pid: p.id })}>Editar</button>`}</span></td>
           </tr>`; })}</tbody>
-        </table>${lista.length ? null : html`<p class="vacio">Nada por reponer.</p>`}</div>
+        </table>${lista.length ? null : q.trim() ? NoHay(lista, base) : html`<p class="vacio">${grupo ? 'No hay nada en este grupo.' : 'Nada por reponer.'}</p>`}</div>
     </div>
     <div class="tres">
       ${Top}

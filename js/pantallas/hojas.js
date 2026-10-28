@@ -1,13 +1,15 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTRA, esDivisa, esElectronico, monedaEfectivo, billetesDe } from '../paises.js';
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo } from '../ui.js';
 import { Monto, Linea } from '../graficos.js';
 import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
 import { infoTasas } from './tasas.js';
+import { Grupos, Grupo, colorGrupo, textosProducto, iniciales2 } from './grupos.js';
+import { buscar, parecidos } from '../buscar.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
 const VENCE = [{ v: 7, n: 'En 7 días' }, { v: 15, n: 'En 15 días' }, { v: 30, n: 'En 30 días' }];
@@ -35,7 +37,7 @@ function Confirmar({ d, cerrar }) {
 }
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
@@ -332,6 +334,9 @@ function Producto({ d, cerrar }) {
   const [enDolar, setEnDolar] = useState(!!(p0 && p0.usd));
   // Impuesto del producto: general, una tasa reducida del país o exento.
   const [imp, setImp] = useState(p0 && p0.imp != null ? p0.imp : 'gen');
+  // Grupo: uno de los que hay o uno nuevo escrito aquí mismo.
+  const [grupo, setGrupo] = useState(p0 ? p0.g || '' : d.g || '');
+  const [grupoNuevo, setGrupoNuevo] = useState(null);
   const gen = S.negocio.taxGen != null ? S.negocio.taxGen : P.tax[1];
   const opcionesImp = [{ v: 'gen', n: 'General ' + gen + ' %' }].concat((P.red || []).filter(r => r > 0).map(r => ({ v: r, n: r + ' %' })), [{ v: 0, n: 'Exento' }]);
   const pon = o => setF(x => Object.assign({}, x, o));
@@ -342,7 +347,7 @@ function Producto({ d, cerrar }) {
     if (!f.n.trim() || !p) { avisar('Escribe el nombre y el precio'); return; }
     const cod = f.cod.trim();
     if (cod && listaProductos().some(x => x.cod === cod && (!p0 || x.id !== p0.id))) { avisar('Ese código ya lo tiene otro producto'); return; }
-    guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: f.n.trim().slice(0, 2).toUpperCase(), p, c: co, q: T.inv ? Math.round(numero(f.q)) : null, min: T.inv ? Math.round(numero(f.min)) : 0, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp });
+    guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: iniciales2(f.n.trim()), p, c: co, q: T.inv ? Math.round(numero(f.q)) : null, min: T.inv ? Math.round(numero(f.min)) : 0, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp, g: grupoNuevo && grupoNuevo.trim() ? guardarGrupo({ n: grupoNuevo.trim() }) : grupo });
     c(() => avisar('Guardado: ' + f.n.trim()));
   };
   const borrar = c => c(() => abrir('confirmar', { titulo: '¿Borrar ' + p0.n + '?', texto: 'Ya no sale para vender ni en el inventario. Las ventas que tuvo se quedan en los reportes.', boton: 'Sí, borrar', si: () => { borrarProducto(p0.id); avisar('Borrado: ' + p0.n); } }));
@@ -355,6 +360,11 @@ function Producto({ d, cerrar }) {
       ${p > 0 && html`<span class="sub entra">Ganas <b class="in num">${D.m(p - co)}</b> por cada uno (${Math.round((p - co) / p * 100)} %)</span>`}
       ${T.inv ? html`<div class="rejilla-2" style="gap:10px"><label class="campo"><span>Tienes</span><input type="text" inputmode="numeric" value=${f.q} placeholder="0" onInput=${e => pon({ q: e.target.value })} /></label><label class="campo"><span>Avísame con menos de</span><input type="text" inputmode="numeric" value=${f.min} placeholder="0" onInput=${e => pon({ min: e.target.value })} /></label></div>`
         : html`<div class="campo"><span>Dura</span><${Chips} opciones=${[{ v: 30, n: '30 min' }, { v: 45, n: '45 min' }, { v: 60, n: '1 hora' }, { v: 120, n: '2 horas' }]} valor=${f.dur} onCambio=${v => pon({ dur: v })} /></div>`}
+      <div class="campo"><span>Grupo</span><div class="chips">
+        <button type="button" class=${'chip chico toca' + (!grupo && grupoNuevo == null ? ' on' : '')} onClick=${() => { setGrupo(''); setGrupoNuevo(null); }}>Sin grupo</button>
+        ${S.grupos.map(g => html`<button type="button" key=${g.id} class=${'chip chico toca' + (grupo === g.id && grupoNuevo == null ? ' on' : '')} onClick=${() => { setGrupo(g.id); setGrupoNuevo(null); }}><i class="punto-grupo" style=${{ background: colorGrupo(g) }}></i>${g.n}</button>`)}
+        <button type="button" class=${'chip chico toca' + (grupoNuevo != null ? ' on' : '')} style="border:1.5px dashed var(--line)" onClick=${() => setGrupoNuevo(grupoNuevo == null ? '' : null)}>+ Nuevo</button></div>
+        ${grupoNuevo != null && html`<input class="entra" type="text" value=${grupoNuevo} placeholder="Nombre del grupo nuevo" autocomplete="off" onInput=${e => setGrupoNuevo(e.target.value)} />`}</div>
       ${S.negocio.taxOn && html`<div class="campo"><span>${P.tax[0]} de este ${T.inv ? 'producto' : 'servicio'}</span><${Chips} opciones=${opcionesImp} valor=${imp} onCambio=${setImp} chico /></div>`}
       ${T.inv && html`<label class="campo"><span>Código de barras (opcional)</span><input class="num" type="text" inputmode="numeric" autocomplete="off" value=${f.cod} placeholder="Pásalo por el lector o escríbelo" onInput=${e => pon({ cod: e.target.value })} /></label>`}`,
     pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar</button>${p0 ? Pie2('Borrar ' + (T.inv ? 'producto' : 'servicio'), () => borrar(c), 'rojo') : null}`
@@ -426,11 +436,13 @@ function Cliente({ d, cerrar }) {
 // ---------- buscar (computadora) ----------
 function Buscar({ d, cerrar }) {
   const { S, D, abrir, ir } = useApp();
-  const t = d.q.toLowerCase();
-  const prods = listaProductos().filter(p => p.n.toLowerCase().includes(t) || (p.cod || '').includes(t));
-  const clis = listaClientes().filter(c => c.n.toLowerCase().includes(t));
+  // Tolerante a acentos, errores de tipeo y plurales; si no hay nada, sugiere lo más parecido.
+  const prods = buscar(listaProductos(), d.q, textosProducto(S)).slice(0, 30);
+  const clis = buscar(listaClientes(), d.q, x => [x.n, x.tel]).slice(0, 20);
+  const sugeridos = !prods.length && !clis.length ? parecidos(listaProductos(), d.q, textosProducto(S)) : [];
   return html`<${Hoja} titulo=${'Buscar «' + d.q + '»'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`${!prods.length && !clis.length && html`<p class="vacio">No encontré nada con «${d.q}».</p>`}
+      ${sugeridos.length > 0 && html`<span class="sub">¿Quisiste decir…?</span><div class="lista">${sugeridos.map(p => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('producto', { pid: p.id }))}><span class="crece">${p.n}</span><b class="num">${D.m(p.p)}</b></button>`)}</div>`}
       ${prods.length > 0 && html`<span class="sub">Productos</span><div class="lista">${prods.map(p => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('producto', { pid: p.id }))}><span class="crece">${p.n}</span><span class="sub">${p.q != null ? p.q + ' und · ' : ''}</span><b class="num">${D.m(p.p)}</b></button>`)}</div>`}
       ${clis.length > 0 && html`<span class="sub">Clientes</span><div class="lista">${clis.map(x => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('cliente', { cid: x.id }))}><span class="crece">${x.n}</span><${Icono} n="sig" t=${16} c="var(--faint)" /></button>`)}</div>`}`,
     pie: null

@@ -5,6 +5,8 @@ import { Icono, avisar, TONOS, hora } from '../ui.js';
 import { resumen, inicioDia, listaProductos, sigNumero } from '../datos.js';
 import { FilaVenta } from './hojas.js';
 import { BarraTasas } from './tasas.js';
+import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo } from './grupos.js';
+import { buscar as buscarEn, parecidos } from '../buscar.js';
 import { Reparto, Monto, color } from '../graficos.js';
 
 // Impuestos: cada producto puede tener su tasa (general, reducida o exento). Se suman por tasa.
@@ -28,6 +30,7 @@ export function Vender() {
   const [cart, setCartRaw] = useState(carritoGuardado);
   const setCart = c => { carritoGuardado = c; setCartRaw(c); };
   const [q, setQ] = useState('');
+  const [grupo, setGrupo] = useState('');
   const lector = useRef(null);
   const prods = listaProductos();
   const items = prods.filter(p => cart[p.id]).map(p => Object.assign({ pid: p.id, n: p.n, q: cart[p.id], p: p.p, c: p.c }, p.imp != null ? { imp: p.imp } : {}));
@@ -51,18 +54,24 @@ export function Vender() {
     window.addEventListener('keydown', tecla);
     return () => window.removeEventListener('keydown', tecla);
   });
+  // Búsqueda tolerante (acentos, errores de tipeo, plurales) dentro del grupo elegido.
+  const enGrupo = filtrarGrupo(prods, S, grupo);
+  const visibles = q.trim() ? buscarEn(enGrupo, q, textosProducto(S)) : enGrupo;
+  const sugeridos = q.trim() && !visibles.length ? parecidos(prods, q, textosProducto(S)) : [];
+  // Enter (o el lector de códigos): primero el código exacto, si no lo más parecido.
   const buscar = e => {
     if (e.key !== 'Enter') return;
-    const t = q.trim().toLowerCase(); if (!t) return;
-    const p = prods.find(x => x.cod && x.cod === t) || prods.find(x => x.n.toLowerCase().includes(t));
+    const t = q.trim(); if (!t) return;
+    const p = prods.find(x => x.cod && x.cod === t) || visibles[0];
     if (p) { sumar(p); avisar('Leído: ' + p.n); setQ(''); } else avisar('No encontré «' + q + '»');
   };
-  const visibles = q && tel ? prods.filter(p => p.n.toLowerCase().includes(q.toLowerCase())) : prods;
 
+  const Sugerencias = q.trim() && !visibles.length ? html`<div class="pila entra" style="gap:8px"><span class="sub">No encontré «${q}»${grupo ? ' en este grupo' : ''}. ${sugeridos.length ? '¿Quisiste decir…?' : ''}</span>
+    <div class="chips">${sugeridos.map(p => html`<button type="button" class="chip toca" onClick=${() => { sumar(p); setQ(''); avisar('Agregado: ' + p.n); }}>${p.n}</button>`)}${grupo ? html`<button type="button" class="chip chico toca" onClick=${() => setGrupo('')}>Buscar en todo</button>` : null}</div></div>` : null;
   const Grilla = html`<div class="productos">${visibles.map((p, i) => { const c = cart[p.id] || 0; return html`
     <button type="button" key=${p.id} class=${'prod toca entra' + (c ? ' on' : '')} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => sumar(p)} aria-label=${'Agregar ' + p.n}>
       ${c ? html`<span class="cant" key=${c}>${c}</span>` : null}
-      <span class=${'ic ' + TONOS[i % 5]} style="width:36px;height:36px;font-size:13px;font-weight:700">${p.ab}</span>
+      ${(() => { const g = grupoDe(S, p); return g ? html`<span class="ic" style=${{ width: '36px', height: '36px', fontSize: '13px', fontWeight: 700, background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 18%, transparent)', color: colorGrupo(g) }}>${p.ab}</span>` : html`<span class=${'ic ' + TONOS[i % 5]} style="width:36px;height:36px;font-size:13px;font-weight:700">${p.ab}</span>`; })()}
       <b>${p.n}</b><small class="num">${D.m(p.p)}${p.dur ? ' · ' + (p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min') : ''}</small>
       ${p.q === 0 && html`<span class="sin">Agotado</span>`}
     </button>`; })}</div>`;
@@ -88,7 +97,9 @@ export function Vender() {
   if (tel) return html`
     <div class="fila entra"><h1 class="titulo crece">${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</h1><span class="sub">Toca para sumar</span></div>
     <${BarraTasas} />
-    <label class="buscador entra" style="width:100%;background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder="Buscar" aria-label="Buscar producto" /></label>
+    <label class="buscador entra" style="width:100%;background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder=${'Buscar entre ' + prods.length} aria-label="Buscar producto" /></label>
+    <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${prods} />
+    ${Sugerencias}
     ${Grilla}
     <div class="tarjeta pila entra">${n ? Lineas : null}${Total}</div>
     ${Boton}`;
@@ -120,6 +131,8 @@ export function Vender() {
         <input ref=${lector} type="text" value=${q} onInput=${e => setQ(e.target.value)} onKeyDown=${buscar} placeholder="Pasa el lector de códigos o escribe el nombre y pulsa Enter" aria-label="Código o nombre" style="font-size:16px" />
         <span class="tecla">F1</span>
       </label>
+      <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${prods} />
+      ${Sugerencias}
       ${Grilla}
       ${HoyCaja()}
       <div class="chips sub">${[['F1', 'Buscar'], ['Enter', 'Agregar'], ['F12', 'Cobrar'], ['Esc', 'Vaciar']].map(k => html`<span class="fila" style="gap:6px"><span class="tecla">${k[0]}</span>${k[1]}</span>`)}</div>

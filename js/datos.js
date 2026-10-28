@@ -9,7 +9,7 @@ const CLAVE = 'orbe-negocios';
 const subs = new Set();
 let S = vacio();
 
-function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [] }; }
+function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [], grupos: [] }; }
 // Datos guardados con versiones anteriores: se completan sin perder nada.
 function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
@@ -23,6 +23,7 @@ function migrar(d) {
   delete d.tasaVE; delete d.tasaFecha;
   if (!d.tasas || typeof d.tasas !== 'object') d.tasas = {};
   if (!Array.isArray(d.historialTasas)) d.historialTasas = [];
+  if (!Array.isArray(d.grupos)) d.grupos = [];
   if (d.negocio && d.negocio.pedirRef === undefined) d.negocio = Object.assign({}, d.negocio, { pedirRef: d.negocio.pais === 'VE', tasaPago: d.negocio.tasaPago || {} });
   // Datos de antes de la cadena de integridad: se firman al cargarlos (la cadena empieza ahí).
   ['ventas', 'registro', 'cierres'].forEach((k, i) => { if (Array.isArray(d[k]) && d[k].some(x => !x.h)) encadenar(d[k], [firmaVenta, firmaRegistro, firmaCierre][i]); });
@@ -187,6 +188,14 @@ const CATALOGO = {
   online: [['CA', 'Camiseta estampada', 15, 6, 40, 10, 0, 8], ['GO', 'Gorra', 12, 5, 16, 6, 0, 4], ['TZ', 'Taza', 9, 3.5, 5, 6, 0, 5], ['TB', 'Bolsa de tela', 10, 4, 22, 5, 0, 3], ['ST', 'Stickers x 5', 4, 1, 90, 20, 0, 6], ['SU', 'Sudadera', 28, 12, 9, 4, 0, 2], ['EN', 'Envío', 3, 3, -1, 0, 0, 7]],
   indep: [['LG', 'Diseño de logo', 120, 0, 0, 0, 600, 1], ['FT', 'Sesión de fotos', 80, 10, 0, 0, 120, 2], ['CL', 'Clase 1 hora', 15, 0, 0, 0, 60, 6], ['AS', 'Asesoría 1 hora', 30, 0, 0, 0, 60, 3], ['VT', 'Visita técnica', 25, 3, 0, 0, 90, 3], ['RS', 'Paquete redes', 60, 0, 0, 0, 240, 1]]
 };
+// Grupos de ejemplo de cada tipo de negocio (por la abreviatura del producto).
+const GRUPOS_EJ = {
+  tienda: [['Víveres', ['HM', 'AR', 'CF', 'AC']], ['Bebidas', ['RF']], ['Lácteos y huevos', ['HV', 'QS']], ['Panadería', ['PN']], ['Limpieza', ['JB']]],
+  comida: [['Platos', ['HB', 'PC', 'PZ', 'CB']], ['Acompañantes', ['EM', 'PF']], ['Bebidas', ['JN', 'RF', 'CF']]],
+  citas: [['Cabello', ['CO', 'CB', 'TI', 'PI']], ['Uñas', ['MA', 'PE']]],
+  online: [['Ropa', ['CA', 'GO', 'SU']], ['Accesorios', ['TZ', 'TB', 'ST']], ['Envíos', ['EN']]],
+  indep: [['Diseño', ['LG', 'RS']], ['Servicios', ['FT', 'VT']], ['Clases y asesorías', ['CL', 'AS']]]
+};
 const VENTAS_DIA = { tienda: 26, comida: 38, citas: 8, online: 7, indep: 2 };
 const NOMBRES = { tienda: 'Bodega La Esquina', comida: 'Sabor Express', citas: 'Estudio Bella', online: 'Estampa Store', indep: 'Ana Ruiz Estudio' };
 const NOMBRES_EMP = { tienda: 'Comercial La Esquina', comida: 'Grupo Sabor Express', citas: 'Estudios Bella', online: 'Estampa Store', indep: 'Ruiz y Asociados' };
@@ -207,7 +216,9 @@ export function crearNegocio(cfg, conEjemplo) {
   if (conEjemplo) perfiles.push(
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
     { id: 'u2', n: 'Luis Pino', rol: 'cajero', pin: '2222', sucs: sucursales.length > 1 ? [sucursales[0]] : [], creado: Date.now() });
-  const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
+  const grupos = (GRUPOS_EJ[T.id] || []).map((g, i) => ({ id: 'g' + i, n: g[0], c: i }));
+  productos.forEach(p => { const i = (GRUPOS_EJ[T.id] || []).findIndex(g => g[1].includes(p.ab)); if (i >= 0) p.g = 'g' + i; });
+  const base = { grupos, negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
   // Países con moneda inestable sin fuente automática: la tasa arranca con la de referencia y se escribe a mano.
   if (P.usd2 && P.id !== 'AR') base.tasa = { modo: 'manual', valor: P.r, fuente: 'oficial', fecha: diaClave(Date.now()) };
   if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D, perfiles));
@@ -367,6 +378,21 @@ export function borrarProducto(pid) {
   cambiar(s => Object.assign({ productos: s.productos.map(x => x.id === pid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró el producto «' + p.n + '»')));
 }
 // Reponer: si cambió lo que cuesta, se guarda como costo de reposición (el de hoy) y se anota.
+// ---------- grupos de productos ----------
+export function guardarGrupo(g) {
+  const nuevo = Object.assign({ id: 'g' + id(), c: S.grupos.length % 8 }, g);
+  cambiar(s => ({ grupos: g.id && s.grupos.some(x => x.id === g.id) ? s.grupos.map(x => x.id === g.id ? Object.assign({}, x, g) : x) : s.grupos.concat([nuevo]) }));
+  return g.id || nuevo.id;
+}
+// Borrar un grupo: sus productos quedan sin grupo (no se borra ninguno).
+export function borrarGrupo(gid) {
+  const g = S.grupos.find(x => x.id === gid); if (!g) return;
+  cambiar(s => Object.assign({ grupos: s.grupos.filter(x => x.id !== gid), productos: s.productos.map(p => p.g === gid ? Object.assign({}, p, { g: '' }) : p) }, nota(s, 'Borró el grupo «' + g.n + '»')));
+}
+// Poner varios productos en un grupo de una vez (y sacar del grupo los que se desmarcaron).
+export function asignarGrupo(gid, ids) {
+  cambiar(s => ({ productos: s.productos.map(p => ids.includes(p.id) ? (p.g === gid ? p : Object.assign({}, p, { g: gid })) : p.g === gid ? Object.assign({}, p, { g: '' }) : p) }));
+}
 export function reponer(pid, cuanto, costo) {
   const p0 = S.productos.find(p => p.id === pid);
   const cambio = p0 && costo > 0 && Math.abs(costo - p0.c) > 0.004;
