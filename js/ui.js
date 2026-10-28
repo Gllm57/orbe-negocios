@@ -7,6 +7,9 @@ export const ICONOS = {
   personas: 'M16 20v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 10a4 4 0 100-8 4 4 0 000 8zM22 20v-2a4 4 0 00-3-3.9M16 2.1a4 4 0 010 7.8',
   deshacer: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11',
   lapiz: 'M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z',
+  camara: 'M3 8a2 2 0 012-2h2.2l1.4-2h6.8l1.4 2H19a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2zM12 17a4 4 0 100-8 4 4 0 000 8z',
+  linterna: 'M8 2h8v4l-2 4v11a1 1 0 01-1 1h-2a1 1 0 01-1-1V10L8 6zM12 13v2',
+  texto: 'M4 7V5h16v2M9 19h6M12 5v14',
   subir: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12',
   caja: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
   lista: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
@@ -153,6 +156,24 @@ const SIMBOLOS = [
 export const simbolo = n => { const s = SIMBOLOS.find(x => x[0].test(n || '')); return s ? s[1] : 'etiqueta'; };
 
 export const iniciales = n => (n || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'ON';
+// Logo del negocio: la imagen que subió el dueño o, si no hay, sus iniciales.
+export const MarcaNegocio = ({ n, t = 42, lapiz }) => html`<span class=${'logo marca' + (n.logo ? ' con-imagen' : '')} style=${{ width: t + 'px', height: t + 'px', fontSize: Math.round(t * 0.36) + 'px', borderRadius: Math.round(t * 0.31) + 'px' }}>${n.logo ? html`<img src=${n.logo} alt="" draggable="false" />` : iniciales(n.nombre)}${lapiz && html`<i class="logo-lapiz"><${Icono} n="lapiz" t=${9} g=${2.6} /></i>`}</span>`;
+// Achica una imagen elegida (logo) a lo sumo «lado» píxeles y la devuelve como texto (data URL) para guardarla.
+export function achicarImagen(archivo, lado = 256) {
+  return new Promise((ok, mal) => {
+    const url = URL.createObjectURL(archivo), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, lado / Math.max(img.width, img.height)), w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const webp = cv.toDataURL('image/webp', 0.9);
+      ok(webp.startsWith('data:image/webp') ? webp : cv.toDataURL('image/png'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('imagen')); };
+    img.src = url;
+  });
+}
 export const TONOS = ['t-vio', 't-ver', 't-amb', 't-azu', 't-ros'];
 export function hace(t) {
   const d = Math.floor((Date.now() - t) / 86400000);

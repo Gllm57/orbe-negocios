@@ -398,6 +398,13 @@ export function reponer(pid, cuanto, costo) {
   const cambio = p0 && costo > 0 && Math.abs(costo - p0.c) > 0.004;
   cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }, cambio ? { c: costo, cAntes: p.c } : {}) : p) }, cambio ? nota(s, 'Costo de «' + p0.n + '» pasó de ' + p0.c + ' a ' + costo) : {}));
 }
+// Ajuste rápido de existencia (escáner): suma o resta unidades sin tocar el costo, y queda anotado.
+export function ajustarStock(pid, cuanto) {
+  const p0 = S.productos.find(p => p.id === pid); if (!p0 || !cuanto) return 0;
+  const nuevo = Math.max(0, (p0.q || 0) + cuanto), real = nuevo - (p0.q || 0);
+  cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid ? Object.assign({}, p, { q: nuevo }) : p) }, nota(s, (real >= 0 ? 'Sumó ' + real + ' a' : 'Restó ' + -real + ' de') + ' «' + p0.n + '» con el escáner (' + (p0.q || 0) + ' → ' + nuevo + ')')));
+  return nuevo;
+}
 // Remarcar: sube (o baja) los precios en bloque un porcentaje, con redondeo «bonito».
 export function remarcar(ids, pct, redondo) {
   cambiar(s => Object.assign({ productos: s.productos.map(p => ids.includes(p.id) ? Object.assign({}, p, { p: redondo(p.p * (1 + pct / 100)), pAntes: p.p }) : p) }, nota(s, 'Remarcó ' + ids.length + ' precios ' + (pct > 0 ? '+' : '') + pct + ' %')));
@@ -431,6 +438,16 @@ export function entrar(pid) { cambiar(s => ({ ajustes: Object.assign({}, s.ajust
 export function salir() { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, { perfil: '' }) })); }
 export function guardarPerfil(p) {
   cambiar(s => ({ perfiles: p.id && s.perfiles.some(x => x.id === p.id) ? s.perfiles.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.perfiles.concat([Object.assign({ id: 'u' + id(), pin: '', sucs: [], creado: Date.now() }, p)]) }));
+}
+// Cambiar o quitar el PIN de un perfil (en el registro se anota quién lo cambió, nunca el PIN).
+export function cambiarPin(pid, pin) {
+  const p0 = S.perfiles.find(p => p.id === pid); if (!p0) return;
+  cambiar(s => Object.assign({ perfiles: s.perfiles.map(p => p.id === pid ? Object.assign({}, p, { pin }) : p) }, nota(s, (pin ? (p0.pin ? 'Cambió' : 'Puso') : 'Quitó') + ' el PIN de ' + p0.n)));
+}
+// Eliminar un perfil: ya no aparece ni puede entrar, pero sus ventas y su nombre se quedan en el historial.
+export function borrarPerfil(pid) {
+  const p0 = S.perfiles.find(p => p.id === pid); if (!p0 || p0.rol === 'dueno') return;
+  cambiar(s => Object.assign({ perfiles: s.perfiles.map(p => p.id === pid ? Object.assign({}, p, { borrado: Date.now(), inactivo: true, pin: '' }) : p) }, nota(s, 'Eliminó el perfil de ' + p0.n)));
 }
 export function cambiarPermiso(rolId, k, v) { cambiar(s => ({ roles: s.roles.map(r => r.id === rolId && !r.fijo ? Object.assign({}, r, { p: Object.assign({}, r.p, { [k]: v }) }) : r) })); }
 export function nuevoRol(n) { const r = { id: 'r' + id(), n, p: { vender: true } }; cambiar(s => ({ roles: s.roles.concat([r]) })); return r; }

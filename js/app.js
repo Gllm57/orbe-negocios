@@ -6,7 +6,7 @@ import { Recorrido } from './recorrido.js';
 import { ChipTasa } from './pantallas/tasas.js';
 import { puede, rolDe } from './permisos.js';
 import { pais, tipo, dinero, leerTasa } from './paises.js';
-import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera } from './ui.js';
+import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera, MarcaNegocio } from './ui.js';
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
 import { Vender } from './pantallas/vender.js';
@@ -124,10 +124,10 @@ function App() {
     <div class="marco-pc">
       <aside class="lateral" aria-label="Menú">
         <div class="fila" style="gap:10px;padding:0 6px"><${LogoOrbe} t=${30} /><b style="font-size:16px;letter-spacing:-0.02em">Orbe Negocios</b></div>
-        <div class="tarjeta fila" style="padding:12px;gap:10px">
-          <span class="logo marca">${iniciales(S.negocio.nombre)}</span>
+        <button type="button" class="tarjeta fila cab-negocio toca" style="padding:12px;gap:10px" title=${pd('ajustes') ? 'Editar los datos y el logo' : ''} onClick=${() => pd('ajustes') ? abrir('negocio') : avisar('Solo quien puede cambiar los ajustes edita los datos del negocio')}>
+          <${MarcaNegocio} n=${S.negocio} lapiz=${pd('ajustes')} />
           <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b class="corta" style="font-size:14px">${S.negocio.nombre}</b><span class="sub corta fila" style="gap:5px"><${Bandera} id=${P.id} t=${14} />${(S.negocio.escala === 'empresa' ? 'Empresa' : T.n) + (E ? ' · ' + S.negocio.sucursales.length + ' locales' : '')}</span></span>
-        </div>
+        </button>
         <nav style="display:flex;flex-direction:column;gap:10px">
           ${grupos.map(g => html`<div class="grupo"><small>${g[0]}</small>
             ${g[1].map(s => html`<button type="button" class=${'nav-btn toca' + (s === valida ? ' on' : '')} aria-current=${s === valida ? 'page' : 'false'} onClick=${() => ir(s)}>

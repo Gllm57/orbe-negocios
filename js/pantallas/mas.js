@@ -56,7 +56,8 @@ function Ajustes() {
     <div class="fila" style="gap:10px;padding:6px 0 10px"><span class=${'logo redondo ' + TONOS[S.perfiles.indexOf(yo) % 5]} style="width:40px;height:40px;font-size:14px">${iniciales(yo.n)}</span>
       <span class="crece" style="display:flex;flex-direction:column"><b style="font-size:15px">${yo.n}</b><span class="sub">${rol ? rol.n : ''} · ${yo.pin ? 'con PIN' : 'sin PIN'}</span></span></div>
     <div class="chips">
-      <button type="button" class="btn2 chico toca" onClick=${() => abrir('perfil', { pid: yo.id })}>Cambiar nombre o PIN</button>
+      <button type="button" class="btn2 chico toca" onClick=${() => abrir('perfil', { pid: yo.id })}><${Icono} n="lapiz" t=${14} />Editar perfil</button>
+      <button type="button" class="btn2 chico toca" onClick=${() => abrir('pin', { pid: yo.id })}><${Icono} n="candado" t=${14} />${yo.pin ? 'Cambiar PIN' : 'Poner PIN'}</button>
       <button type="button" class="btn2 chico acento toca" onClick=${() => salir()}>Cambiar de perfil</button>
       ${puede('equipo') && tel && html`<button type="button" class="btn2 chico verde toca" onClick=${() => ir('equipo')}>Equipo y permisos</button>`}
     </div>`, 0, 'perfil');

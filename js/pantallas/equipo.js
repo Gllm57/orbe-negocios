@@ -23,14 +23,16 @@ export function Equipo() {
   };
 
   const Personas = html`<section class="tarjeta entra" style="padding-bottom:6px">
-    <div class="tarjeta-tit">${S.perfiles.filter(p => !p.inactivo).length} personas<button type="button" class="btn2 chico lleno toca" onClick=${() => abrir('perfil', {})}>+ Perfil</button></div>
-    <div class="lista">${S.perfiles.map((p, i) => { const rr = rolDe(S, p), puedo = p.id === yo.id || puedeEditarRol(yo, p.rol); return html`
+    <div class="tarjeta-tit">${S.perfiles.filter(p => !p.inactivo && !p.borrado).length} personas<button type="button" class="btn2 chico lleno toca" onClick=${() => abrir('perfil', {})}>+ Perfil</button></div>
+    <div class="lista">${S.perfiles.map((p, i) => p.borrado ? null : (() => { const rr = rolDe(S, p), puedo = p.id === yo.id || puedeEditarRol(yo, p.rol); return html`
       <button type="button" key=${p.id} class="item toca entra" style=${{ '--i': i, color: 'var(--ink)', opacity: p.inactivo ? 0.5 : 1, cursor: puedo ? 'pointer' : 'default' }} onClick=${() => puedo ? abrir('perfil', { pid: p.id }) : avisar('Solo el dueño puede cambiar este perfil')}>
         <span class=${'logo redondo ' + TONOS[i % 5]} style="width:40px;height:40px;font-size:14px">${iniciales(p.n)}</span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${p.n}${p.id === yo.id ? ' (tú)' : ''}</b>
           <span class="sub faint">${p.inactivo ? 'Desactivado' : (E ? (p.sucs && p.sucs.length ? p.sucs.join(', ') : 'Todos los locales') + ' · ' : '') + ventasDe(p.id) + ' ventas hoy' + (p.pin ? '' : ' · sin PIN')}</span></span>
         <span class=${'pildora ' + (p.rol === 'dueno' ? 't-vio' : p.rol === 'admin' ? 't-ver' : 't-azu')}>${rr ? rr.n : 'Sin rol'}</span>
-      </button>`; })}</div>
+        ${puedo && html`<${Icono} n="sig" t=${15} c="var(--faint)" />`}
+      </button>`; })())}</div>
+    <span class="sub faint" style="display:block;padding:6px 2px 8px">Toca una persona para cambiar su nombre, rol o PIN, desactivarla o eliminarla.</span>
   </section>`;
 
   const Ventas = puede('ganancias') && porPersona.length ? html`<section class="tarjeta entra" style="--i:2"><div class="tarjeta-tit">Ventas por persona<span class="sub">hoy</span></div><${Reparto} segs=${porPersona} f=${D.m} titulo="Vendido hoy" /></section>` : null;

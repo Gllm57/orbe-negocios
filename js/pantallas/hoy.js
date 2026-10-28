@@ -4,7 +4,7 @@ import { useApp } from '../ctx.js';
 import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, bajoCosto, cierreDeHoy, leer, diaClave, vigentes } from '../datos.js';
 import { esElectronico } from '../paises.js';
 import { Barras, Linea, Reparto, Monto, Anillo, color } from '../graficos.js';
-import { Icono, LogoOrbe, iniciales, hora, fechaCorta, Bandera } from '../ui.js';
+import { Icono, LogoOrbe, iniciales, hora, fechaCorta, Bandera, MarcaNegocio, avisar } from '../ui.js';
 import { nombreTasa } from '../paises.js';
 import { FilaVenta } from './hojas.js';
 import { OfertaRecorrido } from '../recorrido.js';
@@ -14,6 +14,8 @@ const DIA = 86400000;
 
 export function Hoy() {
   const { S, P, T, D, E, tel, ir, abrir, suc, setSuc, enLinea, puede } = useApp();
+  // Tocar el nombre o el logo del negocio abre sus datos (con permiso de ajustes).
+  const editarNegocio = () => puede('ajustes') ? abrir('negocio') : avisar('Solo quien puede cambiar los ajustes edita los datos del negocio');
   const verGan = puede('ganancias');
   const hoy0 = inicioDia(Date.now());
   const r = resumen(hoy0, hoy0 + DIA, suc), ayer = resumen(hoy0 - DIA, Date.now() - DIA, suc);
@@ -61,8 +63,10 @@ export function Hoy() {
 
   if (tel) return html`
     <header class="cab entra">
-      <span class="logo marca">${iniciales(S.negocio.nombre)}</span>
-      <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub corta">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · <${Bandera} id=${P.id} t=${14} /> ${E ? (suc || 'Todos los locales') : T.n}</span></span>
+      <button type="button" class="cab-negocio toca crece" aria-label=${puede('ajustes') ? 'Editar los datos y el logo del negocio' : S.negocio.nombre} onClick=${editarNegocio}>
+        <${MarcaNegocio} n=${S.negocio} lapiz=${puede('ajustes')} />
+        <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub corta">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · <${Bandera} id=${P.id} t=${14} /> ${E ? (suc || 'Todos los locales') : T.n}</span></span>
+      </button>
       <span class="pildora" style=${{ background: enLinea ? 'var(--in-soft)' : 'var(--amber-soft)', color: enLinea ? 'var(--in-text)' : 'var(--amber-text)' }}><span class="punto"></span>${enLinea ? 'En línea' : 'Sin internet'}</span>
     </header>
     <${BarraTasas} />

@@ -42,6 +42,12 @@ export function Vender() {
     if (d > 0 && p.q != null && ya + d > p.q) { avisar(p.q === 0 ? p.n + ': agotado' : 'Solo quedan ' + p.q + ' de ' + p.n); return; }
     const c = Object.assign({}, cart); c[p.id] = ya + d; if (c[p.id] <= 0) delete c[p.id]; setCart(c);
   };
+  // Desde el escáner: la venta puede haber cambiado entre lecturas, así que se suma sobre la última.
+  const sumarEscaneado = p => {
+    const ya = carritoGuardado[p.id] || 0;
+    if (p.q != null && ya + 1 > p.q) { avisar(p.q === 0 ? p.n + ': agotado' : 'Solo quedan ' + p.q + ' de ' + p.n); return false; }
+    setCart(Object.assign({}, carritoGuardado, { [p.id]: ya + 1 }));
+  };
   const cobrar = () => { if (!n) return; abrir('cobrar', { items, tt, onListo: () => setCart({}) }); };
   useEffect(() => {
     if (tel) return;
@@ -97,7 +103,8 @@ export function Vender() {
   if (tel) return html`
     <div class="fila entra"><h1 class="titulo crece">${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</h1><span class="sub">Toca para sumar</span></div>
     <${BarraTasas} />
-    <label class="buscador entra" style="width:100%;background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder=${'Buscar entre ' + prods.length} aria-label="Buscar producto" /></label>
+    <div class="fila entra" style="gap:8px"><label class="buscador crece" style="background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder=${'Buscar entre ' + prods.length} aria-label="Buscar producto" /></label>
+      <button type="button" class="icono-btn toca escanear-mini" aria-label="Escanear con la cámara" onClick=${() => abrir('escaner', { para: 'vender', onAgregar: sumarEscaneado })}><${Icono} n="camara" t=${20} /></button></div>
     <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${prods} />
     ${Sugerencias}
     ${Grilla}

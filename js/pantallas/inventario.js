@@ -69,6 +69,11 @@ export function Inventario() {
 
   if (tel) return html`
     <div class="fila entra" style="gap:8px"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="btn2 chico toca" onClick=${() => abrir('remarcar')}>Remarcar</button><button type="button" class="btn2 chico acento toca" onClick=${() => editarP({})}>+ Agregar</button>`}</div>
+    <button type="button" class="escanear-btn toca entra" data-tour="escanear" onClick=${() => abrir('escaner', { para: 'inventario' })}>
+      <span class="escanear-ic"><${Icono} n="camara" t=${20} /></span>
+      <span class="crece" style="display:flex;flex-direction:column;gap:1px;text-align:left"><b>Escanear con la cámara</b><span class="sub">Lee el código o el nombre: suma, resta o crea el producto</span></span>
+      <${Icono} n="sig" t=${16} c="var(--faint)" />
+    </button>
     ${Cifras}
     ${bajos.length > 0 && html`<button type="button" class="tarjeta fila toca entra" style="border:0;background:var(--amber-soft);box-shadow:none;color:var(--ink);text-align:left" onClick=${() => setFiltro(filtro === 'Por reponer' ? 'Todo' : 'Por reponer')}>
       <span class="ic t-amb"><${Icono} n="alerta" t=${18} /></span><span class="crece" style="display:flex;flex-direction:column"><b style="font-size:14px;font-weight:600">${bajos.length} ${bajos.length === 1 ? 'producto' : 'productos'} por debajo del mínimo</b><span class="sub">${filtro === 'Por reponer' ? 'Toca para ver todo' : 'Toca para verlos'}</span></span></button>`}

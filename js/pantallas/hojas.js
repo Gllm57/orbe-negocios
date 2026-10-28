@@ -1,14 +1,15 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTRA, esDivisa, esElectronico, monedaEfectivo, billetesDe } from '../paises.js';
-import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera } from '../ui.js';
+import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera, MarcaNegocio, achicarImagen } from '../ui.js';
 import { Monto, Linea } from '../graficos.js';
 import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
 import { infoTasas } from './tasas.js';
 import { Grupos, Grupo, colorGrupo, textosProducto, iniciales2 } from './grupos.js';
+import { Escaner } from './escaner.js';
 import { buscar, parecidos } from '../buscar.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
@@ -37,7 +38,7 @@ function Confirmar({ d, cerrar }) {
 }
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
@@ -139,6 +140,7 @@ function Recibo({ d, cerrar }) {
       ${v.dev && html`<div class="tarjeta fila entra" style="background:var(--fill2);box-shadow:none;gap:10px"><${Icono} n="deshacer" t=${18} c="var(--muted)" /><span class="sub" style="color:var(--ink)">Devolución de la venta #${v.dev}${v.motivo ? ' · ' + v.motivo : ''}</span></div>`}
       <div style=${'border-radius:16px;background:#f7f6fc;color:#1a1733;padding:16px;display:flex;flex-direction:column;gap:7px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace;position:relative;overflow:hidden' + (v.anulada ? ';opacity:.75' : '')}>
         ${v.anulada && html`<span class="sello">ANULADA</span>`}
+        ${S.negocio.logo && html`<img src=${S.negocio.logo} alt="" style="display:block;margin:0 auto 2px;max-width:96px;max-height:56px;object-fit:contain" />`}
         <b style="text-align:center;font-size:14px">${S.negocio.nombre}</b>
         ${S.negocio.razon && html`<span style="text-align:center;color:#625f7d">${S.negocio.razon}${S.negocio.fiscal ? ' · ' + P.fiscal[0] + ' ' + S.negocio.fiscal : ''}</span>`}
         <span style="text-align:center;color:#625f7d">${v.dev ? 'Devolución' : 'Recibo'} #${v.n} · ${fechaCorta(v.t)} ${hora(v.t)}${cli ? ' · ' + cli.n : ''}</span>
@@ -356,7 +358,7 @@ function Cierre({ d, cerrar }) {
 function Producto({ d, cerrar }) {
   const { S, D, T, P, abrir } = useApp();
   const p0 = S.productos.find(p => p.id === d.pid) || null;
-  const [f, setF] = useState(p0 ? { n: p0.n, p: String(p0.p), c: String(p0.c), q: p0.q == null ? '' : String(p0.q), min: String(p0.min), dur: p0.dur || 60, cod: p0.cod || '', usd: p0.usd ? String(p0.usd).replace('.', ',') : '' } : { n: '', p: '', c: '', q: '', min: '', dur: 60, cod: '', usd: '' });
+  const [f, setF] = useState(p0 ? { n: p0.n, p: String(p0.p), c: String(p0.c), q: p0.q == null ? '' : String(p0.q), min: String(p0.min), dur: p0.dur || 60, cod: p0.cod || '', usd: p0.usd ? String(p0.usd).replace('.', ',') : '' } : { n: d.n || '', p: '', c: '', q: d.q != null ? String(d.q) : '', min: '', dur: 60, cod: d.cod || '', usd: '' });
   const [enDolar, setEnDolar] = useState(!!(p0 && p0.usd));
   // Impuesto del producto: general, una tasa reducida del país o exento.
   const [imp, setImp] = useState(p0 && p0.imp != null ? p0.imp : 'gen');
@@ -505,35 +507,83 @@ function Locales({ d, cerrar }) {
 
 // ---------- perfiles del equipo ----------
 function Perfil({ d, cerrar }) {
-  const { S, E, yo, puede } = useApp();
+  const { S, E, yo, puede, abrir } = useApp();
   const p0 = S.perfiles.find(p => p.id === d.pid) || null;
   // Sin permiso de equipo solo se cambia el nombre y el PIN propio, nunca el rol.
   const admin = puede('equipo');
-  const esDueno = p0 && p0.rol === 'dueno', soloDatos = esDueno || !admin;
+  const esDueno = p0 && p0.rol === 'dueno', soloDatos = esDueno || !admin, soyYo = p0 && p0.id === yo.id;
   const rolesPosibles = S.roles.filter(r => !r.fijo && puedeEditarRol(yo, r.id));
-  const [f, setF] = useState(p0 ? { n: p0.n, rol: p0.rol, pin: p0.pin || '', sucs: p0.sucs || [], inactivo: !!p0.inactivo } : { n: '', rol: (rolesPosibles.find(r => r.id === 'cajero') || rolesPosibles[0] || {}).id, pin: '', sucs: [], inactivo: false });
+  const [f, setF] = useState(p0 ? { n: p0.n, rol: p0.rol, pin: '', pin2: '', sucs: p0.sucs || [], inactivo: !!p0.inactivo } : { n: '', rol: (rolesPosibles.find(r => r.id === 'cajero') || rolesPosibles[0] || {}).id, pin: '', pin2: '', sucs: [], inactivo: false });
   const pon = o => setF(x => Object.assign({}, x, o));
   const guardar = c => {
     if (!f.n.trim()) { avisar('Escribe el nombre'); return; }
-    if (f.pin && !/^\d{4}$/.test(f.pin)) { avisar('El PIN son 4 números'); return; }
-    if (p0 && p0.id === yo.id && f.inactivo) { avisar('No puedes desactivar tu propio perfil'); return; }
-    guardarPerfil(Object.assign({ id: p0 ? p0.id : undefined }, { n: f.n.trim(), pin: f.pin }, soloDatos ? {} : { rol: f.rol, sucs: f.sucs, inactivo: f.inactivo }));
+    if (!p0 && f.pin && !/^\d{4}$/.test(f.pin)) { avisar('El PIN son 4 números'); return; }
+    if (!p0 && f.pin !== f.pin2) { avisar('Los dos PIN no son iguales'); return; }
+    if (soyYo && f.inactivo) { avisar('No puedes desactivar tu propio perfil'); return; }
+    guardarPerfil(Object.assign({ id: p0 ? p0.id : undefined }, { n: f.n.trim() }, p0 ? {} : { pin: f.pin }, soloDatos ? {} : { rol: f.rol, sucs: f.sucs, inactivo: f.inactivo }));
     c(() => avisar(p0 ? 'Perfil guardado' : 'Perfil creado: ' + f.n.trim().split(' ')[0] + (f.pin ? ' entra con su PIN' : '')));
   };
+  // Eliminar: solo quien maneja el equipo, nunca al dueño ni a uno mismo.
+  const puedeBorrar = p0 && admin && !esDueno && !soyYo && puedeEditarRol(yo, p0.rol);
+  const borrar = c => c(() => abrir('confirmar', { titulo: '¿Eliminar el perfil de ' + p0.n + '?', texto: 'Ya no podrá entrar. Sus ventas y lo que hizo se quedan en el historial con su nombre.', boton: 'Sí, eliminar perfil', si: () => { borrarPerfil(p0.id); avisar('Perfil eliminado'); } }));
   const rolActual = S.roles.find(r => r.id === f.rol);
-  return html`<${Hoja} titulo=${p0 ? (p0.id === yo.id ? 'Tu perfil' : 'Editar perfil') : 'Nuevo perfil'} onCerrar=${cerrar} contenido=${c => ({
+  const i = Math.max(0, S.perfiles.indexOf(p0));
+  return html`<${Hoja} titulo=${p0 ? (soyYo ? 'Tu perfil' : 'Editar perfil') : 'Nuevo perfil'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
+      ${p0 && html`<div class="fila" style="gap:12px"><span class=${'logo redondo ' + TONOS[i % 5]} style="width:52px;height:52px;font-size:18px">${iniciales(f.n || p0.n)}</span>
+        <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="corta" style="font-size:17px">${f.n || p0.n}</b><span class="sub">${(S.roles.find(r => r.id === p0.rol) || {}).n || ''}${p0.inactivo ? ' · desactivado' : ''}</span></span></div>`}
       <label class="campo"><span>Nombre</span><input type="text" value=${f.n} placeholder="Ej.: Luisa Pino" autocomplete="off" onInput=${e => pon({ n: e.target.value })} /></label>
       ${esDueno || !admin ? esDueno && html`<div class="tarjeta fila" style="background:var(--accent-soft);box-shadow:none"><${Icono} n="escudo" t=${18} c="var(--accent)" /><span class="sub" style="color:var(--ink)">Es el dueño: siempre puede todo y nadie le puede quitar permisos.</span></div>`
         : html`<div class="campo"><span>Rol</span><${Chips} opciones=${rolesPosibles.map(r => ({ v: r.id, n: r.n }))} valor=${f.rol} onCambio=${v => pon({ rol: v })} /></div>
           ${rolActual && html`<span class="sub faint entra" key=${f.rol}>Puede: ${Object.keys(rolActual.p).filter(k => rolActual.p[k]).length} de ${PERMISOS.length} permisos. Los cambias en «Qué puede hacer cada rol».</span>`}`}
-      <label class="campo"><span>PIN de 4 números (para entrar)</span><input class="num" type="text" inputmode="numeric" maxlength="4" autocomplete="off" value=${f.pin} placeholder="Sin PIN" onInput=${e => pon({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></label>
+      ${p0 ? html`<div class="tarjeta fila" style="background:var(--fill2);box-shadow:none;gap:12px">
+          <span class="simb-c" style=${{ '--c': p0.pin ? 'var(--in)' : 'var(--amber)', width: '36px', height: '36px' }}><${Icono} n="candado" t=${17} /></span>
+          <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px">${p0.pin ? 'Entra con PIN' : 'Sin PIN'}</b><span class="sub">${p0.pin ? '••••' : 'Cualquiera puede entrar con este perfil'}</span></span>
+          <button type="button" class="btn2 chico acento toca" onClick=${() => c(() => abrir('pin', { pid: p0.id, volver: true }))}>${p0.pin ? 'Cambiar PIN' : 'Poner PIN'}</button>
+        </div>`
+        : html`<div class="rejilla-2" style="gap:10px">
+          <label class="campo"><span>PIN de 4 números</span><input class="num" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" value=${f.pin} placeholder="Sin PIN" onInput=${e => pon({ pin: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></label>
+          <label class="campo"><span>Repite el PIN</span><input class="num" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" value=${f.pin2} placeholder="····" onInput=${e => pon({ pin2: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></label>
+        </div>`}
       ${E && !soloDatos && html`<div class="campo"><span>Trabaja en</span><div class="chips">
         <button type="button" class=${'chip toca' + (!f.sucs.length ? ' on' : '')} onClick=${() => pon({ sucs: [] })}>Todos los locales</button>
         ${S.negocio.sucursales.map(s => { const on = f.sucs.includes(s); return html`<button type="button" class=${'chip toca' + (on ? ' on' : '')} onClick=${() => pon({ sucs: on ? f.sucs.filter(x => x !== s) : f.sucs.concat([s]) })}>${s}</button>`; })}
       </div></div>`}
-      ${p0 && !soloDatos && p0.id !== yo.id && html`<${Interruptor} on=${!f.inactivo} onCambio=${v => pon({ inactivo: !v })} titulo="Perfil activo" sub="Si lo apagas, ya no puede entrar. Sus ventas se quedan." />`}`,
-    pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>${p0 ? 'Guardar' : 'Crear perfil'}</button>`
+      ${p0 && !soloDatos && !soyYo && html`<${Interruptor} on=${!f.inactivo} onCambio=${v => pon({ inactivo: !v })} titulo="Perfil activo" sub="Si lo apagas, ya no puede entrar. Lo puedes volver a encender." />`}`,
+    pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>${p0 ? 'Guardar' : 'Crear perfil'}</button>${puedeBorrar && html`<button type="button" class="btn2 rojo toca" style="min-height:50px;border-radius:25px" onClick=${() => borrar(c)}><${Icono} n="basura" t=${16} />Eliminar perfil</button>`}`
+  })} />`;
+}
+
+// ---------- cambiar el PIN ----------
+// El propio PIN se cambia sabiendo el actual; quien maneja el equipo puede poner uno nuevo a otros sin saberlo.
+function Pin({ d, cerrar }) {
+  const { S, yo, puede, abrir } = useApp();
+  const p0 = S.perfiles.find(p => p.id === d.pid); if (!p0) return null;
+  const soyYo = p0.id === yo.id, pideActual = soyYo && !!p0.pin;
+  const [f, setF] = useState({ actual: '', nuevo: '', otra: '' });
+  const [mal, setMal] = useState(0);
+  const pon = o => setF(x => Object.assign({}, x, o));
+  const solo4 = v => v.replace(/\D/g, '').slice(0, 4);
+  const volver = () => { if (d.volver) abrir('perfil', { pid: p0.id }); };
+  const guardar = c => {
+    if (pideActual && f.actual !== p0.pin) { setMal(Date.now()); avisar('El PIN actual no es ese'); return; }
+    if (!/^\d{4}$/.test(f.nuevo)) { avisar('El PIN nuevo son 4 números'); return; }
+    if (f.nuevo !== f.otra) { setMal(Date.now()); avisar('Los dos PIN nuevos no son iguales'); return; }
+    cambiarPin(p0.id, f.nuevo); c(() => { avisar('PIN ' + (p0.pin ? 'cambiado' : 'puesto') + (soyYo ? '' : ' a ' + p0.n.split(' ')[0])); volver(); });
+  };
+  const quitar = c => {
+    if (pideActual && f.actual !== p0.pin) { setMal(Date.now()); avisar('Escribe primero el PIN actual'); return; }
+    cambiarPin(p0.id, ''); c(() => { avisar('PIN quitado'); volver(); });
+  };
+  const Campo = (k, t, ph) => html`<label class="campo"><span>${t}</span><input class="num pin-campo" type="password" inputmode="numeric" maxlength="4" autocomplete=${k === 'actual' ? 'current-password' : 'new-password'} value=${f[k]} placeholder=${ph} onInput=${e => pon({ [k]: solo4(e.target.value) })} /></label>`;
+  return html`<${Hoja} titulo=${(p0.pin ? 'Cambiar PIN' : 'Poner PIN') + (soyYo ? '' : ' de ' + p0.n.split(' ')[0])} onCerrar=${cerrar} contenido=${c => ({
+    cuerpo: html`<span class="sub" style="line-height:1.45;margin-top:-4px">${soyYo ? 'Con el PIN nadie más puede entrar con tu perfil.' : 'Dale el PIN nuevo a ' + p0.n.split(' ')[0] + '. Puede cambiarlo después desde su perfil.'}</span>
+      <div class=${'pila' + (mal ? ' sacude' : '')} key=${mal} style="gap:12px">
+        ${pideActual && Campo('actual', 'PIN actual', '····')}
+        <div class="rejilla-2" style="gap:10px">${Campo('nuevo', 'PIN nuevo', '····')}${Campo('otra', 'Repítelo', '····')}</div>
+      </div>
+      ${f.nuevo.length === 4 && f.otra.length === 4 && html`<span class=${'sub entra ' + (f.nuevo === f.otra ? 'in' : 'out')} style="font-weight:600">${f.nuevo === f.otra ? '✓ Los dos coinciden' : 'No coinciden'}</span>`}`,
+    pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar PIN</button>${p0.pin && html`<button type="button" class="btn2 rojo toca" style="min-height:50px;border-radius:25px" onClick=${() => quitar(c)}>Quitar el PIN</button>`}`
   })} />`;
 }
 
@@ -550,21 +600,36 @@ function Rol({ d, cerrar }) {
 function Negocio({ d, cerrar }) {
   const { S, P, T } = useApp();
   const n = S.negocio;
-  const [f, setF] = useState({ nombre: n.nombre, razon: n.razon || '', fiscal: n.fiscal || '', tipo: n.tipo, escala: n.escala, pais: n.pais });
+  const [f, setF] = useState({ nombre: n.nombre, razon: n.razon || '', fiscal: n.fiscal || '', tipo: n.tipo, escala: n.escala, pais: n.pais, logo: n.logo || '' });
+  const [latido, setLatido] = useState(false);
+  // Logo: se elige una imagen del teléfono o la computadora y se achica para guardarla.
+  const elegirLogo = async e => {
+    const a = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!a) return;
+    if (!/^image\//.test(a.type)) { avisar('Elige una imagen (PNG, JPG o similar)'); return; }
+    try { pon({ logo: await achicarImagen(a, 256) }); setLatido(true); setTimeout(() => setLatido(false), 380); } catch (er) { avisar('No pude abrir esa imagen'); }
+  };
   const pon = o => setF(x => Object.assign({}, x, o));
   const P2 = pais(f.pais), T2 = tipo(f.tipo), otroPais = f.pais !== n.pais;
   const guardar = c => {
     if (!f.nombre.trim()) { avisar('Escribe el nombre'); return; }
-    const cambios = { nombre: f.nombre.trim(), razon: f.razon.trim(), fiscal: f.fiscal.trim(), tipo: f.tipo, escala: f.escala, pais: f.pais };
+    const cambios = { nombre: f.nombre.trim(), razon: f.razon.trim(), fiscal: f.fiscal.trim(), tipo: f.tipo, escala: f.escala, pais: f.pais, logo: f.logo };
     // Otro país: sus formas de pago e impuesto. La tasa se vuelve a leer.
     if (otroPais) Object.assign(cambios, { pays: P2.pays.slice(), taxOn: P2.tax[1] > 0 });
-    const que = 'Cambió los datos del negocio' + (otroPais ? ' (país: ' + P.n + ' → ' + P2.n + ')' : '') + (f.tipo !== n.tipo ? ' (tipo: ' + T.n + ' → ' + T2.n + ')' : '');
+    const que = 'Cambió los datos del negocio' + (otroPais ? ' (país: ' + P.n + ' → ' + P2.n + ')' : '') + (f.tipo !== n.tipo ? ' (tipo: ' + T.n + ' → ' + T2.n + ')' : '') + (f.logo !== (n.logo || '') ? (f.logo ? ' (logo nuevo)' : ' (quitó el logo)') : '');
     cambiarNegocio(cambios, que);
     if (otroPais) guardarTasa({ modo: 'auto', valor: 0, fecha: '', fuente: 'oficial' });
     c(() => avisar('Datos guardados'));
   };
   return html`<${Hoja} titulo=${n.escala === 'empresa' ? 'Datos de la empresa' : 'Datos del negocio'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
+      <div class="logo-grande">
+        <label class="toca" style="cursor:pointer" aria-label="Elegir el logo"><span class=${'logo-envuelto' + (latido ? ' cambio' : '')}><${MarcaNegocio} n=${{ nombre: f.nombre || n.nombre, logo: f.logo }} t=${72} /></span><input type="file" accept="image/*" hidden onChange=${elegirLogo} /></label>
+        <span class="crece" style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <span class="sub" style="line-height:1.4">${f.logo ? 'Sale arriba en la app y en tus recibos.' : 'Pon el logo de tu ' + (f.escala === 'empresa' ? 'empresa' : 'negocio') + ': sale arriba en la app y en tus recibos.'}</span>
+          <span class="chips"><label class="btn2 chico acento toca" style="cursor:pointer"><${Icono} n="subir" t=${14} />${f.logo ? 'Cambiar logo' : 'Subir logo'}<input type="file" accept="image/*" hidden onChange=${elegirLogo} /></label>${f.logo && html`<button type="button" class="btn2 chico toca" onClick=${() => pon({ logo: '' })}>Quitar</button>`}</span>
+        </span>
+      </div>
       <label class="campo"><span>Nombre</span><input type="text" value=${f.nombre} autocomplete="organization" onInput=${e => pon({ nombre: e.target.value })} /></label>
       <div class="campo"><span>Tamaño</span><div class="segmento" style="width:100%">${[['negocio', 'Negocio'], ['empresa', 'Empresa']].map(o => html`<button type="button" style="flex:1" class=${f.escala === o[0] ? 'on' : ''} onClick=${() => pon({ escala: o[0] })}>${o[1]}</button>`)}</div></div>
       <div class="rejilla-2" style="gap:10px">
@@ -807,6 +872,7 @@ function CierreZ({ d, cerrar }) {
   const linea = (a, b, fuerte) => html`<span class="fila" style=${{ justifyContent: 'space-between', gap: '8px', fontWeight: fuerte ? 700 : 400, color: fuerte ? 'inherit' : '#625f7d' }}><span>${a}</span><span>${b}</span></span>`;
   return html`<${Hoja} titulo=${'Cierre Z #' + (z.n || S.cierres.indexOf(z) + 1)} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`<div style="border-radius:16px;background:#f7f6fc;color:#1a1733;padding:16px;display:flex;flex-direction:column;gap:7px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace">
+      ${S.negocio.logo && html`<img src=${S.negocio.logo} alt="" style="display:block;margin:0 auto 2px;max-width:96px;max-height:56px;object-fit:contain" />`}
       <b style="text-align:center;font-size:14px">${S.negocio.nombre}</b>
       ${S.negocio.fiscal && html`<span style="text-align:center;color:#625f7d">${S.negocio.razon || ''} · ${P.fiscal[0]} ${S.negocio.fiscal}</span>`}
       <span style="text-align:center;color:#625f7d">CIERRE Z #${z.n || S.cierres.indexOf(z) + 1} · ${fechaCorta(z.t)} ${hora(z.t)}${quien ? ' · ' + quien : ''}</span>
