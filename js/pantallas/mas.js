@@ -7,6 +7,7 @@ import { Icono, Interruptor, Chips, avisar, iniciales, TONOS, hace, Bandera } fr
 import { nombreTasa } from '../paises.js';
 import { BloqueGastos, inicioMes } from './gastos.js';
 import { descargar, ventasCSV } from './reportes.js';
+import { COND_ORDEN } from '../ordenpdf.js';
 
 function Ajustes() {
   const { S, P, T, D, abrir, tel, puede, yo, rol, ir, verRecorrido } = useApp();
@@ -21,6 +22,10 @@ function Ajustes() {
       ${Dato('Nombre', n.nombre)}${n.razon ? Dato('Razón social', n.razon) : null}${n.fiscal ? Dato(P.fiscal[0], n.fiscal) : null}
       ${Dato('Tipo', T.n)}${Dato('Tamaño', n.escala === 'empresa' ? 'Empresa' : 'Negocio')}
       <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('negocio')}><${Icono} n="lapiz" t=${14} />Cambiar datos</button></div>`, 0),
+    Tarjeta('Órdenes de trabajo y pedidos', 'lista', html`
+      <${Interruptor} on=${!!n.ordenes} onCambio=${v => { cambiarNegocio({ ordenes: v }, (v ? 'Activó' : 'Desactivó') + ' las órdenes de trabajo y pedidos'); avisar(v ? (tel ? 'Listo: «Órdenes» está en la barra de abajo. Clientes pasó a Más.' : 'Listo: «Órdenes» está en el menú') : 'Órdenes desactivadas (las guardadas no se borran)'); }} titulo="Usar órdenes" sub="Para talleres, reparaciones, encargos y pedidos con fecha de entrega, anticipo y seguimiento." />
+      ${n.ordenes && html`<label class="campo entra" style="margin-top:6px"><span>Condiciones que salen en la orden impresa y en el PDF</span><textarea rows="3" value=${n.condOrden != null ? n.condOrden : COND_ORDEN} onChange=${e => cambiarNegocio({ condOrden: e.target.value.trim() })}></textarea></label>
+        <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => ir('ordenes')}>Ir a Órdenes</button></div>`}`, 0),
     Tarjeta(n.sucursales.length > 1 ? 'Locales y sucursales' : 'Tu local', 'edificio', html`
       ${n.sucursales.length > 1 ? n.sucursales.map((x, k) => Dato('Local ' + (k + 1), x)) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Tienes un solo local, así que Orbe no te muestra sucursales. Si abres otro, agrégalo aquí.</p>`}
       <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('locales')}>${n.sucursales.length > 1 ? 'Cambiar o agregar' : '+ Agregar otro local'}</button></div>`, 1),
@@ -63,13 +68,13 @@ function Ajustes() {
     </div>`, 0, 'perfil');
   const ayuda = Tarjeta('Ayuda', 'lista', html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Un recorrido guiado por toda la app: qué hace cada parte y cómo se usa.</p>
     <button type="button" class="btn2 chico acento toca" onClick=${verRecorrido}>Ver el recorrido guiado</button>`, 1);
-  const apariencia = tarjetas[5];
+  const apariencia = tarjetas[6];
   const lista = [perfil, ayuda].concat(puede('ajustes') ? tarjetas : [apariencia]);
   return tel ? html`<div class="pila">${lista}</div>` : html`<div class="ajustes-pc">${lista}</div>`;
 }
 
 export function Mas() {
-  const { D, tel, ir, abrir, puede } = useApp();
+  const { S, D, tel, ir, abrir, puede } = useApp();
   if (!tel) return html`<${Ajustes} />`;
   const desde = inicioMes(), r = resumen(desde, Date.now() + 1, '');
   const gastos = gastosEntre(desde, Date.now() + 1).reduce((a, g) => a + g.v, 0);
@@ -86,6 +91,7 @@ export function Mas() {
     <div class="rejilla-2" data-tour="mas-acciones">
       ${puede('gastos') && html`<button type="button" class="btn2 rojo toca" style="min-height:52px" onClick=${() => abrir('gasto')}>Anotar gasto</button>`}
       ${puede('cierre') && html`<button type="button" class="btn2 acento toca" style="min-height:52px" onClick=${() => abrir('cierre')}>Cierre del día</button>`}
+      ${S.negocio.ordenes && puede('ordenes') && html`<button type="button" class="btn2 verde toca" style="min-height:52px" onClick=${() => ir('clientes')}><${Icono} n="personas" t=${16} />Clientes</button>`}
     </div>
     ${puede('gastos') && html`${b.PorPagar}${b.Mes}${b.Recientes}`}
     <h2 class="sub" style="font-size:13px;margin:6px 4px -4px">Ajustes</h2>

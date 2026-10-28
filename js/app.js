@@ -1,7 +1,7 @@
 // Orbe Negocios · arranque. Decide si es teléfono o computadora, y arma la navegación.
 import { html, render, useState, useEffect } from './lib/preact-htm.js';
 import { Ctx } from './ctx.js';
-import { iniciarDatos, useDatos, leer, guardarTasa, guardarTasaExtra, tasaEuro, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir, guardarPerfil } from './datos.js';
+import { iniciarDatos, useDatos, leer, guardarTasa, guardarTasaExtra, tasaEuro, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir, guardarPerfil, ordenAtrasada } from './datos.js';
 import { Recorrido } from './recorrido.js';
 import { ChipTasa } from './pantallas/tasas.js';
 import { puede, rolDe } from './permisos.js';
@@ -9,6 +9,7 @@ import { pais, tipo, dinero, leerTasa } from './paises.js';
 import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera, MarcaNegocio } from './ui.js';
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
+import { Ordenes } from './pantallas/ordenes.js';
 import { Vender } from './pantallas/vender.js';
 import { Clientes } from './pantallas/clientes.js';
 import { Inventario } from './pantallas/inventario.js';
@@ -30,6 +31,7 @@ const esTelefono = () => {
 const SECCIONES = {
   hoy: { n: 'Hoy', npc: 'Panel', i: 'inicio', C: Hoy },
   vender: { n: 'Vender', npc: 'Caja', i: 'carrito', C: Vender },
+  ordenes: { n: 'Órdenes', i: 'orden', C: Ordenes },
   clientes: { n: 'Clientes', i: 'personas', C: Clientes },
   inventario: { n: 'Inventario', i: 'caja', C: Inventario },
   gastos: { n: 'Gastos y por pagar', i: 'dinero', C: Gastos },
@@ -38,7 +40,7 @@ const SECCIONES = {
   mas: { n: 'Más', npc: 'Ajustes', i: 'mas', ipc: 'ajustes', C: Mas }
 };
 // Secciones que necesitan un permiso para verse.
-const PERMISO_SEC = { vender: 'vender', gastos: 'gastos', reportes: 'ganancias', equipo: 'equipo' };
+const PERMISO_SEC = { vender: 'vender', gastos: 'gastos', reportes: 'ganancias', equipo: 'equipo', ordenes: 'ordenes' };
 
 function aplicarTema(tema) {
   const r = document.documentElement;
@@ -83,7 +85,7 @@ function App() {
   const yo = perfilActual();
   if (!yo) return html`<${Acceso} tel=${tel} /><${Avisos} />`;
   const pd = k => puede(S, yo, k);
-  const permitida = s => SECCIONES[s] && (!PERMISO_SEC[s] || pd(PERMISO_SEC[s]));
+  const permitida = s => SECCIONES[s] && (s !== 'ordenes' || !!S.negocio.ordenes) && (!PERMISO_SEC[s] || pd(PERMISO_SEC[s]));
 
   const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasa.valor, S.negocio.euro ? tasaEuro() : 0);
   // Varios locales: aparece el selector de sucursal y los gráficos por sucursal (sea negocio o empresa).
@@ -97,11 +99,13 @@ function App() {
   const Tour = tour ? html`<${Recorrido} onFin=${() => { setTour(false); if (!yo.tour) marcarTour(Date.now()); }} />` : null;
   const nombreSec = s => s === 'vender' ? (tel ? T.vender : 'Caja') : s === 'inventario' && !T.inv ? 'Servicios' : tel ? SECCIONES[s].n : (SECCIONES[s].npc || SECCIONES[s].n);
   const Pantalla = SECCIONES[valida].C;
-  const cuenta = { clientes: deudores().filter(c => c.deuda > 0).length, inventario: bajoMinimo().length, gastos: porPagar().length };
+  const cuenta = { clientes: deudores().filter(c => c.deuda > 0).length, inventario: bajoMinimo().length, gastos: porPagar().length, ordenes: S.negocio.ordenes ? S.ordenes.filter(o => ordenAtrasada(o)).length : 0 };
 
   if (tel) {
-    const tabs = ['hoy', 'vender', 'clientes', 'inventario', 'mas'].filter(permitida);
-    const marcada = valida === 'equipo' || valida === 'reportes' ? 'mas' : valida;
+    // Con órdenes, «Órdenes» ocupa el lugar de «Clientes» en la barra, y Clientes pasa a «Más».
+    const conOrdenes = permitida('ordenes');
+    const tabs = ['hoy', 'vender', conOrdenes ? 'ordenes' : 'clientes', 'inventario', 'mas'].filter(permitida);
+    const marcada = valida === 'equipo' || valida === 'reportes' || (conOrdenes && valida === 'clientes') ? 'mas' : valida;
     return html`<${Ctx.Provider} value=${ctx}>
       <div class=${'tel-raiz' + (hoja ? ' con-hoja' : '')}>
         <div class="app-fondo">
@@ -118,8 +122,8 @@ function App() {
     </${Ctx.Provider}>`;
   }
 
-  const grupos = [['Día a día', ['hoy', 'vender', 'clientes']], ['Operación', ['inventario', 'gastos']], ['Gestión', ['reportes', 'equipo', 'mas']]].map(g => [g[0], g[1].filter(permitida)]).filter(g => g[1].length);
-  const colores = { clientes: 'var(--c3)', inventario: 'var(--c3)', gastos: 'var(--c5)' };
+  const grupos = [['Día a día', ['hoy', 'vender', 'ordenes', 'clientes']], ['Operación', ['inventario', 'gastos']], ['Gestión', ['reportes', 'equipo', 'mas']]].map(g => [g[0], g[1].filter(permitida)]).filter(g => g[1].length);
+  const colores = { clientes: 'var(--c3)', inventario: 'var(--c3)', gastos: 'var(--c5)', ordenes: 'var(--c5)' };
   return html`<${Ctx.Provider} value=${ctx}>
     <div class="marco-pc">
       <aside class="lateral" aria-label="Menú">
@@ -168,6 +172,7 @@ function subtitulo(s, { S, E, suc, T }) {
   return {
     hoy: f.charAt(0).toUpperCase() + f.slice(1) + ' · ' + donde,
     vender: 'Escanea o toca los productos · F12 para cobrar',
+    ordenes: 'Recibe, sigue y entrega trabajos y pedidos · arrastra las tarjetas para cambiar el estado',
     clientes: 'Quién te debe y su historial',
     inventario: T.inv ? 'Lo que tienes y lo que falta' : 'Precios y duración',
     gastos: 'Lo que gastas y lo que debes',

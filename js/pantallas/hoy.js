@@ -9,6 +9,7 @@ import { nombreTasa } from '../paises.js';
 import { FilaVenta } from './hojas.js';
 import { OfertaRecorrido } from '../recorrido.js';
 import { BarraTasas } from './tasas.js';
+import { OrdenesHoy } from './ordenes.js';
 
 const DIA = 86400000;
 
@@ -93,6 +94,7 @@ export function Hoy() {
         <button type="button" class="tarjeta toca entra" style=${{ '--i': 5 + i, border: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 6px', color: 'var(--ink)', fontSize: '12px', fontWeight: 600 }} onClick=${q[3]}>
           <span class=${'ic ' + q[2]}><${Icono} n=${q[0]} t=${18} g=${2.2} /></span>${q[1]}</button>`)}
     </div>
+    ${puede('ordenes') && html`<${OrdenesHoy} />`}
     ${pagos.length > 0 && html`<section class="tarjeta entra" style="--i:8"><div class="tarjeta-tit">${E && !suc ? 'Por sucursal hoy' : 'Cómo te pagaron hoy'}</div><${Reparto} segs=${E && !suc ? sucs : pagos} f=${D.m} titulo="Vendido hoy" /></section>`}
     <section class="tarjeta entra" style="--i:8">
       <div class="tarjeta-tit">Últimos 7 días<button type="button" class="btn2 chico acento toca" onClick=${() => ir('reportes')}>Reportes</button></div>
@@ -135,7 +137,7 @@ export function Hoy() {
     </div>
     <div class="tres estira">
       <section class="tarjeta entra llena" style="--i:6"><div class="tarjeta-tit">Ventas por hora<span class="sub">hoy</span></div><${Barras} datos=${horas} alto=${180} resaltar=${ahoraH - 7} llenar /></section>
-      <div class="entra" style="--i:7">${Pendientes}</div>
+      <div class="entra pila" style="--i:7">${puede('ordenes') && html`<${OrdenesHoy} />`}${Pendientes}</div>
       <div class="entra" style="--i:8">${Recientes}</div>
     </div>`;
 }

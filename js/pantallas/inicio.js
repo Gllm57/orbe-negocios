@@ -26,6 +26,8 @@ export function Inicio({ tel }) {
   const pays = c.pays || P.pays;
   const taxOn = c.taxOn ?? P.tax[1] > 0;
   const E = c.escala === 'empresa';
+  // Talleres y servicios traen las órdenes de trabajo encendidas; los demás las encienden en Ajustes.
+  const conOrdenes = c.tipo === 'citas' || c.tipo === 'indep';
 
   const marco = contenido => html`<div style=${tel ? '' : 'min-height:100vh;display:grid;place-items:center;padding:32px 16px'}>
     <div class=${tel ? '' : 'tarjeta'} style=${tel ? 'min-height:100dvh;display:flex;flex-direction:column' : 'width:min(520px,100%);height:min(820px,calc(100vh - 64px));padding:0;display:flex;flex-direction:column;overflow:hidden;border-radius:28px'}>${contenido}</div></div>`;
@@ -91,9 +93,10 @@ export function Inicio({ tel }) {
   if (paso === 'listo') cuerpo = html`<div class="pila">
     <span style="width:76px;height:76px;border-radius:50%;background:var(--in);display:grid;place-items:center;animation:pop .55s var(--spring) both"><${Icono} n="check" t=${36} g=${2.8} c="#0b0a14" /></span>
     <div class="tarjeta"><div class="tarjeta-tit"><span class="sub">Encendido para ti</span></div><div class="pila">
-      ${[['carrito', 'Vender y cobrar con ' + pays.slice(0, 2).join(', ') + (pays.length > 2 ? ' y más' : '')], ['personas', 'Clientes y lo que te deben'], [(TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'caja' : 'lista', (TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'Inventario y stock mínimo' : 'Servicios con precio y duración'], ['dinero', 'Gastos y cuentas por pagar'], ['grafico', 'Reportes con gráficos'], ['candado', 'Cierre del día'], ['escudo', 'Perfiles para tu equipo, con permisos'], ['guardar', 'Copias y modo sin conexión']].map((m, k) => html`
+      ${[['carrito', 'Vender y cobrar con ' + pays.slice(0, 2).join(', ') + (pays.length > 2 ? ' y más' : '')], ['personas', 'Clientes y lo que te deben'], [(TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'caja' : 'lista', (TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'Inventario y stock mínimo' : 'Servicios con precio y duración'], ].concat(conOrdenes ? [['lista', 'Órdenes de trabajo: recibe, sigue y entrega trabajos, con anticipo y PDF por WhatsApp']] : [], [['dinero', 'Gastos y cuentas por pagar'], ['grafico', 'Reportes con gráficos'], ['candado', 'Cierre del día'], ['escudo', 'Perfiles para tu equipo, con permisos'], ['guardar', 'Copias y modo sin conexión']]).map((m, k) => html`
         <div class="fila entra" style=${{ '--i': 4 + k * 2, gap: '12px' }}><span class="ic t-ver" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${m[0]} t=${16} g=${2.2} /></span><b style="font-size:14px;font-weight:600;line-height:1.35;min-width:0">${m[1]}</b></div>`)}
     </div></div>
+    ${!conOrdenes && html`<div class="tarjeta fila entra" style="--i:20;gap:12px;align-items:flex-start;box-shadow:none;background:var(--accent-soft)"><span class="ic t-vio" style="width:32px;height:32px;border-radius:10px"><${Icono} n="lista" t=${16} g=${2.2} /></span><span class="sub" style="color:var(--ink);line-height:1.45"><b>¿Haces reparaciones, encargos o pedidos con fecha de entrega?</b> Las órdenes de trabajo vienen apagadas para ${(TIPOS.find(t => t.id === c.tipo) || { n: 'tu tipo de negocio' }).n.toLowerCase()}. Las enciendes cuando quieras en Ajustes → Órdenes de trabajo y pedidos.</span></div>`}
     <div class="tarjeta" style="padding:4px 16px"><${Interruptor} on=${ejemplo} onCambio=${setEjemplo} titulo="Llenar con un mes de ventas de ejemplo" sub="Para probar. Trae dos empleados de prueba: Carla (encargada, PIN 1111) y Luis (cajero, PIN 2222)." /></div>
   </div>`;
 

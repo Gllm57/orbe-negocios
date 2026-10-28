@@ -9,7 +9,7 @@ const CLAVE = 'orbe-negocios';
 const subs = new Set();
 let S = vacio();
 
-function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [], grupos: [] }; }
+function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], ordenes: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [], grupos: [] }; }
 // Datos guardados con versiones anteriores: se completan sin perder nada.
 function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
@@ -24,6 +24,10 @@ function migrar(d) {
   if (!d.tasas || typeof d.tasas !== 'object') d.tasas = {};
   if (!Array.isArray(d.historialTasas)) d.historialTasas = [];
   if (!Array.isArray(d.grupos)) d.grupos = [];
+  if (!Array.isArray(d.ordenes)) d.ordenes = [];
+  // Órdenes de trabajo y pedidos: encendidas de entrada en talleres y servicios; el permiso, para administrador y encargado.
+  if (d.negocio && d.negocio.ordenes === undefined) d.negocio = Object.assign({}, d.negocio, { ordenes: d.negocio.tipo === 'citas' || d.negocio.tipo === 'indep' });
+  d.roles = d.roles.map(r => r.p && r.p.ordenes === undefined ? Object.assign({}, r, { p: Object.assign({}, r.p, { ordenes: r.id === 'admin' || r.id === 'encargado' }) }) : r);
   if (d.negocio && d.negocio.pedirRef === undefined) d.negocio = Object.assign({}, d.negocio, { pedirRef: d.negocio.pais === 'VE', tasaPago: d.negocio.tasaPago || {} });
   // Datos de antes de la cadena de integridad: se firman al cargarlos (la cadena empieza ahí).
   ['ventas', 'registro', 'cierres'].forEach((k, i) => { if (Array.isArray(d[k]) && d[k].some(x => !x.h)) encadenar(d[k], [firmaVenta, firmaRegistro, firmaCierre][i]); });
@@ -211,7 +215,7 @@ export function crearNegocio(cfg, conEjemplo) {
   const nSuc = Math.max(1, Math.min(5, cfg.sucN || 1)), NOM = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur'];
   const sucursales = nSuc === 1 ? ['Principal'] : Array.from({ length: nSuc }, (_, i) => ((cfg.sucNombres || [])[i] || '').trim() || NOM[i]);
   const productos = CATALOGO[T.id].map((x, i) => ({ id: 'p' + i, ab: x[0], n: x[1], p: D.precio(x[2]), c: D.precio(x[3]), q: x[4] < 0 ? null : Math.round(x[4] * (E ? 3 : 1)), min: Math.round(x[5] * (E ? 3 : 1)), dur: x[6] || 0, pop: x[7], cod: '759' + String(1234000 + i * 37) }));
-  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now(), pedirRef: P.id === 'VE', igtf: false, fiadoUsd: false, tasaPago: {} };
+  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now(), ordenes: T.id === 'citas' || T.id === 'indep', pedirRef: P.id === 'VE', igtf: false, fiadoUsd: false, tasaPago: {} };
   const perfiles = [{ id: 'u0', n: (cfg.dueno || '').trim() || 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }];
   if (conEjemplo) perfiles.push(
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
@@ -288,8 +292,28 @@ function ejemplo(neg, productos, D, perfiles) {
     gastos.forEach(g => { g.tasa = tasaDia(g.t); });
     for (let d = 63; d >= 1; d--) historialTasas.push({ dia: diaClave(hoy0 - d * DIA), f: 'oficial', v: tasaDia(hoy0 - d * DIA) });
   }
+  // Órdenes de ejemplo (se ven si el negocio usa órdenes): una atrasada, una lista y dos recién recibidas.
+  const taller = neg.tipo === 'citas' || neg.tipo === 'indep', hora17 = d => { const x = new Date(hoy0 + d * DIA); x.setHours(17, 0, 0, 0); return x.getTime(); };
+  const ej = taller
+    ? [['Laptop HP 15 — no enciende', 'Con cargador. Rayón en la tapa.', [['Diagnóstico', 15], ['Puerto de carga', 35], ['Mano de obra', 35]], 'proceso', -1, 40],
+      ['iPhone 12 — cambio de pantalla', 'Pantalla rota, táctil funciona.', [['Pantalla original', 90], ['Mano de obra', 30]], 'lista', 0, 60],
+      ['Impresora Epson L3150 — atasco de papel', '', [['Revisión', 10]], 'recibida', 2, 0],
+      ['Moto Bera — servicio de 5.000 km', 'Cambio de aceite y frenos.', [['Aceite y filtro', 25], ['Pastillas de freno', 18], ['Mano de obra', 22]], 'recibida', 3, 20]]
+    : [['Pedido: 3 tortas de cumpleaños', 'Una de chocolate, dos de vainilla. Escribir «Feliz día Ana».', [['Torta mediana', 30, 3]], 'proceso', -1, 45],
+      ['Encargo: 2 cajas de refrescos surtidos', 'Retira en el local.', [['Caja de refrescos', 18, 2]], 'lista', 0, 0],
+      ['Pedido para empresa: café y azúcar', 'Facturar a nombre de la empresa.', [['Café 500 g', 6, 10], ['Azúcar 1 kg', 1.6, 10]], 'recibida', 2, 30],
+      ['Bandeja de 50 tequeños', 'Para el sábado a las 10 am.', [['Bandeja de tequeños', 25]], 'recibida', 4, 0]];
+  const ordenes = ej.map((o, i) => {
+    const t0 = ahora - (3 - Math.min(i, 2)) * DIA + i * 3600000, oid = 'o' + id();
+    const est = ['recibida', 'proceso', 'lista'], hasta = est.indexOf(o[3]);
+    const hist = est.slice(0, hasta + 1).map((e, k) => ({ t: t0 + k * 5 * 3600000, por: perfiles[k % perfiles.length].id, txt: k === 1 && taller ? 'Se pidió el repuesto.' : '', e }));
+    if (o[5]) { hist.splice(1, 0, { t: t0 + 60000, por: perfiles[0].id, txt: '', ant: D.precio(o[5]), m: neg.pays[0], tipo: 'Anticipo' }); abonos.push({ id: id(), t: t0 + 60000, cli: clientes[i].id, v: D.precio(o[5]), m: neg.pays[0], pagos: [{ m: neg.pays[0], v: D.precio(o[5]) }], nota: 'Anticipo', ord: oid }); }
+    return { id: oid, n: i + 1, tipo: taller ? 'trabajo' : 'pedido', cli: clientes[i].id, que: o[0], det: o[1], items: o[2].map((x, k) => ({ pid: 'libre:ej' + i + k, n: x[0], q: x[2] || 1, p: D.precio(x[1]), c: 0, libre: true })),
+      entrega: hora17(o[4]), resp: perfiles[(i + 1) % perfiles.length].id, suc: neg.sucursales[0], t: t0, por: perfiles[0].id, estado: o[3], hist, avisado: o[3] === 'lista' ? ahora - 3600000 : 0 };
+  });
+  ordenes.forEach((o, i) => { const a = abonos.find(x => x.ord === o.id); if (a) a.nota = 'Anticipo ' + (o.tipo === 'pedido' ? 'PED-' : 'OT-') + String(i + 1).padStart(4, '0'); });
   // Lo vendido sale del inventario, pero el ejemplo arranca con lo que hay ahora.
-  return { clientes, ventas, abonos, gastos, cierres: [], historialTasas };
+  return { clientes, ventas, abonos, gastos, cierres: [], historialTasas, ordenes };
 }
 
 // ---------- acciones ----------
@@ -333,7 +357,7 @@ export function anularVenta(vid, motivo) {
   cambiar(s => Object.assign({
     ventas: s.ventas.map(x => x.id === vid ? Object.assign({}, x, { anulada: { t: Date.now(), por: s.ajustes.perfil || '', motivo } }) : x),
     productos: stockMas(s.productos, quedan, 1)
-  }, nota(s, 'Anuló la venta #' + v.n + ' (' + motivo + ')')));
+  }, v.orden ? { ordenes: s.ordenes.map(o => o.id === v.orden ? Object.assign({}, o, { estado: 'lista', venta: '', hist: o.hist.concat([{ t: Date.now(), por: s.ajustes.perfil || '', txt: 'Se anuló la venta #' + v.n + ': la orden vuelve a «Lista»', e: 'lista' }]) }) : o) } : {}, nota(s, 'Anuló la venta #' + v.n + ' (' + motivo + ')')));
   return true;
 }
 // Devolución: un movimiento nuevo en negativo (cuenta el día que se devuelve) y lo devuelto vuelve al inventario.
@@ -355,14 +379,80 @@ export function devolver(vid, lineas, pagos, motivo, monto) {
   }, nota(s, 'Devolución de la venta #' + v.n + ' (' + motivo + ')')));
   return dev;
 }
-export function abonar(cli, pagos, nota) {
+export function abonar(cli, pagos, nota, extra) {
   const v = pagos.reduce((a, p) => a + p.v, 0);
-  const ab = { id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 };
+  const ab = Object.assign({ id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 }, extra || {});
   if (S.negocio.fiadoUsd) ab.fu = dolarDe(v);
   if (nota) ab.nota = nota;
   cambiar(s => ({ abonos: s.abonos.concat([ab]) }));
 }
 export const pagosDeAbono = a => a.pagos || [{ m: a.m, v: a.v }];
+
+// ---------- órdenes de trabajo y pedidos ----------
+// Cada orden guarda su historial (estados y notas). Los anticipos son abonos marcados con la orden:
+// entran a la caja el día que se pagan y no se mezclan con lo que el cliente debe por fiado.
+// Al entregar se hace la venta completa; lo adelantado se paga con «Anticipo» (no vuelve a entrar a la caja).
+export const ESTADOS_ORDEN = [
+  { k: 'recibida', n: 'Recibida', tono: 't-amb', c: 'var(--amber)' },
+  { k: 'proceso', n: 'En proceso', tono: 't-azu', c: 'var(--blue)' },
+  { k: 'lista', n: 'Lista', tono: 't-ver', c: 'var(--in)' },
+  { k: 'entregada', n: 'Entregada', tono: 't-vio', c: 'var(--accent)' }
+];
+export const PREFIJO_ORDEN = { trabajo: 'OT', pedido: 'PED' };
+export const numeroOrden = o => PREFIJO_ORDEN[o.tipo] + '-' + String(o.n).padStart(4, '0');
+export const anticipoDe = oid => S.abonos.filter(a => a.ord === oid).reduce((a, x) => a + x.v, 0);
+export const totalOrden = o => o.items.reduce((a, it) => a + it.q * it.p, 0);
+export const ordenAbierta = o => o.estado !== 'entregada' && o.estado !== 'cancelada';
+export const ordenAtrasada = (o, ahora = Date.now()) => ordenAbierta(o) && o.estado !== 'lista' && o.entrega > 0 && o.entrega < ahora;
+const sigOrden = tipo => S.ordenes.filter(o => o.tipo === tipo).reduce((a, o) => Math.max(a, o.n), 0) + 1;
+const histOrden = (txt, e, extra) => Object.assign({ t: Date.now(), por: S.ajustes.perfil || '', txt: txt || '' }, e ? { e } : {}, extra || {});
+const cambiarOrden = (oid, fn, que) => cambiar(s => Object.assign({ ordenes: s.ordenes.map(o => o.id === oid ? fn(o) : o) }, que ? nota(s, que) : {}));
+
+export function nuevaOrden(o, pagos) {
+  const orden = Object.assign({ id: 'o' + id(), tipo: 'trabajo', items: [], det: '', entrega: 0, resp: '', suc: S.negocio.sucursales[0] }, o, {
+    n: sigOrden(o.tipo || 'trabajo'), t: Date.now(), por: S.ajustes.perfil || '', estado: 'recibida', hist: [histOrden('', 'recibida')]
+  });
+  cambiar(s => Object.assign({ ordenes: s.ordenes.concat([orden]) }, nota(s, 'Creó la orden ' + numeroOrden(orden))));
+  if (pagos && pagos.length) anticipoOrden(orden.id, pagos, true);
+  return orden;
+}
+export function editarOrden(oid, cambios) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0) return;
+  cambiarOrden(oid, o => Object.assign({}, o, cambios, { hist: o.hist.concat([histOrden('Editó la orden')]) }));
+}
+export function estadoOrden(oid, estado, txt) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0 || o0.estado === estado) return;
+  cambiarOrden(oid, o => Object.assign({}, o, { estado }, estado === 'lista' ? { lista: Date.now() } : {}, { hist: o.hist.concat([histOrden(txt, estado)]) }));
+}
+export function notaOrden(oid, txt) { cambiarOrden(oid, o => Object.assign({}, o, { hist: o.hist.concat([histOrden(txt)]) })); }
+export function avisadoOrden(oid) { cambiarOrden(oid, o => Object.assign({}, o, { avisado: Date.now(), hist: o.hist.concat([histOrden('Se avisó al cliente por WhatsApp')]) })); }
+// Anticipo o abono a una orden (puede ser con pagos combinados).
+export function anticipoOrden(oid, pagos, alCrear) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0) return;
+  const v = pagos.reduce((a, p) => a + p.v, 0); if (!(v > 0)) return;
+  abonar(o0.cli, pagos, (alCrear ? 'Anticipo ' : 'Abono ') + numeroOrden(o0), { ord: oid });
+  cambiarOrden(oid, o => Object.assign({}, o, { hist: o.hist.concat([histOrden('', '', { ant: v, m: juntar(pagos), tipo: alCrear ? 'Anticipo' : 'Abono' })]) }));
+}
+// Entregar: la venta ya se hizo (con lo que faltaba y el anticipo); la orden queda cerrada y unida a esa venta.
+export function entregarOrden(oid, vid) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0) return;
+  cambiarOrden(oid, o => Object.assign({}, o, { estado: 'entregada', entregada: Date.now(), venta: vid || '', hist: o.hist.concat([histOrden('', 'entregada')]) }), 'Entregó la orden ' + numeroOrden(o0));
+}
+// Cancelar: lo adelantado se devuelve (sale de la caja hoy) o queda como saldo a favor del cliente.
+export function cancelarOrden(oid, motivo, anticipoComo) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0 || !ordenAbierta(o0)) return;
+  const ant = anticipoDe(oid);
+  // Se devuelve por las mismas formas en que se pagó.
+  if (ant > 0 && anticipoComo === 'devolver') {
+    const por = {}; S.abonos.filter(a => a.ord === oid).forEach(a => pagosDeAbono(a).forEach(p => { por[p.m] = (por[p.m] || 0) + p.v; }));
+    const pagos = Object.keys(por).filter(m => Math.abs(por[m]) > 0.0001).map(m => ({ m, v: -por[m] }));
+    if (pagos.length) abonar(o0.cli, pagos, 'Devolución del anticipo ' + numeroOrden(o0), { ord: oid });
+  }
+  cambiar(s => Object.assign({
+    abonos: ant > 0 && anticipoComo === 'saldo' ? s.abonos.map(a => a.ord === oid ? Object.assign({}, a, { ord: '', deOrden: oid }) : a) : s.abonos,
+    ordenes: s.ordenes.map(o => o.id === oid ? Object.assign({}, o, { estado: 'cancelada', cancelada: Date.now(), hist: o.hist.concat([histOrden(motivo, 'cancelada')]) }) : o)
+  }, nota(s, 'Canceló la orden ' + numeroOrden(o0) + (motivo ? ' (' + motivo + ')' : '') + (ant > 0 ? anticipoComo === 'devolver' ? ' · devolvió el anticipo' : ' · el anticipo quedó como saldo a favor' : ''))));
+}
 const conPagos = g => g.pagos && g.pagos.length ? Object.assign({}, g, { m: juntar(g.pagos) }) : g;
 export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '', tasa: s.tasa.valor || 0 }, conPagos(g))]) })); }
 export function editarGasto(gid, g) { cambiar(s => ({ gastos: s.gastos.map(x => x.id === gid ? Object.assign({}, x, conPagos(g)) : x) })); }
@@ -574,10 +664,10 @@ export function deudaDe(cid) {
     if (S.negocio.pais !== 'VE') {
       let pesos = 0, usd = 0;
       vigentes().filter(v => v.cli === cid).forEach(v => v.pagos.forEach(p => { if (p.m === 'Fiado' || p.m === 'Saldo a favor') { if (p.fu != null) usd += p.fu; else pesos += p.v; } }));
-      S.abonos.filter(a => a.cli === cid).forEach(x => { if (x.fu != null) usd -= x.fu; else pesos -= x.v; });
+      S.abonos.filter(a => a.cli === cid && !a.ord).forEach(x => { if (x.fu != null) usd -= x.fu; else pesos -= x.v; });
       return pesos + usd * tasaDe();
     }
-    return vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0);
+    return vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid && !a.ord).reduce((a, x) => a + x.v, 0);
   });
 }
 export function deudores() {

@@ -155,3 +155,17 @@ export function dinero(P, tasa, tasaEur) {
     }
   };
 }
+
+// Código de país para WhatsApp: «0414-555-1234» en Venezuela → 584145551234.
+export const PREFIJO_TEL = { DE: '49', AR: '54', AU: '61', AT: '43', BE: '32', BO: '591', BR: '55', CA: '1', CL: '56', CO: '57', CR: '506', EC: '593', EG: '20', SV: '503', ES: '34', US: '1', PH: '63', FR: '33', GT: '502', HN: '504', IN: '91', IE: '353', IT: '39', KE: '254', LB: '961', MA: '212', MX: '52', NI: '505', NG: '234', NL: '31', PA: '507', PY: '595', PE: '51', PL: '48', PT: '351', DO: '1', GB: '44', ZA: '27', CH: '41', TR: '90', UY: '598', VE: '58', ZW: '263' };
+export function telInternacional(t, pid) {
+  const s = String(t || '').trim(); let d = s.replace(/\D/g, '');
+  if (d.length < 7) return '';
+  if (s.startsWith('+') || s.startsWith('00')) return d.replace(/^00/, '');
+  const pre = PREFIJO_TEL[pid]; if (!pre) return d;
+  if (d.startsWith(pre) && d.length >= pre.length + 8) return d;
+  d = d.replace(/^0+/, '');
+  // Argentina: los celulares en WhatsApp llevan un 9 después del 54.
+  if (pid === 'AR' && !d.startsWith('9')) d = '9' + d;
+  return pre + d;
+}
