@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Páginas y apps para tu negocio</title>
+<meta name="description" content="Páginas web, catálogos con pedidos por WhatsApp, microapps y apps para negocios de Latinoamérica. Entrega rápida, precio cerrado y todo a distancia.">
+<meta property="og:title" content="Páginas y apps para tu negocio">
+<meta property="og:description" content="Catálogo con pedidos a WhatsApp en 5 días desde 180 USD. Microapps de citas, fiados e inventario.">
+<link rel="icon" href="../icons/icono.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #f4f3fb; --surface: #ffffff; --ink: #1a1733; --muted: #5f5c7a; --line: #dedcf0;
+  --primary: #6a5cf2; --primary-ink: #fff; --accent-soft: rgba(143,132,255,.16); --accent-text: #5b4fe0;
+  --wa: #128c5e; --wa-ink: #fff; --orb1: #8f84ff; --orb2: #3ddc9f; --orb3: #f0a020;
+  --display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0b0a14; --surface: #16142a; --ink: #efeefe; --muted: #a3a0c0; --line: #2a2745;
+    --accent-soft: rgba(143,132,255,.18); --accent-text: #c9c0ff; --primary: #8f84ff; --wa: #1fae73; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(18px, env(safe-area-inset-left)); padding-right: max(18px, env(safe-area-inset-right)); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.08; text-wrap: balance; margin: 0; letter-spacing: -.02em; }
+h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); font-weight: 800; }
+h2 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); font-weight: 700; }
+h3 { font-size: 1.25rem; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent-text); }
+.eyebrow { font-size: .78rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); }
+.btn { display: inline-flex; align-items: center; gap: .5em; padding: .85em 1.3em; border-radius: 999px; font: 600 1rem var(--body); text-decoration: none; border: 0; cursor: pointer; transition: transform .2s; }
+.btn:hover { transform: translateY(-2px); }
+.btn:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--orb1); outline-offset: 2px; }
+.btn-wa { background: var(--wa); color: var(--wa-ink); }
+.btn-ghost { background: var(--accent-soft); color: var(--accent-text); }
+
+header.top { display: flex; justify-content: space-between; align-items: center; padding-block: 18px; }
+.marca { display: flex; align-items: center; gap: 10px; font: 700 1.1rem var(--display); }
+.marca img { width: 30px; height: 30px; }
+
+.hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; padding-block: 40px 70px; }
+.hero p.lead { font-size: 1.2rem; color: var(--muted); max-width: 34ch; margin-top: 18px; }
+.hero .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.hero .garantia { margin-top: 18px; font-size: .92rem; color: var(--muted); }
+
+/* Teléfono con un chat de pedido: lo que el cliente del negocio va a vivir */
+.telefono { justify-self: center; width: min(300px, 100%); aspect-ratio: 9/17; border-radius: 38px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 30px 60px -30px rgba(26,23,51,.35); padding: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+.telefono .barra { font: 600 .85rem var(--body); padding: 6px 4px 10px; border-bottom: 1px solid var(--line); }
+.prod { display: grid; grid-template-columns: 46px 1fr auto; gap: 10px; align-items: center; font-size: .85rem; }
+.prod i { width: 46px; height: 46px; border-radius: 14px; display: block; }
+.prod b { display: block; font-weight: 600; }
+.prod span { color: var(--muted); font-size: .78rem; }
+.prod em { font-style: normal; font-weight: 600; }
+.telefono .pedir { margin-top: auto; background: var(--wa); color: #fff; border-radius: 16px; padding: 12px; text-align: center; font-weight: 600; font-size: .9rem; }
+.burbuja { position: absolute; right: -14px; bottom: 74px; background: #dcf8c6; color: #10331f; border-radius: 14px 14px 2px 14px; padding: 10px 12px; font-size: .8rem; max-width: 190px; box-shadow: 0 10px 24px -12px rgba(0,0,0,.4); animation: sube 3.2s ease-in-out infinite alternate; }
+@keyframes sube { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { .burbuja { animation: none; } html { scroll-behavior: auto; } }
+
+section { padding-block: 64px; }
+.cabeza { display: grid; gap: 10px; margin-bottom: 30px; max-width: 640px; }
+.cabeza p { color: var(--muted); }
+
+.dolores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.dolores div { border-top: 2px solid var(--ink); padding-top: 14px; display: grid; gap: 6px; }
+.dolores p { color: var(--muted); font-size: .98rem; }
+
+.planes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.plan { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.plan.destacado { border: 2px solid var(--primary); }
+.plan .precio { font: 800 2.1rem var(--display); letter-spacing: -.03em; }
+.plan .precio small { font: 500 .85rem var(--body); color: var(--muted); letter-spacing: 0; }
+.plan ul { margin: 0; padding-left: 1.1em; color: var(--muted); font-size: .94rem; display: grid; gap: 4px; }
+.plan .plazo { font-size: .85rem; font-weight: 600; color: var(--accent-text); }
+.plan .btn { margin-top: auto; justify-content: center; }
+.nota { margin-top: 18px; color: var(--muted); font-size: .95rem; }
+
+.trabajos { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.trabajo { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: grid; gap: 10px; }
+.trabajo .orbes { display: flex; gap: 6px; }
+.trabajo .orbes i { width: 16px; height: 16px; border-radius: 50%; }
+.trabajo p { color: var(--muted); }
+
+.pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; counter-reset: p; }
+.pasos li { counter-increment: p; display: grid; gap: 6px; }
+.pasos li::before { content: "Día " attr(data-dia); font: 700 .8rem var(--body); color: var(--accent-text); letter-spacing: .06em; text-transform: uppercase; }
+.pasos p { color: var(--muted); font-size: .96rem; }
+
+.faq details { border-bottom: 1px solid var(--line); padding-block: 16px; }
+.faq summary { font-weight: 600; cursor: pointer; }
+.faq details p { color: var(--muted); margin-top: 8px; max-width: 65ch; }
+
+.cotiza { background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: clamp(22px, 4vw, 44px); display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+form { display: grid; gap: 14px; }
+label { display: grid; gap: 6px; font-weight: 600; font-size: .92rem; }
+input, select, textarea { font: 400 1rem var(--body); padding: .75em .9em; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+textarea { min-height: 90px; resize: vertical; }
+.sincontacto { color: var(--muted); font-size: .9rem; }
+
+footer { padding-block: 40px 60px; color: var(--muted); font-size: .9rem; }
+
+@media (max-width: 900px) {
+  .hero, .cotiza { grid-template-columns: 1fr; }
+  .planes { grid-template-columns: 1fr 1fr; }
+  .pasos { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .planes, .trabajos, .dolores, .pasos { grid-template-columns: 1fr; }
+  .burbuja { right: 0; }
+  section { padding-block: 44px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="marca"><img src="../icons/icono.svg" alt=""> Orbe Estudio</div>
+    <a class="btn btn-ghost" href="#cotizar">Cotizar gratis</a>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Páginas, catálogos y apps para negocios</div>
+      <h1>Tus clientes ven todo, eligen y te piden por WhatsApp.</h1>
+      <p class="lead">Dejas de mandar fotos y precios uno por uno. Te entrego tu catálogo o tu app lista en días, con precio cerrado y sin comisiones por venta.</p>
+      <div class="acciones">
+        <a class="btn btn-wa" href="#cotizar">Quiero el mío</a>
+        <a class="btn btn-ghost" href="#planes">Ver precios</a>
+      </div>
+      <p class="garantia">Ves una muestra con tus productos antes de pagar el resto. Trabajo con negocios de toda Latinoamérica, a distancia.</p>
+    </div>
+    <div class="telefono" aria-hidden="true">
+      <div class="barra">Dulce Hogar · Catálogo</div>
+      <div class="prod"><i style="background:linear-gradient(135deg,#ffb3c1,#f0a020)"></i><div><b>Torta de chocolate</b><span>20 porciones</span></div><em>$28</em></div>
+      <div class="prod"><i style="background:linear-gradient(135deg,#8f84ff,#5fb3ff)"></i><div><b>Cupcakes x12</b><span>Decorados</span></div><em>$15</em></div>
+      <div class="prod"><i style="background:linear-gradient(135deg,#3ddc9f,#f0a020)"></i><div><b>Galletas surtidas</b><span>Caja de 24</span></div><em>$9</em></div>
+      <div class="pedir">Enviar pedido por WhatsApp</div>
+      <div class="burbuja">Hola, quiero 1 Torta de chocolate y 1 Cupcakes x12. Total $43. Retiro el sábado.</div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="cabeza"><div class="eyebrow">Te suena</div><h2>Lo que le quita tiempo a tu negocio</h2></div>
+    <div class="dolores">
+      <div><h3>"¿Precio?"</h3><p>Respondes la misma pregunta veinte veces al día y algunos clientes se van mientras esperan.</p></div>
+      <div><h3>Pedidos en desorden</h3><p>Los pedidos quedan perdidos entre chats, notas de voz y capturas de pantalla.</p></div>
+      <div><h3>Sin presencia en Google</h3><p>Quien te busca en Google no te encuentra, o encuentra un perfil sin precios ni horario.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="planes">
+  <div class="wrap">
+    <div class="cabeza"><div class="eyebrow">Precios en dólares</div><h2>Elige lo que tu negocio necesita</h2><p>Precio cerrado antes de empezar. 50% para arrancar y 50% al entregar. Acepto transferencia, Zelle, PayPal, Binance y pago móvil.</p></div>
+    <div class="planes">
+      <div class="plan destacado">
+        <div class="eyebrow">Más pedido</div>
+        <h3>Catálogo con pedidos</h3>
+        <div class="precio">$180 <small>pago único</small></div>
+        <ul><li>Hasta 40 productos con foto y precio</li><li>Carrito que envía el pedido a tu WhatsApp</li><li>Enlace para tu Instagram y código QR</li><li>Tú cambias precios desde el teléfono</li></ul>
+        <div class="plazo">Listo en 5 días</div>
+        <a class="btn btn-wa" href="#cotizar" data-plan="Catálogo con pedidos">Lo quiero</a>
+      </div>
+      <div class="plan">
+        <h3>Página de negocio</h3>
+        <div class="precio">$320 <small>pago único</small></div>
+        <ul><li>Hasta 5 secciones</li><li>Dominio propio y aparecer en Google</li><li>Ubicación, horario, reseñas y contacto</li><li>Rápida en teléfonos y datos móviles</li></ul>
+        <div class="plazo">Lista en 7 días</div>
+        <a class="btn btn-ghost" href="#cotizar" data-plan="Página de negocio">Cotizar</a>
+      </div>
+      <div class="plan">
+        <h3>Microapp</h3>
+        <div class="precio">$450 <small>desde</small></div>
+        <ul><li>Agenda de citas, fiados, inventario o pedidos</li><li>Se instala en el teléfono como una app</li><li>Funciona sin internet</li><li>Hecha a la medida de tu forma de trabajar</li></ul>
+        <div class="plazo">Lista en 2 a 3 semanas</div>
+        <a class="btn btn-ghost" href="#cotizar" data-plan="Microapp">Cotizar</a>
+      </div>
+      <div class="plan">
+        <h3>App completa</h3>
+        <div class="precio">$1.200 <small>desde</small></div>
+        <ul><li>Ventas, clientes, reportes y usuarios</li><li>Teléfono y computadora</li><li>Datos en la nube si lo necesitas</li><li>Como Orbe Negocios, a tu medida</li></ul>
+        <div class="plazo">4 a 8 semanas</div>
+        <a class="btn btn-ghost" href="#cotizar" data-plan="App completa">Cotizar</a>
+      </div>
+    </div>
+    <p class="nota">Mantenimiento opcional: $25 al mes con hosting, cambios pequeños y copias de seguridad incluidos.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cabeza"><div class="eyebrow">Trabajos</div><h2>Apps que ya puedes abrir y probar</h2><p>Las dos funcionan hoy en el teléfono y en la computadora. Ábrelas y juega con los datos de ejemplo.</p></div>
+    <div class="trabajos">
+      <div class="trabajo">
+        <div class="orbes"><i style="background:var(--orb1)"></i><i style="background:var(--orb2)"></i><i style="background:var(--orb3)"></i></div>
+        <h3>Orbe Negocios</h3>
+        <p>Caja para cobrar con las formas de pago de cada país, fiados y abonos, inventario, gastos, cierre del día y reportes con gráficos. Funciona sin internet y lee la tasa del día.</p>
+        <a href="https://gllm57.github.io/orbe-negocios/" target="_blank" rel="noopener">Abrir la demo</a>
+      </div>
+      <div class="trabajo">
+        <div class="orbes"><i style="background:var(--orb2)"></i><i style="background:var(--orb3)"></i><i style="background:var(--orb1)"></i></div>
+        <h3>Orbe, finanzas personales</h3>
+        <p>Gastos, ingresos y metas de ahorro con su propio símbolo, gráficos animados y modo claro y oscuro. Se instala como app desde el navegador.</p>
+        <a href="https://gllm57.github.io/misgastos/" target="_blank" rel="noopener">Abrir la demo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cabeza"><div class="eyebrow">Cómo trabajamos</div><h2>Un catálogo, de la primera charla a tus primeros pedidos</h2></div>
+    <ol class="pasos">
+      <li data-dia="1"><h3>Me cuentas</h3><p>Una charla de 15 minutos por WhatsApp. Me mandas fotos, precios y tu logo.</p></li>
+      <li data-dia="2"><h3>Ves la muestra</h3><p>Te envío un enlace con tu catálogo armado para que lo pruebes.</p></li>
+      <li data-dia="4"><h3>Ajustamos</h3><p>Cambiamos lo que quieras: colores, textos, orden de los productos.</p></li>
+      <li data-dia="5"><h3>A vender</h3><p>Lo publicas en tu Instagram y estados. Te enseño a cambiar precios.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="wrap">
+    <div class="cabeza"><div class="eyebrow">Preguntas</div><h2>Antes de empezar</h2></div>
+    <details><summary>¿Tengo que pagar todos los meses?</summary><p>No. El catálogo, la página y las apps son un pago único. El mantenimiento de $25 al mes es opcional; sin él solo pagas el dominio propio si lo quieres (unos $12 al año).</p></details>
+    <details><summary>¿Cobran comisión por cada pedido?</summary><p>No. Los pedidos te llegan directo a tu WhatsApp y el dinero va directo a ti.</p></details>
+    <details><summary>No sé nada de tecnología. ¿Igual puedo?</summary><p>Sí. Yo me encargo de todo y te dejo un video corto que muestra cómo cambiar precios y productos desde el teléfono.</p></details>
+    <details><summary>¿En qué países trabajas?</summary><p>En toda Latinoamérica y con negocios hispanos de EE. UU. y España. Todo se hace por WhatsApp y videollamada.</p></details>
+  </div>
+</section>
+
+<section id="cotizar">
+  <div class="wrap">
+    <div class="cotiza">
+      <div class="cabeza" style="margin:0;align-content:start">
+        <div class="eyebrow">Cotización gratis</div>
+        <h2>Cuéntame de tu negocio</h2>
+        <p>Te respondo el mismo día con el precio exacto y una idea de cómo se vería.</p>
+      </div>
+      <form id="form">
+        <label for="negocio">Nombre del negocio<input id="negocio" required placeholder="Ej. Dulce Hogar Repostería"></label>
+        <label for="plan">Qué necesitas
+          <select id="plan">
+            <option>Catálogo con pedidos</option><option>Página de negocio</option><option>Microapp</option><option>App completa</option><option>No sé todavía</option>
+          </select>
+        </label>
+        <label for="detalle">Qué vendes y dónde estás<textarea id="detalle" placeholder="Ej. Tortas y postres en Medellín, hoy vendo por Instagram"></textarea></label>
+        <button class="btn btn-wa" type="submit">Enviar por WhatsApp</button>
+        <p class="sincontacto" id="aviso" hidden></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Orbe Estudio · Páginas, catálogos y apps para negocios de Latinoamérica.</div></footer>
+
+<script>
+const WHATSAPP = ""; // tu número con código de país, solo dígitos, ej. "584121234567"
+const CORREO = "";   // opcional, tu correo de trabajo
+
+document.querySelectorAll("[data-plan]").forEach(a => a.addEventListener("click", () => {
+  document.getElementById("plan").value = a.dataset.plan;
+}));
+document.getElementById("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const negocio = document.getElementById("negocio").value.trim();
+  const plan = document.getElementById("plan").value;
+  const detalle = document.getElementById("detalle").value.trim();
+  const texto = `Hola, vi tu página. Mi negocio es ${negocio}. Me interesa: ${plan}.${detalle ? " " + detalle : ""}`;
+  const aviso = document.getElementById("aviso");
+  if (WHATSAPP) {
+    location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(texto);
+  } else if (CORREO) {
+    location.href = "mailto:" + CORREO + "?subject=" + encodeURIComponent("Cotización: " + plan) + "&body=" + encodeURIComponent(texto);
+  } else {
+    aviso.hidden = false;
+    aviso.textContent = "Muy pronto podrás escribirme desde aquí.";
+  }
+});
+</script>
+</body>
+</html>
