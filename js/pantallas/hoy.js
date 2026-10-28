@@ -52,7 +52,7 @@ export function Hoy() {
   if (tel) return html`
     <header class="cab entra">
       <span class="logo marca">${iniciales(S.negocio.nombre)}</span>
-      <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${P.f} ${E ? (suc || 'Todos los locales') : T.n}</span></span>
+      <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub corta">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${P.f} ${E ? (suc || 'Todos los locales') : T.n}</span></span>
       <span class="pildora" style=${{ background: enLinea ? 'var(--in-soft)' : 'var(--amber-soft)', color: enLinea ? 'var(--in-text)' : 'var(--amber-text)' }}><span class="punto"></span>${enLinea ? 'En línea' : 'Sin internet'}</span>
     </header>
     <${OfertaRecorrido} />

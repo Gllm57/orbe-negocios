@@ -357,34 +357,55 @@ table.tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width
 /* ---------- pagos combinados ---------- */
 .pagos-mix { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 20px; background: var(--fill2); }
 .pago-fila { display: flex; flex-direction: column; gap: 2px; }
-.pago-linea { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.pago-linea { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .pago-forma { position: relative; display: flex; align-items: center; min-width: 0; }
-.pago-forma .simb { position: absolute; left: 10px; pointer-events: none; }
-.pago-forma select { width: 100%; min-height: 50px; border-radius: 15px; border: 1.5px solid var(--line); background: var(--surface); font-size: 15px; font-weight: 600; padding: 0 30px 0 44px; appearance: none; -webkit-appearance: none; cursor: pointer; text-overflow: ellipsis;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.pago-forma .simb { position: absolute; left: 9px; pointer-events: none; }
+.pago-forma select { width: 100%; min-height: 50px; border-radius: 15px; border: 1.5px solid var(--line); background: var(--surface); font-size: 14px; font-weight: 600; padding: 0 26px 0 40px; appearance: none; -webkit-appearance: none; cursor: pointer; text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
 .pago-forma select:focus, .pago-monto input:focus { border-color: var(--accent); outline: none; }
 .pago-forma select option { background: var(--surface); color: var(--ink); }
 .pago-monto { display: flex; align-items: center; min-width: 0; border-radius: 15px; border: 1.5px solid var(--line); background: var(--surface); min-height: 50px; overflow: hidden; transition: border-color .2s ease; }
 .pago-monto:focus-within { border-color: var(--accent); }
-.pago-monto input { flex: 1; min-width: 0; border: 0; background: none; font-size: 17px; font-weight: 700; padding: 0 12px; height: 46px; text-align: right; outline: none; }
-.pago-moneda { border: 0; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px; height: 34px; min-width: 40px; padding: 0 8px; margin-left: 6px; border-radius: 10px; cursor: pointer; }
+.pago-monto input { flex: 1; min-width: 0; border: 0; background: none; font-size: 17px; font-weight: 700; padding: 0 10px; height: 46px; text-align: right; outline: none; }
+.pago-moneda { border: 0; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px; height: 34px; min-width: 34px; padding: 0 7px; margin-left: 5px; flex-shrink: 0; border-radius: 10px; cursor: pointer; }
 .pago-resto { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12px; cursor: pointer; padding: 2px 4px; }
 .pago-cuenta { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
 .pago-cuenta .barra-prog i { transition: width .45s var(--spring), background .3s ease; }
 
 /* ---------- recorrido guiado ---------- */
-.tour { position: fixed; inset: 0; z-index: 200; }
-.tour-tapa { position: absolute; inset: 0; }
-.tour-luz { position: fixed; border-radius: 20px; pointer-events: none; box-shadow: 0 0 0 3px rgba(143,132,255,.75), 0 0 0 9999px rgba(8,6,20,.62);
-  transition: top .5s var(--spring), left .5s var(--spring), width .5s var(--spring), height .5s var(--spring); animation: tourEntra .35s ease both; }
+.tour { position: fixed; inset: 0; z-index: 200; animation: tourEntra .4s ease both; }
+.tour.sale { animation: tourSale .32s ease both; pointer-events: none; }
 @keyframes tourEntra { from { opacity: 0; } to { opacity: 1; } }
-.tour-caja { position: fixed; display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 24px; background: var(--surface); color: var(--ink);
-  box-shadow: 0 24px 60px rgba(0,0,0,.35); animation: tourCaja .45s var(--spring) both; }
-@keyframes tourCaja { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
-.tour-puntos { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
-.tour-puntos i { width: 6px; height: 6px; border-radius: 3px; background: var(--line); transition: width .35s var(--spring), background .3s ease; }
-.tour-puntos i.ya { background: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.tour-puntos i.on { width: 18px; background: var(--accent); }
-.oferta-tour { gap: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface)); flex-wrap: wrap; }
+@keyframes tourSale { to { opacity: 0; } }
+.tour-tapa { position: absolute; inset: 0; }
+/* La luz: un hueco en la sombra que se mueve y cambia de tamaño con resorte */
+.tour-luz { position: fixed; border-radius: 20px; pointer-events: none; box-shadow: 0 0 0 3px rgba(143,132,255,.8), 0 0 0 9999px rgba(8,6,20,.64);
+  transition: top .6s var(--spring), left .6s var(--spring), width .6s var(--spring), height .6s var(--spring), border-radius .6s var(--spring); will-change: top, left, width, height; }
+.tour-luz.sin { border-radius: 50%; }
+.tour-pulso { position: absolute; inset: -3px; border-radius: inherit; border: 2px solid rgba(143,132,255,.9); animation: tourPulso 1.6s .55s ease-out 2 both; }
+.tour-luz.sin .tour-pulso { display: none; }
+@keyframes tourPulso { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.06); } }
+/* La tarjeta se desliza a su nuevo lugar; el texto entra desde el lado hacia donde avanzas */
+.tour-caja { position: fixed; display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 24px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 24px 60px rgba(0,0,0,.35); transition: top .6s var(--spring), left .6s var(--spring); animation: tourCaja .5s var(--spring) both; touch-action: pan-y; }
+@keyframes tourCaja { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+.tour.sale .tour-caja { animation: tourCajaSale .3s ease both; }
+@keyframes tourCajaSale { to { opacity: 0; transform: translateY(10px) scale(.97); } }
+.tour-contenido { display: flex; flex-direction: column; gap: 6px; }
+.tour-contenido.de-der { animation: tourDer .45s var(--spring) both; }
+.tour-contenido.de-izq { animation: tourIzq .45s var(--spring) both; }
+@keyframes tourDer { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes tourIzq { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+.tour-flecha { position: absolute; width: 16px; height: 16px; background: var(--surface); transform: translateX(-50%) rotate(45deg); border-radius: 3px; transition: left .6s var(--spring); }
+.tour-flecha.arriba { top: -7px; }
+.tour-flecha.abajo { bottom: -7px; }
+.tour-progreso { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.tour-progreso i { display: block; height: 100%; background: var(--accent); border-radius: 2px; transform-origin: left; transition: transform .6s var(--spring); }
+@media (prefers-reduced-motion: reduce) { .tour, .tour-luz, .tour-caja, .tour-contenido, .tour-pulso, .tour-flecha, .tour-progreso i { transition: none !important; animation: none !important; } }
+.oferta-tour { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface)); }
+.oferta-btns { display: flex; gap: 8px; }
+html.tel .oferta-tour { grid-template-columns: auto minmax(0, 1fr); }
+html.tel .oferta-btns { grid-column: 1 / -1; }
+html.tel .oferta-btns .btn2 { flex: 1; min-height: 44px; }
 .oferta-logo { display: grid; place-items: center; }
 @media (prefers-reduced-motion: reduce) { .tour-luz, .tour-caja { transition: none; animation: none; } }

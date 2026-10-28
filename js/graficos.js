@@ -137,7 +137,8 @@ export function Anillo({ p, tam = 64, grosor = 7, c = 'var(--in)', children }) {
 // segs: [{ n, v, c, i? (símbolo), d? (cambio en %), bueno? }]
 export function Reparto({ segs, f, total, titulo = 'Total', tam = 124, grosor = 11, hueco = 4, max = 4 }) {
   const tot = total ?? segs.reduce((a, s) => a + s.v, 0);
-  const orden = segs.slice().sort((a, b) => b.v - a.v);
+  // «Otros» siempre al final, aunque sume más.
+  const orden = segs.slice().sort((a, b) => (a.n === 'Otros') - (b.n === 'Otros') || b.v - a.v);
   const pct = v => { const q = tot ? v / tot * 100 : 0; return (q > 0 && q < 1 ? '<1' : Math.round(q)) + ' %'; };
   return html`<div class="reparto">
     <div class="fila" style="gap:16px">

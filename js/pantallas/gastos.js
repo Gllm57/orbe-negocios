@@ -36,7 +36,7 @@ export function BloqueGastos({ compacto }) {
     <div class="tarjeta-tit">Gastos recientes<button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('gasto')}>+ Gasto</button></div>
     <div class="lista">${gm.slice().sort((a, b) => b.t - a.t).slice(0, compacto ? 4 : 12).map((g, i) => html`<button type="button" class="item toca entra" key=${g.id} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('gasto', { gid: g.id })}>
       <span class="simb-c" style=${{ '--c': COLOR_CAT[g.cat] || 'var(--c4)', width: '32px', height: '32px' }}><${Icono} n=${simbolo(g.cat)} t=${16} /></span>
-      <span class="crece" style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">${g.n}</span><span class="sub faint">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
+      <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="corta" style="font-size:14px">${g.n}</span><span class="sub faint corta">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
       <b class="num out" style="font-size:14px">−${D.m(g.v)}</b>
     </button>`)}</div>
   </section>`;

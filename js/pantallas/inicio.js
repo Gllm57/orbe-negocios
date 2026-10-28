@@ -76,7 +76,7 @@ export function Inicio({ tel }) {
       <label class="campo"><span>${P.fiscal[0]} (sale en tus recibos)</span><input type="text" value=${c.fiscal} placeholder=${P.fiscal[1] || 'Tu número fiscal'} onInput=${e => pon({ fiscal: e.target.value })} /></label>
     </div>`}
     <div class="campo"><span>${E ? '¿Cuántas sucursales tienes?' : '¿Cuántos locales tienes?'}</span>
-      <div class="chips">${SUCS.map(s => html`<button type="button" class=${'chip toca' + (c.sucN === s[1] ? ' on' : '')} aria-pressed=${c.sucN === s[1] ? 'true' : 'false'} onClick=${() => pon({ sucN: s[1] })}>${s[0]}</button>`)}</div>
+      <div class="chips">${SUCS.map(s => html`<button type="button" class=${'chip toca' + (c.sucN === s[1] ? ' on' : '')} aria-pressed=${c.sucN === s[1] ? 'true' : 'false'} onClick=${() => pon({ sucN: s[1] })}>${s[1] === 1 && c.escala === 'empresa' ? 'Una sola' : s[0]}</button>`)}</div>
       <span class="sub faint">${c.sucN === 1 ? 'Si abres otro, lo agregas en Ajustes y Orbe separa las ventas y la caja de cada uno.' : 'Cada uno tendrá su caja, sus ventas y su inventario. Ponles nombre:'}</span>
       ${c.sucN > 1 && html`<div class="rejilla-2 entra" style="gap:8px">${Array.from({ length: c.sucN }, (_, k) => html`<label class="campo" key=${k}><span class="sr">Nombre del local ${k + 1}</span><input type="text" value=${c.sucNombres[k] || ''} placeholder=${NOMBRES_SUC[k]} onInput=${e => { const ns = c.sucNombres.slice(); ns[k] = e.target.value; pon({ sucNombres: ns }); }} /></label>`)}</div>`}
     </div>
@@ -85,14 +85,14 @@ export function Inicio({ tel }) {
       <div class="chips">${P.pays.map(n => { const on = pays.includes(n); return html`<button type="button" class=${'chip toca' + (on ? ' on' : '')} aria-pressed=${on ? 'true' : 'false'} onClick=${() => pon({ pays: on ? (pays.length > 1 ? pays.filter(x => x !== n) : pays) : P.pays.filter(x => x === n || pays.includes(x)) })}>${on && html`<${Icono} n="check" t=${14} g=${3} c="var(--accent)" />`}${n}</button>`; })}</div></div>
     <div class="tarjeta" style="padding:4px 16px 12px">
       <${Interruptor} on=${taxOn && P.tax[1] > 0} onCambio=${v => P.tax[1] ? pon({ taxOn: v }) : avisar('Pon el porcentaje en Ajustes')} titulo=${'Cobrar ' + P.tax[0] + (P.tax[1] ? ' ' + P.tax[1] + ' %' : '')} sub=${P.tax[1] ? 'Lo puedes cambiar o apagar cuando quieras' : 'Varía según tu zona'} />
-      ${taxOn && P.tax[1] > 0 && html`<div class="segmento" style="width:100%;margin-top:4px">${[[true, 'Incluido en el precio'], [false, 'Aparte']].map(o => html`<button type="button" style="flex:1" class=${c.taxIncl === o[0] ? 'on' : ''} onClick=${() => pon({ taxIncl: o[0] })}>${o[1]}</button>`)}</div>`}
+      ${taxOn && P.tax[1] > 0 && html`<div class="segmento" style="width:100%;margin-top:4px">${[[true, 'En el precio'], [false, 'Aparte']].map(o => html`<button type="button" style="flex:1" class=${c.taxIncl === o[0] ? 'on' : ''} onClick=${() => pon({ taxIncl: o[0] })}>${o[1]}</button>`)}</div>`}
     </div>
   </div>`;
   if (paso === 'listo') cuerpo = html`<div class="pila">
     <span style="width:76px;height:76px;border-radius:50%;background:var(--in);display:grid;place-items:center;animation:pop .55s var(--spring) both"><${Icono} n="check" t=${36} g=${2.8} c="#0b0a14" /></span>
     <div class="tarjeta"><div class="tarjeta-tit"><span class="sub">Encendido para ti</span></div><div class="pila">
-      ${[['carrito', 'Vender con ' + pays.slice(0, 2).join(', ') + '…'], ['personas', 'Clientes y lo que te deben'], [(TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'caja' : 'lista', (TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'Inventario y stock mínimo' : 'Servicios con precio y duración'], ['dinero', 'Gastos y cuentas por pagar'], ['grafico', 'Reportes con gráficos'], ['candado', 'Cierre del día'], ['escudo', 'Perfiles para tu equipo, con permisos'], ['guardar', 'Copias y modo sin conexión']].map((m, k) => html`
-        <div class="fila entra" style=${{ '--i': 4 + k * 2, gap: '12px' }}><span class="ic t-ver" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${m[0]} t=${16} g=${2.2} /></span><b style="font-size:14px;font-weight:600">${m[1]}</b></div>`)}
+      ${[['carrito', 'Vender y cobrar con ' + pays.slice(0, 2).join(', ') + (pays.length > 2 ? ' y más' : '')], ['personas', 'Clientes y lo que te deben'], [(TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'caja' : 'lista', (TIPOS.find(t => t.id === c.tipo) || {}).inv ? 'Inventario y stock mínimo' : 'Servicios con precio y duración'], ['dinero', 'Gastos y cuentas por pagar'], ['grafico', 'Reportes con gráficos'], ['candado', 'Cierre del día'], ['escudo', 'Perfiles para tu equipo, con permisos'], ['guardar', 'Copias y modo sin conexión']].map((m, k) => html`
+        <div class="fila entra" style=${{ '--i': 4 + k * 2, gap: '12px' }}><span class="ic t-ver" style="width:32px;height:32px;border-radius:10px"><${Icono} n=${m[0]} t=${16} g=${2.2} /></span><b style="font-size:14px;font-weight:600;line-height:1.35;min-width:0">${m[1]}</b></div>`)}
     </div></div>
     <div class="tarjeta" style="padding:4px 16px"><${Interruptor} on=${ejemplo} onCambio=${setEjemplo} titulo="Llenar con un mes de ventas de ejemplo" sub="Para probar. Trae dos empleados de prueba: Carla (encargada, PIN 1111) y Luis (cajero, PIN 2222)." /></div>
   </div>`;
