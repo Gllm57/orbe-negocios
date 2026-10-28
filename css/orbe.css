@@ -416,3 +416,7 @@ html.tel .oferta-btns { grid-column: 1 / -1; }
 html.tel .oferta-btns .btn2 { flex: 1; min-height: 44px; }
 .oferta-logo { display: grid; place-items: center; }
 @media (prefers-reduced-motion: reduce) { .tour-luz, .tour-caja { transition: none; animation: none; } }
+.pago-ref { min-height: 40px; border-radius: 12px; border: 1.5px dashed var(--line); background: var(--surface); font-size: 14px; padding: 0 12px; width: 100%; outline: none; }
+.pago-ref:focus { border-style: solid; border-color: var(--accent); }
+.billetes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; padding: 0 0 12px; }
+.billete { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 6px 6px 12px; border-radius: 14px; background: var(--surface); font-size: 13px; font-weight: 600; }

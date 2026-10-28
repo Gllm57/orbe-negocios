@@ -1,7 +1,8 @@
 // Hoy (teléfono) y Panel (computadora): cómo va el día, con gráficos en vivo.
 import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, cierreDeHoy, leer, diaClave } from '../datos.js';
+import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, bajoCosto, cierreDeHoy, leer, diaClave, vigentes } from '../datos.js';
+import { esElectronico } from '../paises.js';
 import { Barras, Linea, Reparto, Monto, Anillo, color } from '../graficos.js';
 import { Icono, LogoOrbe, iniciales, hora, fechaCorta } from '../ui.js';
 import { nombreTasa } from '../paises.js';
@@ -31,6 +32,13 @@ export function Hoy() {
   if (bajos.length) pendientes.push({ i: 'caja', t: 't-azu', txt: bajos.length + (bajos.length === 1 ? ' producto por debajo del mínimo' : ' productos por debajo del mínimo'), sub: bajos.slice(0, 2).map(p => p.n).join(', '), go: () => ir('inventario') });
   if (pp.length && puede('gastos')) pendientes.push({ i: 'calendario', t: 't-ros', txt: pp[0].n + ': ' + D.m(pp[0].v), sub: venceTxt(pp[0].vence), go: () => ir(tel ? 'mas' : 'gastos') });
   if (D.dual) pendientes.push({ i: 'sube', t: 't-vio', txt: nombreTasa(P, S.tasa) + ': ' + (P.id === 'VE' ? 'Bs ' : '$ ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa), sub: S.tasa.modo === 'manual' ? 'Escrita a mano' : S.tasa.valor && S.tasa.fecha === diaClave(Date.now()) ? 'Leída hoy de internet' : 'Sin internet: se usa la última guardada', go: puede('ajustes') ? () => abrir('tasa') : null });
+  // La tasa saltó desde ayer: conviene revisar precios (o, en Venezuela, la tasa con la que cobras).
+  if (D.dual) { const h = (S.historialTasas || []).filter(x => x.f === (S.tasa.fuente || 'oficial')); const q = h.length > 1 ? (h[h.length - 1].v / h[h.length - 2].v - 1) * 100 : 0;
+    if (Math.abs(q) >= 3) pendientes.unshift({ i: 'alerta', t: 't-amb', txt: 'El dólar ' + (q > 0 ? 'subió ' : 'bajó ') + Math.abs(q).toFixed(1).replace('.', ',') + ' % desde ayer', sub: P.id === 'VE' ? 'Revisa las tasas con las que cobras' : 'Revisa tus precios', go: puede('productos') && P.id !== 'VE' ? () => abrir('remarcar') : puede('ajustes') ? () => abrir('tasa') : null }); }
+  const sinGan = bajoCosto();
+  if (sinGan.length && puede('productos')) pendientes.push({ i: 'etiqueta', t: 't-ros', txt: sinGan.length + (sinGan.length === 1 ? ' producto casi no deja ganancia' : ' productos casi no dejan ganancia'), sub: sinGan.slice(0, 2).map(p => p.n).join(', ') + ': cuesta reponerlos casi lo que cobras', go: () => abrir('remarcar', { alcance: 'margen' }) });
+  if (S.negocio.pedirRef && puede('ajustes')) { const n = vigentes().filter(v => v.t > Date.now() - 7 * DIA).reduce((a, v) => a + v.pagos.filter(p => p.ref && !p.ok && esElectronico(p.m)).length, 0);
+    if (n) pendientes.push({ i: 'check', t: 't-azu', txt: n + (n === 1 ? ' pago por verificar' : ' pagos por verificar') + ' con el banco', sub: 'Sube el estado de cuenta y Orbe los busca', go: () => abrir('conciliar') }); }
   if (puede('cierre')) pendientes.push(cierre ? { i: 'check', t: 't-ver', txt: 'Día cerrado', sub: 'Cerraste a las ' + hora(cierre.t), go: null } : { i: 'candado', t: 't-ver', txt: 'Cierre del día', sub: 'Cuenta la caja cuando cierres', go: () => abrir('cierre') });
 
   const recientes = leer().ventas.filter(v => !suc || v.suc === suc).slice(-6).reverse();

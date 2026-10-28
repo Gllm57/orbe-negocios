@@ -70,7 +70,7 @@ function App() {
   // Tasa del día (Venezuela y Argentina): si es automática, una vez al día y cuando vuelve el internet.
   const pid = S.negocio && S.negocio.pais;
   useEffect(() => {
-    if ((pid === 'VE' || pid === 'AR') && S.tasa.modo !== 'manual' && enLinea && S.tasa.fecha !== diaClave(Date.now())) leerTasa(pid, S.tasa.fuente).then(v => { if (v) guardarTasa({ valor: v }); });
+    if ((pid === 'VE' || pid === 'AR') && S.tasa.modo !== 'manual' && enLinea && S.tasa.fecha !== diaClave(Date.now())) leerTasa(pid, S.tasa.fuente).then(v => { if (v) guardarTasa({ valor: v }, dinero(pais(pid)).bonito); });
   }, [pid, S.tasa.modo, S.tasa.fuente, enLinea]);
 
   if (!S.negocio) return html`<${Inicio} tel=${tel} /><${Avisos} />`;

@@ -1,14 +1,14 @@
 // Datos de Orbe Negocios. Todo se guarda primero en el aparato (funciona sin internet).
 // Regla de Orbe: si algo se daña al cargar, se aparta y nunca se borra.
 import { useState, useEffect } from './lib/preact-htm.js';
-import { pais, tipo, dinero } from './paises.js';
+import { pais, tipo, dinero, TASA_VE_RESPALDO, esDivisa } from './paises.js';
 import { ROLES_BASE } from './permisos.js';
 
 const CLAVE = 'orbe-negocios';
 const subs = new Set();
 let S = vacio();
 
-function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' } }; }
+function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [] }; }
 // Datos guardados con versiones anteriores: se completan sin perder nada.
 function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
@@ -18,6 +18,9 @@ function migrar(d) {
   if (!Array.isArray(d.registro)) d.registro = [];
   if (!d.tasa || typeof d.tasa !== 'object' || (d.tasaVE && !d.tasa.valor)) d.tasa = { modo: 'auto', valor: d.tasaVE || 0, fuente: 'oficial', fecha: d.tasaFecha || '' };
   delete d.tasaVE; delete d.tasaFecha;
+  if (!d.tasas || typeof d.tasas !== 'object') d.tasas = {};
+  if (!Array.isArray(d.historialTasas)) d.historialTasas = [];
+  if (d.negocio && d.negocio.pedirRef === undefined) d.negocio = Object.assign({}, d.negocio, { pedirRef: d.negocio.pais === 'VE', tasaPago: d.negocio.tasaPago || {} });
   d.v = 2;
   return d;
 }
@@ -187,13 +190,14 @@ export function crearNegocio(cfg, conEjemplo) {
   const nSuc = Math.max(1, Math.min(5, cfg.sucN || 1)), NOM = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur'];
   const sucursales = nSuc === 1 ? ['Principal'] : Array.from({ length: nSuc }, (_, i) => ((cfg.sucNombres || [])[i] || '').trim() || NOM[i]);
   const productos = CATALOGO[T.id].map((x, i) => ({ id: 'p' + i, ab: x[0], n: x[1], p: D.precio(x[2]), c: D.precio(x[3]), q: x[4] < 0 ? null : Math.round(x[4] * (E ? 3 : 1)), min: Math.round(x[5] * (E ? 3 : 1)), dur: x[6] || 0, pop: x[7], cod: '759' + String(1234000 + i * 37) }));
-  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now() };
+  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now(), pedirRef: P.id === 'VE', igtf: false, fiadoUsd: false, tasaPago: {} };
   const perfiles = [{ id: 'u0', n: (cfg.dueno || '').trim() || 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }];
   if (conEjemplo) perfiles.push(
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
     { id: 'u2', n: 'Luis Pino', rol: 'cajero', pin: '2222', sucs: sucursales.length > 1 ? [sucursales[0]] : [], creado: Date.now() });
   const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
   if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D, perfiles));
+  else base.historialTasas = [];
   cambiar(() => base);
 }
 
@@ -250,13 +254,32 @@ function ejemplo(neg, productos, D, perfiles) {
     ['Distribuidora Central', 'Mercancía', 84, ahora, false, ahora + DIA],
     ['Alquiler del local', 'Alquiler', 250, ahora, false, ahora + 5 * DIA]
   ].map(g => ({ id: id(), n: g[0], cat: g[1], v: D.precio(g[2] * kb), t: g[3], pagado: g[4], vence: g[5] || 0, m: neg.pays[0], suc: neg.sucursales[0] }));
+  // En Venezuela y Argentina la tasa sube un poco cada día: cada venta y gasto guarda la de su día.
+  const ve = neg.pais === 'VE', ar = neg.pais === 'AR', historialTasas = [];
+  if (ve || ar) {
+    const base = S.tasa.valor || (ve ? TASA_VE_RESPALDO : 1200), ritmo = ve ? 0.006 : 0.003;
+    const tasaDia = t => Math.round(base / (1 + ritmo * Math.max(0, (hoy0 - inicioDia(t)) / DIA)) * 100) / 100;
+    ventas.forEach(v => { v.tasa = tasaDia(v.t); });
+    gastos.forEach(g => { g.tasa = tasaDia(g.t); });
+    for (let d = 63; d >= 1; d--) historialTasas.push({ dia: diaClave(hoy0 - d * DIA), f: 'oficial', v: tasaDia(hoy0 - d * DIA) });
+  }
   // Lo vendido sale del inventario, pero el ejemplo arranca con lo que hay ahora.
-  return { clientes, ventas, abonos, gastos, cierres: [] };
+  return { clientes, ventas, abonos, gastos, cierres: [], historialTasas };
 }
 
 // ---------- acciones ----------
 // Parte fiada de una venta: con pagos combinados puede ser solo una parte (p. ej. la mitad por Pago Móvil y el resto fiado).
-export const fiadoDe = v => v.pagos.reduce((a, p) => a + (p.m === 'Fiado' ? p.v : 0), 0);
+export const fiadoDe = v => v.pagos.reduce((a, p) => a + (p.m === 'Fiado' || p.m === 'Saldo a favor' ? p.v : 0), 0);
+// ---------- tasas ----------
+// La tasa principal (la de mostrar) y las extra (paralela, USDT, propia). Cada forma de pago puede cobrarse con una.
+export function tasaDe(k) {
+  const prin = S.tasa.valor || (S.negocio && S.negocio.pais === 'VE' ? TASA_VE_RESPALDO : S.negocio ? pais(S.negocio.pais).r : 1);
+  if (!k || k === 'oficial') return prin;
+  return (S.tasas[k] && S.tasas[k].valor) || prin;
+}
+export const tasaMetodo = m => tasaDe(((S.negocio && S.negocio.tasaPago) || {})[m]);
+const dolarDe = (v, t) => S.negocio.pais === 'VE' ? v : v / (t || tasaDe());
+const anotarHistorial = (s, f, v) => { const dia = diaClave(Date.now()), h = (s.historialTasas || []).filter(x => !(x.dia === dia && x.f === f)); return h.concat([{ dia, f, v }]).slice(-600); };
 const juntar = pagos => pagos.map(p => p.m).join(' + ');
 export const sigNumero = () => (S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1;
 const stockMas = (productos, lineas, signo) => productos.map(p => { const q = lineas[p.id]; return q && p.q != null ? Object.assign({}, p, { q: Math.max(0, p.q + signo * q) }) : p; });
@@ -264,10 +287,13 @@ const porLinea = items => items.reduce((o, it) => (o[it.pid] = (o[it.pid] || 0) 
 // Registro de cambios: quién hizo qué y cuándo (anulaciones, devoluciones, borrados, cambios del negocio).
 const nota = (s, que) => ({ registro: (s.registro || []).concat([{ t: Date.now(), por: s.ajustes.perfil || '', que }]).slice(-500) });
 
-export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto }) {
+export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto, igtf }) {
   // Si el impuesto va aparte, el total cobrado es mayor que la suma de los productos.
   const total = conImpuesto || items.reduce((a, it) => a + it.q * it.p, 0);
   const venta = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 };
+  if (igtf) venta.igtf = igtf;
+  // Fiado en dólares (Argentina): la deuda se guarda también en dólares para que no pierda valor.
+  if (S.negocio.fiadoUsd) venta.pagos = pagos.map(p => p.m === 'Fiado' || p.m === 'Saldo a favor' ? Object.assign({}, p, { fu: dolarDe(p.v) }) : p);
   cambiar(s => ({ ventas: s.ventas.concat([venta]), productos: stockMas(s.productos, porLinea(items), -1) }));
   return venta;
 }
@@ -301,13 +327,16 @@ export function devolver(vid, lineas, pagos, motivo, monto) {
   }, nota(s, 'Devolución de la venta #' + v.n + ' (' + motivo + ')')));
   return dev;
 }
-export function abonar(cli, pagos) {
+export function abonar(cli, pagos, nota) {
   const v = pagos.reduce((a, p) => a + p.v, 0);
-  cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: s.ajustes.perfil || '' }]) }));
+  const ab = { id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 };
+  if (S.negocio.fiadoUsd) ab.fu = dolarDe(v);
+  if (nota) ab.nota = nota;
+  cambiar(s => ({ abonos: s.abonos.concat([ab]) }));
 }
 export const pagosDeAbono = a => a.pagos || [{ m: a.m, v: a.v }];
 const conPagos = g => g.pagos && g.pagos.length ? Object.assign({}, g, { m: juntar(g.pagos) }) : g;
-export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '' }, conPagos(g))]) })); }
+export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '', tasa: s.tasa.valor || 0 }, conPagos(g))]) })); }
 export function editarGasto(gid, g) { cambiar(s => ({ gastos: s.gastos.map(x => x.id === gid ? Object.assign({}, x, conPagos(g)) : x) })); }
 export function borrarGasto(gid) {
   const g = S.gastos.find(x => x.id === gid); if (!g) return;
@@ -320,7 +349,16 @@ export function borrarProducto(pid) {
   const p = S.productos.find(x => x.id === pid); if (!p) return;
   cambiar(s => Object.assign({ productos: s.productos.map(x => x.id === pid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró el producto «' + p.n + '»')));
 }
-export function reponer(pid, cuanto) { cambiar(s => ({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }) : p) })); }
+// Reponer: si cambió lo que cuesta, se guarda como costo de reposición (el de hoy) y se anota.
+export function reponer(pid, cuanto, costo) {
+  const p0 = S.productos.find(p => p.id === pid);
+  const cambio = p0 && costo > 0 && Math.abs(costo - p0.c) > 0.004;
+  cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }, cambio ? { c: costo, cAntes: p.c } : {}) : p) }, cambio ? nota(s, 'Costo de «' + p0.n + '» pasó de ' + p0.c + ' a ' + costo) : {}));
+}
+// Remarcar: sube (o baja) los precios en bloque un porcentaje, con redondeo «bonito».
+export function remarcar(ids, pct, redondo) {
+  cambiar(s => Object.assign({ productos: s.productos.map(p => ids.includes(p.id) ? Object.assign({}, p, { p: redondo(p.p * (1 + pct / 100)), pAntes: p.p }) : p) }, nota(s, 'Remarcó ' + ids.length + ' precios ' + (pct > 0 ? '+' : '') + pct + ' %')));
+}
 export function nuevoCliente(c) { const nuevo = Object.assign({ id: 'c' + id(), tipo: 'persona', limite: 0, tel: '' }, c); cambiar(s => ({ clientes: s.clientes.concat([nuevo]) })); return nuevo; }
 export function editarCliente(cid, c) { cambiar(s => ({ clientes: s.clientes.map(x => x.id === cid ? Object.assign({}, x, c) : x) })); }
 export function borrarCliente(cid) {
@@ -350,7 +388,50 @@ export function guardarSucursales(nombres, renombres) {
   }));
 }
 // Tasa: automática (se lee de internet una vez al día) o escrita a mano. En Argentina se elige oficial, blue o MEP.
-export function guardarTasa(t) { cambiar(s => ({ tasa: Object.assign({}, s.tasa, t, t.valor ? { fecha: diaClave(Date.now()) } : {}) })); }
+export function guardarTasa(t, redondo) {
+  cambiar(s => {
+    const out = { tasa: Object.assign({}, s.tasa, t, t.valor ? { fecha: diaClave(Date.now()) } : {}) };
+    if (t.valor) {
+      out.historialTasas = anotarHistorial(s, out.tasa.fuente || 'oficial', t.valor);
+      // Precios atados al dólar: se recalculan con la tasa nueva.
+      if (redondo && s.negocio && s.negocio.pais !== 'VE' && s.productos.some(p => p.usd > 0)) out.productos = s.productos.map(p => p.usd > 0 ? Object.assign({}, p, { p: redondo(p.usd * t.valor) }) : p);
+    }
+    return out;
+  });
+}
+export function guardarTasaExtra(k, t) {
+  cambiar(s => {
+    const x = Object.assign({}, s.tasas[k], t, t.valor ? { fecha: diaClave(Date.now()) } : {});
+    return Object.assign({ tasas: Object.assign({}, s.tasas, { [k]: x }) }, t.valor ? { historialTasas: anotarHistorial(s, k, t.valor) } : {});
+  });
+}
+// Quitar ceros (redenominación): divide todos los montos guardados. Antes se aparta una copia.
+export async function quitarCeros(n) {
+  await apartar('antes-de-quitar-ceros');
+  const f = Math.pow(10, n), q = v => typeof v === 'number' ? Math.round(v / f * 100) / 100 : v;
+  const ve = S.negocio.pais === 'VE';
+  const pagosQ = ps => (ps || []).map(p => Object.assign({}, p, { v: q(p.v) }));
+  cambiar(s => {
+    const tasaQ = x => x ? Object.assign({}, x, { valor: q(x.valor) }) : x;
+    // Si la tasa nunca se leyó, se parte de la de referencia para no perderla.
+    const out = { tasa: Object.assign({}, s.tasa, { valor: q(s.tasa.valor || tasaDe()) }), tasas: Object.keys(s.tasas).reduce((o, k) => (o[k] = tasaQ(s.tasas[k]), o), {}), historialTasas: s.historialTasas.map(h => Object.assign({}, h, { v: q(h.v) })),
+      ventas: s.ventas.map(v => ve ? Object.assign({}, v, { tasa: q(v.tasa) }) : v), gastos: s.gastos.map(g => ve ? Object.assign({}, g, { tasa: q(g.tasa) }) : g) };
+    // En Venezuela los precios están en dólares: solo cambia la tasa. En los demás países se dividen todos los montos.
+    if (!ve) Object.assign(out, {
+      productos: s.productos.map(p => Object.assign({}, p, { p: q(p.p), c: q(p.c) })),
+      ventas: s.ventas.map(v => Object.assign({}, v, { total: q(v.total), imp: q(v.imp), igtf: q(v.igtf), recibido: q(v.recibido), items: v.items.map(it => Object.assign({}, it, { p: q(it.p), c: q(it.c) })), pagos: pagosQ(v.pagos) })),
+      abonos: s.abonos.map(a => Object.assign({}, a, { v: q(a.v), pagos: a.pagos ? pagosQ(a.pagos) : a.pagos })),
+      gastos: s.gastos.map(g => Object.assign({}, g, { v: q(g.v), pagos: g.pagos ? pagosQ(g.pagos) : g.pagos })),
+      clientes: s.clientes.map(c => Object.assign({}, c, { limite: q(c.limite) }))
+    });
+    return Object.assign(out, nota(s, 'Le quitó ' + n + ' ceros a la moneda'));
+  });
+}
+// Conciliación: marca como verificados los pagos cuya referencia aparece en el estado de cuenta del banco.
+export function verificarPagos(claves) {
+  if (!claves.length) return;
+  cambiar(s => Object.assign({ ventas: s.ventas.map(v => v.pagos.some((p, k) => claves.includes(v.id + ':' + k)) ? Object.assign({}, v, { pagos: v.pagos.map((p, k) => claves.includes(v.id + ':' + k) ? Object.assign({}, p, { ok: Date.now() }) : p) }) : v) }, nota(s, 'Verificó ' + claves.length + ' pagos con el banco')));
+}
 export async function empezarDeNuevo() {
   await apartar('antes-de-borrar');
   cambiar(() => Object.assign(vacio(), { ajustes: Object.assign({}, S.ajustes, { perfil: '' }) }));
@@ -373,9 +454,14 @@ export function resumen(desde, hasta, suc) {
   return m('re' + desde + hasta + suc, () => {
     const vs = ventasEntre(desde, hasta, suc);
     const porPago = {}, porHora = new Array(24).fill(0), porSuc = {}, porProd = {}, porPersona = {};
-    let total = 0, cost = 0, fiado = 0;
+    let total = 0, cost = 0, fiado = 0, totalAlt = 0, ganAlt = 0, repo = 0;
+    // En Venezuela y Argentina: lo mismo en la otra moneda (Bs o US$) con la tasa del día de cada venta.
+    const ve = S.negocio.pais === 'VE', alt = (x, t) => ve ? x * (t || tasaDe()) : x / (t || tasaDe());
+    const costoHoy = {}; S.productos.forEach(p => { costoHoy[p.id] = p.c; });
     vs.forEach(v => {
       total += v.total; cost += costo(v);
+      totalAlt += alt(v.total, v.tasa); ganAlt += alt(v.total - costo(v), v.tasa);
+      v.items.forEach(it => { repo += it.q * (it.p - (costoHoy[it.pid] != null ? costoHoy[it.pid] : it.c)); });
       fiado += fiadoDe(v);
       v.pagos.forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; });
       porHora[new Date(v.t).getHours()] += v.total;
@@ -384,7 +470,7 @@ export function resumen(desde, hasta, suc) {
       v.items.forEach(it => { const x = porProd[it.pid] || (porProd[it.pid] = { n: it.n, q: 0, v: 0, g: 0 }); x.q += it.q; x.v += it.q * it.p; x.g += it.q * (it.p - it.c); });
     });
     const n = vs.filter(v => !v.dev).length;
-    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0 };
+    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0, totalAlt, ganAlt, ganReposicion: repo };
   });
 }
 
@@ -393,14 +479,24 @@ export function serieDias(dias, suc) {
     const hoy0 = inicioDia(Date.now()), out = [];
     for (let d = dias - 1; d >= 0; d--) {
       const a = hoy0 - d * DIA, r = resumen(a, a + DIA, suc);
-      out.push({ t: a, total: r.total, ganancia: r.ganancia, porSuc: r.porSuc, n: r.n });
+      out.push({ t: a, total: r.total, ganancia: r.ganancia, porSuc: r.porSuc, n: r.n, totalAlt: r.totalAlt });
     }
     return out;
   });
 }
 
 export function deudaDe(cid) {
-  return m('de' + cid, () => vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0));
+  return m('de' + cid, () => {
+    // Fiado en dólares: se suma en dólares y se pasa a la moneda local con la tasa de hoy.
+    // Lo fiado antes de activarlo sigue en pesos.
+    if (S.negocio.pais !== 'VE') {
+      let pesos = 0, usd = 0;
+      vigentes().filter(v => v.cli === cid).forEach(v => v.pagos.forEach(p => { if (p.m === 'Fiado' || p.m === 'Saldo a favor') { if (p.fu != null) usd += p.fu; else pesos += p.v; } }));
+      S.abonos.filter(a => a.cli === cid).forEach(x => { if (x.fu != null) usd -= x.fu; else pesos -= x.v; });
+      return pesos + usd * tasaDe();
+    }
+    return vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0);
+  });
 }
 export function deudores() {
   return m('deudores', () => listaClientes().map(c => {
@@ -409,10 +505,14 @@ export function deudores() {
     const desde = fiados.length ? fiados[0].t : 0;
     const suyas = vigentes().filter(v => v.cli === c.id && !v.dev);
     const ultima = suyas.reduce((a, v) => Math.max(a, v.t), 0);
-    return Object.assign({}, c, { deuda: Math.max(0, deuda), desde, ultima, compras: suyas.length });
+    return Object.assign({}, c, { deuda: Math.max(0, deuda), saldo: Math.max(0, -deuda), desde, ultima, compras: suyas.length });
   }).sort((a, b) => b.deuda - a.deuda));
 }
 export function porPagar() { return m('pp', () => S.gastos.filter(g => !g.pagado).sort((a, b) => a.vence - b.vence)); }
+// Un gasto en la otra moneda, con la tasa de su día.
+export const gastoAlt = g => S.negocio.pais === 'VE' ? g.v * (g.tasa || tasaDe()) : g.v / (g.tasa || tasaDe());
 export function gastosEntre(desde, hasta) { return m('ge' + desde + hasta, () => S.gastos.filter(g => g.pagado && g.t >= desde && g.t < hasta)); }
+// Productos que se venden por debajo de lo que cuesta reponerlos (o casi sin ganancia).
+export function bajoCosto() { return m('bc', () => listaProductos().filter(p => p.c > 0 && p.p < p.c * 1.05)); }
 export function bajoMinimo() { return m('bm', () => listaProductos().filter(p => p.q != null && p.min > 0 && p.q < p.min)); }
 export function cierreDeHoy() { const k = diaClave(Date.now()); return S.cierres.find(c => c.dia === k) || null; }

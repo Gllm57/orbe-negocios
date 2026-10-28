@@ -47,14 +47,14 @@ export function Inventario() {
     <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
       <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
       <span class="crece" style="display:flex;flex-direction:column;gap:6px">
-        <span class="fila" style="gap:8px"><b class="crece corta" style="font-size:14px;font-weight:600">${p.n}</b><b class="num" style=${{ fontSize: '13px', color: e[2] }}>${p.q} und</b></span>
+        <span class="fila" style="gap:8px"><b class="crece corta" style="font-size:14px;font-weight:600">${p.n}</b>${vg && p.c > 0 && p.p < p.c * 1.05 ? html`<span class="pildora t-ros">Sin ganancia</span>` : null}<b class="num" style=${{ fontSize: '13px', color: e[2] }}>${p.q} und</b></span>
         <span class="barra-prog"><i style=${{ width: Math.min(100, Math.round(p.q / Math.max(1, p.min * 2) * 100)) + '%', background: e[2] }}></i></span>
         <span class="sub faint num" style="font-size:11px">${vg ? 'Costo ' + D.m(p.c) + ' · ' : ''}Precio ${D.m(p.p)}${vg ? ' · Ganas ' + (p.p ? Math.round((p.p - p.c) / p.p * 100) : 0) + ' %' : ''}</span>
       </span>
     </button>`; })}</div>`;
 
   if (tel) return html`
-    <div class="fila entra"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="btn2 chico acento toca" onClick=${() => editarP({})}>+ Agregar</button>`}</div>
+    <div class="fila entra" style="gap:8px"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="btn2 chico toca" onClick=${() => abrir('remarcar')}>Remarcar</button><button type="button" class="btn2 chico acento toca" onClick=${() => editarP({})}>+ Agregar</button>`}</div>
     ${Cifras}
     ${bajos.length > 0 && html`<button type="button" class="tarjeta fila toca entra" style="border:0;background:var(--amber-soft);box-shadow:none;color:var(--ink);text-align:left" onClick=${() => setFiltro(filtro === 'Por reponer' ? 'Todo' : 'Por reponer')}>
       <span class="ic t-amb"><${Icono} n="alerta" t=${18} /></span><span class="crece" style="display:flex;flex-direction:column"><b style="font-size:14px;font-weight:600">${bajos.length} ${bajos.length === 1 ? 'producto' : 'productos'} por debajo del mínimo</b><span class="sub">${filtro === 'Por reponer' ? 'Toca para ver todo' : 'Toca para verlos'}</span></span></button>`}
@@ -70,11 +70,11 @@ export function Inventario() {
       <div class="tarjeta cifra entra" style="--i:3"><span class="sub">Productos</span><span class="v num">${conStock.length}</span><span class="sub faint">con existencia</span></div>
     </div>
     <div class="pila">
-        <div class="fila"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 lleno toca" onClick=${() => editarP({})}>+ Producto</button>`}</div>
+        <div class="fila"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('remarcar')}><${Icono} n="etiqueta" t=${15} />Remarcar precios</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({})}>+ Producto</button>`}</div>
         <div class="tabla-caja"><table class="tabla">
           <thead><tr><th>Producto</th><th>Código</th><th class="der">Costo</th><th class="der">Precio</th><th class="der">Tienes</th><th class="der">Mínimo</th><th>Estado</th><th></th></tr></thead>
           <tbody>${lista.map((p, i) => { const e = estado(p); return html`<tr key=${p.id} style=${{ animationDelay: i * 25 + 'ms' }}>
-            <td><b style="font-weight:600">${p.n}</b></td><td class="muted num">${p.cod || '—'}</td>
+            <td><b style="font-weight:600">${p.n}</b>${p.usd > 0 ? html` <span class="pildora t-ver" title="Precio atado al dólar">US$ ${p.usd}</span>` : null}${vg && p.c > 0 && p.p < p.c * 1.05 ? html` <span class="pildora t-ros">Sin ganancia</span>` : null}</td><td class="muted num">${p.cod || '—'}</td>
             <td class="der num muted">${vg ? D.m(p.c) : '—'}</td><td class="der num">${D.m(p.p)}</td>
             <td class="der num"><b style=${{ color: e[2] }}>${p.q}</b></td><td class="der num muted">${p.min}</td>
             <td><span class=${'pildora ' + e[1]}>${e[0]}</span></td>
