@@ -296,31 +296,57 @@ function Cierre({ d, cerrar }) {
   const r = Object.assign({}, r0, { porPago });
   const gastosHoy = gastosEntre(hoy0, Date.now() + 1).reduce((a, g) => a + g.v, 0);
   const metodos = Object.keys(r.porPago).filter(k => k !== 'Fiado' && k !== 'Saldo a favor');
+  const efectivos = metodos.filter(esEfectivo), digitales = metodos.filter(k => !esEfectivo(k)).sort((a, b) => r.porPago[b] - r.porPago[a]);
   const [contado, setContado] = useState(() => { const o = {}; metodos.forEach(k => { o[k] = D.redondo(r.porPago[k]); }); return o; });
-  // Contar por billetes: cada forma en efectivo en su moneda (en Venezuela, $ y Bs por separado).
+  // Cada efectivo se cuenta en su moneda: en Venezuela, «Efectivo Bs» en bolívares; «Efectivo €» en euros.
+  const fmt2 = new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const enSu = k => { const mon = monedaEfectivo(P, k); return { mon, a: v => mon.eur ? D.aEur(v) : mon.otra ? D.aOtra(v, tasaMetodo(k)) : v, de: x => mon.eur ? D.deEur(x) : mon.otra ? D.deOtra(x, tasaMetodo(k)) : x, ver: x => mon.otra ? mon.s + ' ' + fmt2.format(x) : D.m(x) }; };
+  const [texto, setTexto] = useState(() => { const o = {}; efectivos.forEach(k => { const e = enSu(k); o[k] = String(Math.round(e.a(r.porPago[k]) * 100) / 100).replace('.', ','); }); return o; });
+  const ponContado = (k, vMain, txt) => { setContado(cc => Object.assign({}, cc, { [k]: Math.max(0, D.redondo(vMain)) })); setTexto(tt => Object.assign({}, tt, { [k]: txt != null ? txt : String(Math.round(enSu(k).a(Math.max(0, vMain)) * 100) / 100).replace('.', ',') })); };
+  // Contar por billetes.
   const [billetes, setBilletes] = useState({});
   const [abierto, setAbierto] = useState('');
   const contarBillete = (k, b, dd) => {
-    const mon = monedaEfectivo(P, k), bk = Object.assign({}, billetes[k] || {}); bk[b] = Math.max(0, (bk[b] || 0) + dd);
+    const bk = Object.assign({}, billetes[k] || {}); bk[b] = Math.max(0, (bk[b] || 0) + dd);
     const suma = Object.keys(bk).reduce((a, x) => a + Number(x) * bk[x], 0);
     setBilletes(Object.assign({}, billetes, { [k]: bk }));
-    setContado(Object.assign({}, contado, { [k]: D.redondo(mon.eur ? D.deEur(suma) : mon.otra ? D.deOtra(suma, tasaMetodo(k)) : suma) }));
+    ponContado(k, enSu(k).de(suma));
   };
-  const dif = metodos.filter(esEfectivo).reduce((a, k) => a + (contado[k] - D.redondo(r.porPago[k])), 0);
+  const dif = D.redondo(efectivos.reduce((a, k) => a + (contado[k] - D.redondo(r.porPago[k])), 0));
+  const totalDigital = digitales.reduce((a, k) => a + r.porPago[k], 0);
+  const estado = df => Math.abs(df) < 0.005 ? ['Cuadra', 't-ver'] : df < 0 ? ['Faltan ' + D.m(-df), 't-amb'] : ['Sobran ' + D.m(df), 't-azu'];
+  const cifras = [puede('ganancias') ? ['Ganancia', D.m(r.ganancia), 'var(--in)'] : ['Ventas', String(r.n), 'var(--ink)'], ['Fiado', D.m(r.fiado), 'var(--amber)'], ['Gastos', D.m(gastosHoy), 'var(--out)']];
   return html`<${Hoja} titulo="Cierre del día" onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
-      <span class="sub" style="margin-top:-6px">Cuenta lo que hay en la caja. Lo digital ya está sumado.</span>
-      <div class="tarjeta" style="background:var(--fill2);box-shadow:none;padding:4px 14px"><div class="lista">
-        ${metodos.length ? metodos.map(k => { const esp = D.redondo(r.porPago[k]), ef = esEfectivo(k), df = D.redondo(contado[k] - esp), mon = monedaEfectivo(P, k), bk = billetes[k] || {}; return html`<div key=${k} style="border-bottom:1px solid var(--line)"><div class="item" style="border:0">
-          <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${k}</b><span class="sub num" style=${{ color: ef ? (df === 0 ? 'var(--in)' : 'var(--amber)') : '' }}>${ef ? (df === 0 ? 'Esperado ' + D.m(esp) + ' · cuadra' : (df < 0 ? 'Faltan ' : 'Sobran ') + D.m(Math.abs(df))) : 'Ya confirmado'}</span></span>
-          ${ef ? html`<span class="fila" style="gap:6px"><button type="button" class="icono-btn chico toca" aria-label="Contar menos" onClick=${() => setContado(Object.assign({}, contado, { [k]: Math.max(0, D.redondo(contado[k] - D.paso)) }))}><${Icono} n="menos1" t=${14} g=${2.6} /></button><b class="num" style="min-width:84px;text-align:center">${D.m(contado[k])}</b><button type="button" class="icono-btn chico toca" aria-label="Contar más" onClick=${() => setContado(Object.assign({}, contado, { [k]: D.redondo(contado[k] + D.paso) }))}><${Icono} n="mas1" t=${14} g=${2.6} /></button></span>` : html`<b class="num">${D.m(esp)}</b>`}
-        </div>
-        ${ef && html`<button type="button" class="pago-resto toca" style="margin:-4px 0 8px" onClick=${() => setAbierto(abierto === k ? '' : k)}>${abierto === k ? 'Listo' : 'Contar por billetes (' + mon.s + ')'}</button>`}
-        ${ef && abierto === k && html`<div class="billetes entra">${billetesDe(mon.cod).map(b => html`<div class="billete"><span class="num">${mon.s} ${b.toLocaleString(P.loc)}</span><span class="fila" style="gap:4px"><button type="button" class="icono-btn chico toca" style="width:30px;height:30px" aria-label=${'Un billete menos de ' + b} onClick=${() => contarBillete(k, b, -1)}><${Icono} n="menos1" t=${12} g=${2.6} /></button><b class="num" style="min-width:22px;text-align:center">${bk[b] || 0}</b><button type="button" class="icono-btn chico toca" style="width:30px;height:30px" aria-label=${'Un billete más de ' + b} onClick=${() => contarBillete(k, b, 1)}><${Icono} n="mas1" t=${12} g=${2.6} /></button></span></div>`)}
-          ${mon.otra && html`<span class="sub num" style="grid-column:1/-1">Contado: ${mon.s} ${Object.keys(bk).reduce((a, x) => a + Number(x) * bk[x], 0).toLocaleString(P.loc)} = ${D.m(contado[k])}</span>`}</div>`}
-        </div>`; }) : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
-      </div></div>
-      <div class="rejilla-2">${[['Total vendido', r.total, 'var(--ink)'], puede('ganancias') ? ['Ganancia', r.ganancia, 'var(--in)'] : ['Ventas', r.n, 'var(--ink)', true], ['Fiado hoy', r.fiado, 'var(--amber)'], ['Gastos hoy', gastosHoy, 'var(--out)']].map(k => html`<div class="tarjeta cifra" style="background:var(--fill2);box-shadow:none;padding:12px"><span class="sub" style="font-size:11px">${k[0]}</span><b class="num" style=${{ color: k[2], fontSize: '17px' }}>${k[3] ? k[1] : D.m(k[1])}</b></div>`)}</div>`,
+      <div class="cierre-resumen">
+        <span class="sub">Vendido hoy · ${r.n} ${r.n === 1 ? 'venta' : 'ventas'}</span>
+        <b class="num cierre-total">${D.m(r.total)}</b>
+        ${D.dual && html`<span class="sub num">${D.s(r.total)}</span>`}
+        <div class="cierre-cifras">${cifras.map(k => html`<div><span class="sub">${k[0]}</span><b class="num" style=${{ color: k[2] }}>${k[1]}</b></div>`)}</div>
+      </div>
+
+      ${efectivos.length > 0 && html`<div class="cierre-seccion"><span class="cierre-tit"><${Icono} n="billete" t=${15} />Cuenta el efectivo</span>
+        ${efectivos.map(k => { const esp = D.redondo(r.porPago[k]), df = D.redondo(contado[k] - esp), e = enSu(k), bk = billetes[k] || {}, est = estado(df); return html`<div class="cierre-efectivo" key=${k}>
+          <div class="fila" style="gap:8px"><b class="crece" style="font-size:15px">${k}</b><span class=${'pildora ' + est[1]}>${est[0]}</span></div>
+          <span class="sub num">Esperado ${e.ver(e.a(esp))}${e.mon.otra ? ' · ' + D.m(esp) : ''}</span>
+          <div class="cierre-contador">
+            <button type="button" class="icono-btn toca" aria-label=${'Contar menos en ' + k} onClick=${() => ponContado(k, contado[k] - (e.mon.otra ? e.de(billetesDe(e.mon.cod)[1]) : D.paso))}><${Icono} n="menos1" t=${16} g=${2.6} /></button>
+            <label class="cierre-monto"><span class="sub">${e.mon.otra ? e.mon.s : P.s}</span><input class="num" type="text" inputmode="decimal" autocomplete="off" aria-label=${'Contado en ' + k} value=${texto[k]} onInput=${ev => ponContado(k, e.de(numero(ev.target.value)), ev.target.value)} /></label>
+            <button type="button" class="icono-btn toca" aria-label=${'Contar más en ' + k} onClick=${() => ponContado(k, contado[k] + (e.mon.otra ? e.de(billetesDe(e.mon.cod)[1]) : D.paso))}><${Icono} n="mas1" t=${16} g=${2.6} /></button>
+          </div>
+          ${e.mon.otra && html`<span class="sub num" style="text-align:center">= ${D.m(contado[k])}</span>`}
+          <button type="button" class=${'btn2 chico toca' + (abierto === k ? ' acento' : '')} style="align-self:center" onClick=${() => setAbierto(abierto === k ? '' : k)}>${abierto === k ? 'Listo' : 'Contar billetes de ' + e.mon.s}</button>
+          ${abierto === k && html`<div class="billetes entra">${billetesDe(e.mon.cod).map(b => html`<div class="billete"><span class="num">${e.mon.s} ${b.toLocaleString(P.loc)}</span><span class="fila" style="gap:4px"><button type="button" class="icono-btn chico toca" style="width:30px;height:30px" aria-label=${'Un billete menos de ' + b} onClick=${() => contarBillete(k, b, -1)}><${Icono} n="menos1" t=${12} g=${2.6} /></button><b class="num" style="min-width:22px;text-align:center">${bk[b] || 0}</b><button type="button" class="icono-btn chico toca" style="width:30px;height:30px" aria-label=${'Un billete más de ' + b} onClick=${() => contarBillete(k, b, 1)}><${Icono} n="mas1" t=${12} g=${2.6} /></button></span></div>`)}</div>`}
+        </div>`; })}
+      </div>`}
+
+      ${digitales.length > 0 && html`<div class="cierre-seccion"><span class="cierre-tit"><${Icono} n="check" t=${15} />Digital, ya confirmado</span>
+        <div class="cierre-digital">${digitales.map(k => html`<div class="fila" key=${k}><span class="simb"><${Icono} n=${simbolo(k)} t=${13} g=${2.2} /></span><span class="crece corta">${k}</span><b class="num">${D.m(r.porPago[k])}</b></div>`)}
+          <div class="fila cierre-suma"><span class="crece">Total digital</span><b class="num">${D.m(totalDigital)}</b></div></div>
+      </div>`}
+
+      ${metodos.length ? null : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
+      ${efectivos.length > 0 && html`<div class=${'cierre-resultado ' + (Math.abs(dif) < 0.005 ? 'ok' : 'mal')}><${Icono} n=${Math.abs(dif) < 0.005 ? 'check' : 'alerta'} t=${18} /><span class="crece">${Math.abs(dif) < 0.005 ? 'La caja cuadra' : (dif < 0 ? 'Faltan ' : 'Sobran ') + D.m(Math.abs(dif)) + ' en efectivo'}</span></div>`}`,
     pie: html`<button type="button" class="btn toca" onClick=${() => { const z = cerrarDia(contado, { total: r.total, ganancia: r.ganancia, dif, billetes, porPago: r.porPago }); c(() => { avisar(dif === 0 ? 'Día cerrado. Todo cuadra' : 'Día cerrado con ' + (dif < 0 ? 'faltante' : 'sobrante') + ' de ' + D.m(Math.abs(dif))); abrir('cierreZ', { id: z.id }); }); }}>Cerrar el día</button>
       ${S.cierres.length > 0 && Pie2('Cierres anteriores', () => c(() => abrir('cierres')))}`
   })} />`;

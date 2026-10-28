@@ -461,3 +461,24 @@ html.tel .oferta-btns .btn2 { flex: 1; min-height: 44px; }
 
 /* ---------- banderas circulares ---------- */
 .bandera { display: inline-block; flex-shrink: 0; border-radius: 50%; object-fit: cover; vertical-align: middle; background: var(--fill2); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent); }
+
+/* ---------- cierre del día ---------- */
+.cierre-resumen { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 2px; text-align: center; }
+.cierre-total { font-size: 34px; letter-spacing: -0.02em; line-height: 1.1; }
+.cierre-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 12px; }
+.cierre-cifras > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-radius: 14px; background: var(--fill2); min-width: 0; }
+.cierre-cifras .sub { font-size: 11px; }
+.cierre-cifras b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cierre-seccion { display: flex; flex-direction: column; gap: 10px; }
+.cierre-tit { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.cierre-efectivo { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 18px; background: var(--fill2); }
+.cierre-contador { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.cierre-monto { display: flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 14px; border-radius: 16px; background: var(--surface); border: 1.5px solid var(--line); transition: border-color .2s ease; }
+.cierre-monto:focus-within { border-color: var(--accent); }
+.cierre-monto input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 24px; font-weight: 700; text-align: center; color: var(--ink); }
+.cierre-digital { display: flex; flex-direction: column; gap: 2px; padding: 6px 14px; border-radius: 18px; background: var(--fill2); }
+.cierre-digital > .fila { gap: 10px; min-height: 40px; font-size: 14px; }
+.cierre-suma { border-top: 1px solid var(--line); margin-top: 2px; font-weight: 600; }
+.cierre-resultado { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 16px; font-weight: 600; font-size: 15px; }
+.cierre-resultado.ok { background: var(--in-soft); color: var(--in-text); }
+.cierre-resultado.mal { background: var(--amber-soft); color: var(--amber-text); }
