@@ -13,16 +13,16 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="../icons/icono.svg">
+<link rel="icon" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 :root {
   --bg: #f4f3fb; --surface: #ffffff; --ink: #1a1733; --muted: #5f5c7a; --line: #dedcf0;
   --primary: #6a5cf2; --primary-ink: #fff; --accent-soft: rgba(143,132,255,.16); --accent-text: #5b4fe0;
   --wa: #128c5e; --wa-ink: #fff; --orb1: #8f84ff; --orb2: #3ddc9f; --orb3: #f0a020;
-  --display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
-  --body: "Figtree", system-ui, -apple-system, sans-serif;
+  --display: "Sora", "Manrope", system-ui, sans-serif;
+  --body: "Manrope", system-ui, -apple-system, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -33,7 +33,7 @@
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
 .wrap { max-width: 1080px; margin: 0 auto; padding-left: max(18px, env(safe-area-inset-left)); padding-right: max(18px, env(safe-area-inset-right)); }
-h1, h2, h3 { font-family: var(--display); line-height: 1.08; text-wrap: balance; margin: 0; letter-spacing: -.02em; }
+h1, h2, h3 { font-family: var(--display); line-height: 1.08; text-wrap: balance; margin: 0; letter-spacing: -.035em; }
 h1 { font-size: clamp(2.3rem, 6vw, 4.2rem); font-weight: 800; }
 h2 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); font-weight: 700; }
 h3 { font-size: 1.25rem; font-weight: 700; }
@@ -47,8 +47,8 @@ a { color: var(--accent-text); }
 .btn-ghost { background: var(--accent-soft); color: var(--accent-text); }
 
 header.top { display: flex; justify-content: space-between; align-items: center; padding-block: 18px; }
-.marca { display: flex; align-items: center; gap: 10px; font: 700 1.1rem var(--display); }
-.marca img { width: 30px; height: 30px; }
+.marca { display: flex; align-items: center; gap: 10px; font: 800 1.15rem var(--display); letter-spacing: -.03em; }
+.marca img { width: 38px; height: 38px; }
 
 .hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; padding-block: 40px 70px; }
 .hero p.lead { font-size: 1.2rem; color: var(--muted); max-width: 34ch; margin-top: 18px; }
@@ -125,7 +125,7 @@ footer { padding-block: 40px 60px; color: var(--muted); font-size: .9rem; }
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="marca"><img src="../icons/icono.svg" alt=""> Orbe Estudio</div>
+    <div class="marca"><img src="logo.svg" alt=""> Orbe Estudio</div>
     <a class="btn btn-ghost" href="#cotizar">Cotizar gratis</a>
   </header>
 
