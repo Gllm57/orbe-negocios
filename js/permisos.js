@@ -9,6 +9,7 @@ export const PERMISOS = [
   { k: 'ganancias', n: 'Ver ganancias, costos y reportes', g: 'Dinero', i: 'grafico' },
   { k: 'gastos', n: 'Anotar gastos y pagar cuentas', g: 'Dinero', i: 'dinero' },
   { k: 'cierre', n: 'Hacer el cierre del día', g: 'Dinero', i: 'candado' },
+  { k: 'tasas', n: 'Cambiar las tasas del dólar y del euro', g: 'Dinero', i: 'sube' },
   { k: 'productos', n: 'Agregar productos y cambiar precios', g: 'Inventario', i: 'etiqueta' },
   { k: 'reponer', n: 'Reponer inventario', g: 'Inventario', i: 'caja' },
   { k: 'ajustes', n: 'Cambiar los ajustes del negocio', g: 'Administración', i: 'ajustes' },

@@ -7,6 +7,7 @@ import { PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTR
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo } from '../ui.js';
 import { Monto, Linea } from '../graficos.js';
 import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
+import { infoTasas } from './tasas.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
 const VENCE = [{ v: 7, n: 'En 7 días' }, { v: 15, n: 'En 15 días' }, { v: 30, n: 'En 30 días' }];
@@ -90,7 +91,8 @@ function Cobrar({ d, cerrar }) {
   const fmt2 = x => new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(x);
   return html`<${Hoja} titulo=${T.vender === 'Pedido' ? 'Cobrar pedido' : 'Cobrar'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><b class="num" style="font-size:40px;letter-spacing:-0.02em">${D.m(totalCobrar)}</b>${D.dual && html`<span class="sub num">${D.s(totalCobrar)}${S.negocio.euro ? ' · ' + D.e(totalCobrar) : ''}</span>`}${d.tt.txt && html`<span class="sub faint num">${d.tt.txt}: ${D.m(d.tt.imp)}</span>`}${igtf > 0 && html`<span class="sub num entra" style="color:var(--amber-text)">Incluye IGTF 3 % por pago en divisas: ${D.m(igtf)}</span>`}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><b class="num" style="font-size:40px;letter-spacing:-0.02em">${D.m(totalCobrar)}</b>${D.dual && html`<span class="sub num">${D.s(totalCobrar)}${S.negocio.euro ? ' · ' + D.e(totalCobrar) : ''}</span>`}${d.tt.txt && html`<span class="sub faint num">${d.tt.txt}: ${D.m(d.tt.imp)}</span>`}${igtf > 0 && html`<span class="sub num entra" style="color:var(--amber-text)">Incluye IGTF 3 % por pago en divisas: ${D.m(igtf)}</span>`}
+        ${D.dual && html`<button type="button" class="enlace-tasa toca" onClick=${() => c(() => abrir('tasa', { volver: d }))}>${nombreTasa(P, S.tasa)} ${P.id === 'VE' ? 'Bs' : P.s} ${fmt2(D.tasa)}${S.negocio.euro ? ' · € ' + (P.id === 'VE' ? 'Bs ' : P.s + ' ') + fmt2(D.tasaEur) : ''} · ver o cambiar</button>`}</div>
       ${fp.vista({ desliza: tel, calido: v => v === fiadoN || v === 'Saldo a favor', ayuda: 'Ej.: una parte por ' + (S.negocio.pays[0] || '') + ' y otra por ' + (S.negocio.pays[S.negocio.pays.length - 1] || '') + (puede('fiado') ? ', o una parte fiada' : '') })}
       ${efectivo && html`<div class="campo entra"><span>¿Con cuánto te paga?</span>
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">${opcionesPago.map(o => html`<button type="button" class=${'chip toca' + (Math.abs(o.v - dado) < 0.005 ? ' on' : '')} style="justify-content:center;padding:0 4px;color:var(--ink)" onClick=${() => setRecibe(o.v)}>${o.ver}</button>`)}</div>
@@ -541,7 +543,10 @@ function Negocio({ d, cerrar }) {
 
 // ---------- tasas del dólar (Venezuela y Argentina) ----------
 function Tasa({ d, cerrar }) {
-  const { S, P, D, enLinea } = useApp();
+  const { S, P, D, enLinea, puede, abrir } = useApp();
+  // Todos pueden ver las tasas; solo las cuentas habilitadas («Cambiar las tasas») pueden cambiarlas.
+  const editar = puede('tasas');
+  const resumenTasas = infoTasas(S, P, D);
   const ve = P.id === 'VE', mon = ve ? 'Bs ' : P.s + ' ', extras = TASAS_EXTRA[P.id] || [];
   // Solo Venezuela y Argentina tienen de dónde leer la tasa sola; en los demás países se escribe a mano.
   const conFuente = P.id === 'VE' || P.id === 'AR';
@@ -570,17 +575,35 @@ function Tasa({ d, cerrar }) {
     cambiarNegocio({ tasaPago: porPago });
     c(() => avisar('Tasas guardadas'));
   };
+  // Leer de una vez todas las que tienen de dónde leerse.
+  const leerTodas = async () => {
+    if (!enLinea) { avisar('Sin internet: escríbelas a mano'); return; }
+    setLeyendo('todas');
+    const ks = ['principal'].concat(extras.filter(x => x.auto).map(x => x.k), S.negocio.euro ? ['euro'] : []);
+    let n = 0;
+    for (const k of ks) { const v = await leerTasa(P.id, k === 'principal' ? fuente : k); if (v) { n++; if (k === 'principal') setValor(String(v).replace('.', ',')); else if (k === 'euro') setEuro(String(v).replace('.', ',')); else setOtras(o => Object.assign({}, o, { [k]: String(v).replace('.', ',') })); } }
+    setLeyendo(''); avisar(n ? n + (n === 1 ? ' tasa leída' : ' tasas leídas') + '. Toca Guardar' : 'No se pudo leer. Prueba más tarde o escríbelas a mano');
+  };
+  const ESTADO = { hoy: ['Leída hoy', 'var(--in-text)'], 'a mano': ['A mano', 'var(--accent-text)'], vieja: ['Sin actualizar', 'var(--amber-text)'], estimada: ['Estimada', 'var(--amber-text)'] };
   // Historial de la tasa principal: últimos 30 días.
   const hist = (S.historialTasas || []).filter(h => h.f === (S.tasa.fuente || 'oficial')).slice(-30);
   const cambio = hist.length > 1 ? (hist[hist.length - 1].v / hist[hist.length - 2].v - 1) * 100 : 0;
   const mes = hist.length > 1 ? (hist[hist.length - 1].v / hist[0].v - 1) * 100 : 0;
-  return html`<${Hoja} titulo=${ve ? 'Tasas del dólar' : 'Cotización del dólar'} onCerrar=${cerrar} contenido=${c => ({
+  return html`<${Hoja} titulo=${'Tasas de hoy'} onCerrar=${() => { cerrar(); if (d.volver) setTimeout(() => abrir('cobrar', d.volver), 0); }} contenido=${c => ({
     cuerpo: html`
-      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px"><span class="sub">1 dólar</span><b class="num" style="font-size:36px;letter-spacing:-0.02em">${mon + nf.format(t || D.tasa)}</b><span class="sub faint">${!t ? 'Valor de referencia: todavía no se ha leído' : modo === 'manual' ? 'Escrita a mano' : (ve ? 'Oficial del BCV' : P.id === 'AR' ? 'Dólar ' + FUENTES_AR.find(x => x.v === fuente).n.toLowerCase() : 'Escrita a mano') + (S.tasa.fecha ? ' · ' + S.tasa.fecha : '')}</span></div>
+      <div class="tasas-resumen">${resumenTasas.map((x, i) => html`<div class=${'tasa-tarjeta' + (i === 0 ? ' principal' : '')} key=${x.k}>
+        <span class="sub">${x.n}</span>
+        <b class="num">${mon + nf.format(x.v)}</b>
+        <span class="fila" style="gap:6px;flex-wrap:wrap"><span class="num" style=${{ fontSize: '12px', fontWeight: 600, color: ESTADO[x.estado][1] }}>${ESTADO[x.estado][0]}</span>${x.cambio != null && Math.abs(x.cambio) >= 0.05 ? html`<span class="num" style=${{ fontSize: '12px', fontWeight: 600, color: x.cambio > 0 ? 'var(--amber-text)' : 'var(--in-text)' }}>${x.cambio > 0 ? '▲' : '▼'} ${Math.abs(x.cambio).toFixed(1).replace('.', ',')} %</span>` : null}</span>
+      </div>`)}</div>
+      ${editar && conFuente && html`<button type="button" class=${'btn2 acento toca' + (leyendo ? ' apagado' : '')} onClick=${leerTodas}><${Icono} n="descarga" t=${15} />${leyendo === 'todas' ? 'Leyendo…' : 'Actualizar todas de internet'}</button>`}
+      ${!editar && html`<div class="tarjeta fila" style="background:var(--fill2);box-shadow:none;gap:10px"><${Icono} n="candado" t=${16} c="var(--muted)" /><span class="sub" style="line-height:1.45">Puedes verlas, pero cambiarlas solo lo hacen las cuentas habilitadas. Pídeselo al dueño.</span></div>`}
       ${hist.length > 2 && html`<div class="tarjeta" style="background:var(--fill2);box-shadow:none;padding:12px 14px">
         <div class="fila" style="margin-bottom:6px"><span class="sub crece">Últimos ${hist.length} días</span><span class="pildora" style=${{ background: cambio > 0.5 ? 'var(--amber-soft)' : 'var(--in-soft)', color: cambio > 0.5 ? 'var(--amber-text)' : 'var(--in-text)' }}>${cambio >= 0 ? '+' : ''}${cambio.toFixed(1).replace('.', ',')} % hoy · ${mes >= 0 ? '+' : ''}${mes.toFixed(1).replace('.', ',')} % en el mes</span></div>
         <${Linea} datos=${hist.map(h => ({ l: h.dia.slice(8) + '/' + h.dia.slice(5, 7), v: h.v, tip: mon + nf.format(h.v) }))} alto=${100} id="tasa" ajustar />
       </div>`}
+      ${editar && html`<div class="pila" style="gap:14px">
+      <span class="sub" style="font-weight:600;margin-top:4px">Cambiar</span>
       ${conFuente && html`<div class="segmento" style="width:100%">${[['auto', 'Automática'], ['manual', 'A mano']].map(o => html`<button type="button" style="flex:1" class=${modo === o[0] ? 'on' : ''} onClick=${() => setModo(o[0])}>${o[1]}</button>`)}</div>`}
       ${P.id === 'AR' && html`<div class="campo"><span>¿Qué dólar muestras?</span><${Chips} opciones=${FUENTES_AR} valor=${fuente} onCambio=${v => { setFuente(v); if (modo === 'auto') leerYa('principal', v); }} /></div>`}
       ${modo === 'manual' ? html`<label class="campo entra"><span>Tasa (${ve ? 'bolívares' : P.cur} por dólar)</span><input class="grande num" type="text" inputmode="decimal" value=${valor} placeholder="0" onInput=${e => setValor(e.target.value)} /></label>`
@@ -597,8 +620,9 @@ function Tasa({ d, cerrar }) {
           <div class="pila" style="gap:6px">${S.negocio.pays.map(m => html`<div class="pago-linea" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
             <span class="fila" style="gap:8px;font-size:14px;font-weight:600;min-width:0"><span class="simb"><${Icono} n=${simbolo(m)} t=${13} g=${2.2} /></span><span class="corta">${m}</span></span>
             <label class="pago-forma"><select style="padding-left:14px" value=${porPago[m] || ''} aria-label=${'Tasa para ' + m} onChange=${e => setPorPago(Object.assign({}, porPago, { [m]: e.target.value || undefined }))}>${[{ k: '', n: ve ? 'Tasa BCV' : 'Principal' }].concat(extras).map(x => html`<option value=${x.k}>${x.n}</option>`)}</select></label></div>`)}</div>
-          <span class="sub faint" style="line-height:1.4">Al cobrar en ${ve ? 'bolívares' : 'dólares'} con esa forma de pago, Orbe usa su tasa.</span></div>`}`,
-    pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar</button>`
+          <span class="sub faint" style="line-height:1.4">Al cobrar en ${ve ? 'bolívares' : 'dólares'} con esa forma de pago, Orbe usa su tasa.</span></div>`}
+      </div>`}`,
+    pie: editar ? html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar</button>` : html`<button type="button" class="btn2 toca" style="min-height:50px;border-radius:25px" onClick=${() => c()}>Listo</button>`
   })} />`;
 }
 

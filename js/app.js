@@ -3,6 +3,7 @@ import { html, render, useState, useEffect } from './lib/preact-htm.js';
 import { Ctx } from './ctx.js';
 import { iniciarDatos, useDatos, leer, guardarTasa, guardarTasaExtra, tasaEuro, diaClave, bajoMinimo, deudores, porPagar, perfilActual, salir, guardarPerfil } from './datos.js';
 import { Recorrido } from './recorrido.js';
+import { ChipTasa } from './pantallas/tasas.js';
 import { puede, rolDe } from './permisos.js';
 import { pais, tipo, dinero, leerTasa } from './paises.js';
 import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS } from './ui.js';
@@ -146,6 +147,7 @@ function App() {
       <div class="principal">
         <div class="barra-sup">
           <div class="crece"><h1>${valida === 'hoy' ? saludo() : nombreSec(valida)}</h1><span class="sub">${subtitulo(valida, ctx)}</span></div>
+          <${ChipTasa} />
           <label class="buscador"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" aria-label="Buscar" placeholder="Buscar producto o cliente" onKeyDown=${e => { if (e.key === 'Enter' && e.target.value.trim()) { abrir('buscar', { q: e.target.value.trim() }); } }} /><span class="tecla">Enter</span></label>
           ${E && (valida === 'hoy' || valida === 'vender' || valida === 'reportes') && html`<div class="segmento" role="group" aria-label="Sucursal">${[''].concat(S.negocio.sucursales).map(x => html`<button type="button" class=${suc === x ? 'on' : ''} aria-pressed=${suc === x ? 'true' : 'false'} onClick=${() => setSuc(x)}>${x || 'Todas'}</button>`)}</div>`}
           ${valida !== 'vender' && pd('vender') && html`<button type="button" class="btn2 lleno toca" onClick=${() => ir('vender')}><${Icono} n="mas1" t=${16} g=${2.4} />${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</button>`}

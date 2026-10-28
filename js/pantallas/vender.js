@@ -4,6 +4,7 @@ import { useApp } from '../ctx.js';
 import { Icono, avisar, TONOS, hora } from '../ui.js';
 import { resumen, inicioDia, listaProductos, sigNumero } from '../datos.js';
 import { FilaVenta } from './hojas.js';
+import { BarraTasas } from './tasas.js';
 import { Reparto, Monto, color } from '../graficos.js';
 
 // Impuestos: cada producto puede tener su tasa (general, reducida o exento). Se suman por tasa.
@@ -86,6 +87,7 @@ export function Vender() {
 
   if (tel) return html`
     <div class="fila entra"><h1 class="titulo crece">${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</h1><span class="sub">Toca para sumar</span></div>
+    <${BarraTasas} />
     <label class="buscador entra" style="width:100%;background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder="Buscar" aria-label="Buscar producto" /></label>
     ${Grilla}
     <div class="tarjeta pila entra">${n ? Lineas : null}${Total}</div>

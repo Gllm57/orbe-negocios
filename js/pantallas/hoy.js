@@ -8,6 +8,7 @@ import { Icono, LogoOrbe, iniciales, hora, fechaCorta } from '../ui.js';
 import { nombreTasa } from '../paises.js';
 import { FilaVenta } from './hojas.js';
 import { OfertaRecorrido } from '../recorrido.js';
+import { BarraTasas } from './tasas.js';
 
 const DIA = 86400000;
 
@@ -31,11 +32,11 @@ export function Hoy() {
   if (deben.length) pendientes.push({ i: 'campana', t: 't-amb', txt: deben.length + (deben.length === 1 ? ' cliente te debe ' : ' clientes te deben ') + D.m(debenTot), sub: 'Mándales el recordatorio por WhatsApp', go: () => ir('clientes') });
   if (bajos.length) pendientes.push({ i: 'caja', t: 't-azu', txt: bajos.length + (bajos.length === 1 ? ' producto por debajo del mínimo' : ' productos por debajo del mínimo'), sub: bajos.slice(0, 2).map(p => p.n).join(', '), go: () => ir('inventario') });
   if (pp.length && puede('gastos')) pendientes.push({ i: 'calendario', t: 't-ros', txt: pp[0].n + ': ' + D.m(pp[0].v), sub: venceTxt(pp[0].vence), go: () => ir(tel ? 'mas' : 'gastos') });
-  if (D.dual) pendientes.push({ i: 'sube', t: 't-vio', txt: nombreTasa(P, S.tasa) + ': ' + (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa), sub: S.tasa.modo === 'manual' ? 'Escrita a mano' : S.tasa.valor && S.tasa.fecha === diaClave(Date.now()) ? 'Leída hoy de internet' : 'Sin internet: se usa la última guardada', go: puede('ajustes') ? () => abrir('tasa') : null });
-  if (D.dual && S.negocio.euro) pendientes.push({ i: 'sube', t: 't-azu', txt: 'Euro: ' + (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasaEur), sub: S.tasas.euro && S.tasas.euro.valor ? (S.tasas.euro.modo === 'manual' ? 'Escrita a mano' : 'Leída ' + (S.tasas.euro.fecha === diaClave(Date.now()) ? 'hoy' : 'el ' + S.tasas.euro.fecha)) : 'Estimada con el dólar: léela o escríbela', go: puede('ajustes') ? () => abrir('tasa') : null });
+  if (D.dual) pendientes.push({ i: 'sube', t: 't-vio', txt: nombreTasa(P, S.tasa) + ': ' + (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasa), sub: S.tasa.modo === 'manual' ? 'Escrita a mano' : S.tasa.valor && S.tasa.fecha === diaClave(Date.now()) ? 'Leída hoy de internet' : 'Sin internet: se usa la última guardada', go: () => abrir('tasa') });
+  if (D.dual && S.negocio.euro) pendientes.push({ i: 'sube', t: 't-azu', txt: 'Euro: ' + (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasaEur), sub: S.tasas.euro && S.tasas.euro.valor ? (S.tasas.euro.modo === 'manual' ? 'Escrita a mano' : 'Leída ' + (S.tasas.euro.fecha === diaClave(Date.now()) ? 'hoy' : 'el ' + S.tasas.euro.fecha)) : 'Estimada con el dólar: léela o escríbela', go: () => abrir('tasa') });
   // La tasa saltó desde ayer: conviene revisar precios (o, en Venezuela, la tasa con la que cobras).
   if (D.dual) { const h = (S.historialTasas || []).filter(x => x.f === (S.tasa.fuente || 'oficial')); const q = h.length > 1 ? (h[h.length - 1].v / h[h.length - 2].v - 1) * 100 : 0;
-    if (Math.abs(q) >= 3) pendientes.unshift({ i: 'alerta', t: 't-amb', txt: 'El dólar ' + (q > 0 ? 'subió ' : 'bajó ') + Math.abs(q).toFixed(1).replace('.', ',') + ' % desde ayer', sub: P.id === 'VE' ? 'Revisa las tasas con las que cobras' : 'Revisa tus precios', go: puede('productos') && P.id !== 'VE' ? () => abrir('remarcar') : puede('ajustes') ? () => abrir('tasa') : null }); }
+    if (Math.abs(q) >= 3) pendientes.unshift({ i: 'alerta', t: 't-amb', txt: 'El dólar ' + (q > 0 ? 'subió ' : 'bajó ') + Math.abs(q).toFixed(1).replace('.', ',') + ' % desde ayer', sub: P.id === 'VE' || !puede('productos') ? 'Revisa las tasas con las que cobras' : 'Revisa tus precios', go: puede('productos') && P.id !== 'VE' ? () => abrir('remarcar') : () => abrir('tasa') }); }
   const sinGan = bajoCosto();
   if (sinGan.length && puede('productos')) pendientes.push({ i: 'etiqueta', t: 't-ros', txt: sinGan.length + (sinGan.length === 1 ? ' producto casi no deja ganancia' : ' productos casi no dejan ganancia'), sub: sinGan.slice(0, 2).map(p => p.n).join(', ') + ': cuesta reponerlos casi lo que cobras', go: () => abrir('remarcar', { alcance: 'margen' }) });
   if (S.negocio.pedirRef && puede('ajustes')) { const n = vigentes().filter(v => v.t > Date.now() - 7 * DIA).reduce((a, v) => a + v.pagos.filter(p => p.ref && !p.ok && esElectronico(p.m)).length, 0);
@@ -64,6 +65,7 @@ export function Hoy() {
       <span class="crece"><b class="corta">${S.negocio.nombre}</b><span class="sub corta">${new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${P.f} ${E ? (suc || 'Todos los locales') : T.n}</span></span>
       <span class="pildora" style=${{ background: enLinea ? 'var(--in-soft)' : 'var(--amber-soft)', color: enLinea ? 'var(--in-text)' : 'var(--amber-text)' }}><span class="punto"></span>${enLinea ? 'En línea' : 'Sin internet'}</span>
     </header>
+    <${BarraTasas} />
     <${OfertaRecorrido} />
     ${E && html`<div class="chips desliza">${[''].concat(S.negocio.sucursales).map(x => html`<button type="button" class=${'chip chico toca' + (suc === x ? ' on' : '')} onClick=${() => setSuc(x)}>${x || 'Todas'}</button>`)}</div>`}
     <section class="tarjeta entra" data-tour="resumen" style="--i:1;background:linear-gradient(160deg, color-mix(in srgb, var(--c1) 26%, var(--surface)), var(--surface));display:flex;flex-direction:column;gap:12px">

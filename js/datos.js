@@ -15,6 +15,8 @@ function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
   // El permiso de anular llegó después: administrador y encargado lo tienen de entrada.
   d.roles = d.roles.map(r => r.p && r.p.anular === undefined && (r.id === 'admin' || r.id === 'encargado') ? Object.assign({}, r, { p: Object.assign({}, r.p, { anular: true }) }) : r);
+  // Cambiar las tasas llegó después: de entrada solo el administrador (y el dueño, que siempre puede todo).
+  d.roles = d.roles.map(r => r.p && r.p.tasas === undefined ? Object.assign({}, r, { p: Object.assign({}, r.p, { tasas: r.id === 'admin' }) }) : r);
   if (d.negocio && (!Array.isArray(d.perfiles) || !d.perfiles.length)) { d.perfiles = [{ id: 'u0', n: 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }]; d.ajustes = Object.assign({}, d.ajustes, { perfil: 'u0' }); }
   if (!Array.isArray(d.registro)) d.registro = [];
   if (!d.tasa || typeof d.tasa !== 'object' || (d.tasaVE && !d.tasa.valor)) d.tasa = { modo: 'auto', valor: d.tasaVE || 0, fuente: 'oficial', fecha: d.tasaFecha || '' };
