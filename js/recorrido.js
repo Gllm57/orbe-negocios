@@ -15,7 +15,8 @@ function pasosPara({ S, T, tel, puede, ver, E }) {
       : { sec: 'hoy', sel: '.cifras', titulo: 'Tu panel', texto: 'Lo vendido hoy, lo que ganaste, lo que te deben y lo que tienes por pagar. Todo se actualiza al instante.' },
     tel ? { sec: 'hoy', sel: '[data-tour=accesos]', titulo: 'Lo de todos los días', texto: 'Desde aquí vendes, anotas un gasto o haces el cierre del día con un toque.' } : null,
     { sec: 'hoy', sel: '[data-tour=pendientes]', titulo: 'Pendientes de hoy', texto: 'Orbe te avisa a quién cobrarle, qué reponer, qué cuentas vencen' + (dual ? ' y la tasa del dólar' : '') + '. Toca cualquiera para resolverlo.' },
-    tel ? { sel: '.nav-tel', titulo: 'Las secciones', texto: 'Abajo cambias de sección. Solo ves las que tu perfil tiene permitidas.' }
+    tel ? { sel: '.nav-tel', titulo: 'Las secciones', texto: 'Abajo cambias de sección. Solo ves las que tu perfil tiene permitidas.' } : null,
+    tel ? { sel: '.boton-orbe', titulo: 'El botón Orbe', texto: 'Tócalo para crear una venta, una orden, un gasto o un cliente, y para ir a Clientes, Órdenes, Reportes y Equipo.' }
       : { sel: '.lateral nav', titulo: 'El menú', texto: 'Ordenado en Día a día, Operación y Gestión. Los números de colores son cosas pendientes.' },
     !tel ? { sel: '.barra-sup .buscador', titulo: 'Buscar', texto: 'Escribe un producto o un cliente y pulsa Enter. Lo encuentras desde cualquier pantalla.' } : null,
     ver('vender') && (tel

@@ -43,8 +43,7 @@ function Ajustes() {
       ${Dato('Tipo', T.n)}${Dato('Tamaño', n.escala === 'empresa' ? 'Empresa' : 'Negocio')}
       <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('negocio')}><${Icono} n="lapiz" t=${14} />Cambiar datos</button></div>`, 0),
     Tarjeta('Órdenes de trabajo y pedidos', 'lista', html`
-      <${Interruptor} on=${!!n.ordenes} onCambio=${v => { cambiarNegocio({ ordenes: v }, (v ? 'Activó' : 'Desactivó') + ' las órdenes de trabajo y pedidos'); avisar(v ? (tel ? 'Listo: «Órdenes» está en la barra de abajo. Clientes pasó a Más.' : 'Listo: «Órdenes» está en el menú') : 'Órdenes desactivadas (las guardadas no se borran)'); }} titulo="Usar órdenes" sub="Para talleres, reparaciones, encargos y pedidos con fecha de entrega, anticipo y seguimiento." />
-      ${n.ordenes && html`<label class="campo entra" style="margin-top:6px"><span>Condiciones que salen en la orden impresa y en el PDF</span><textarea rows="3" value=${n.condOrden != null ? n.condOrden : COND_ORDEN} onChange=${e => cambiarNegocio({ condOrden: e.target.value.trim() })}></textarea></label>
+      ${html`<p class="sub" style="margin:4px 0 8px;line-height:1.45">Siempre activas: las creas desde el botón Orbe del centro o desde Órdenes.</p><label class="campo" style="margin-top:6px"><span>Condiciones que salen en la orden impresa y en el PDF</span><textarea rows="3" value=${n.condOrden != null ? n.condOrden : COND_ORDEN} onChange=${e => cambiarNegocio({ condOrden: e.target.value.trim() })}></textarea></label>
         <div class="chips" style="margin-top:8px"><button type="button" class="btn2 chico acento toca" onClick=${() => ir('ordenes')}>Ir a Órdenes</button></div>`}`, 0),
     Tarjeta(n.sucursales.length > 1 ? 'Locales y sucursales' : 'Tu local', 'edificio', html`
       ${n.sucursales.length > 1 ? n.sucursales.map((x, k) => Dato('Local ' + (k + 1), x)) : html`<p class="sub" style="margin:4px 0 10px;line-height:1.45">Tienes un solo local, así que Orbe no te muestra sucursales. Si abres otro, agrégalo aquí.</p>`}
@@ -113,7 +112,6 @@ export function Mas() {
       ${puede('gastos') && html`<button type="button" class="btn2 rojo toca" style="min-height:52px" onClick=${() => abrir('gasto')}>Anotar gasto</button>`}
       ${puede('cierre') && html`<button type="button" class="btn2 acento toca" style="min-height:52px" onClick=${() => abrir('cierre')}>Cierre del día</button>`}
       ${puede('vender') && html`<button type="button" class="btn2 toca" style="min-height:52px" onClick=${() => abrir('caja')}><${Icono} n="billete" t=${16} />Caja y turnos</button>`}
-      ${S.negocio.ordenes && puede('ordenes') && html`<button type="button" class="btn2 verde toca" style="min-height:52px" onClick=${() => ir('clientes')}><${Icono} n="personas" t=${16} />Clientes</button>`}
     </div>
     ${puede('gastos') && html`${b.PorPagar}${b.Mes}${b.Recientes}`}
     <h2 class="sub" style="font-size:13px;margin:6px 4px -4px">Ajustes</h2>

@@ -620,3 +620,53 @@ html.tel .oferta-btns .btn2 { flex: 1; min-height: 44px; }
 .factura-fila.fuera { opacity: .5; }
 .factura-fila input, .factura-fila select { min-height: 38px; border-radius: 11px; border: 1.5px solid var(--line); background: var(--surface); font-size: 14px; padding: 0 9px; width: 100%; min-width: 0; color: var(--ink); }
 .factura-fila .casilla { border: 0; padding: 0; flex: none; }
+
+/* Botón Orbe (celular): el logo en el centro de la barra; al tocarlo sube el panel */
+.nav-hueco { pointer-events: none; }
+.boton-orbe { position: fixed; left: 50%; bottom: calc(var(--nav-abajo) + 14px); z-index: 46; width: 64px; height: 64px; margin-left: -32px; border: 0; border-radius: 50%; padding: 0; background: #16142a; display: grid; place-items: center; cursor: pointer;
+  box-shadow: 0 10px 24px rgba(22, 20, 42, .32), 0 0 0 5px var(--bg); transition: transform .45s var(--bounce), opacity .25s ease, box-shadow .3s ease; }
+.boton-orbe > * { grid-area: 1 / 1; }
+.boton-orbe:active { transform: scale(.93); }
+.boton-orbe.dentro { box-shadow: 0 10px 24px rgba(22, 20, 42, .32), 0 0 0 5px var(--bg), 0 0 0 8px var(--accent); }
+.bo-logo { transform-origin: 46px 46px; transition: transform .55s var(--spring), opacity .3s ease; }
+.bo-logo circle { fill: none; stroke-width: 7; }
+.bo-x { display: grid; place-items: center; opacity: 0; transform: rotate(-90deg) scale(.4); transition: opacity .25s ease, transform .45s var(--spring); }
+.boton-orbe.abierto { transform: translateY(-4px); }
+.boton-orbe.abierto .bo-logo { transform: rotate(180deg) scale(.5); opacity: .25; }
+.boton-orbe.abierto .bo-x { opacity: 1; transform: none; }
+.bo-punto { position: absolute; top: 4px; right: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--out); border: 2px solid #16142a; }
+.orbe-velo { position: fixed; inset: 0; z-index: 44; background: rgba(20, 18, 40, .42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+.orbe-velo.on { opacity: 1; pointer-events: auto; }
+.orbe-panel { position: fixed; left: 12px; right: 12px; bottom: calc(var(--nav-abajo) + 92px); z-index: 45; max-width: 520px; margin: 0 auto; padding: 16px; border-radius: 28px; background: var(--surface); box-shadow: 0 20px 50px rgba(0, 0, 0, .25);
+  transform-origin: 50% 100%; transform: translateY(40px) scale(.6); opacity: 0; pointer-events: none; visibility: hidden; transition: transform .5s var(--bounce), opacity .25s ease, visibility 0s linear .5s; }
+.orbe-panel.on { transform: none; opacity: 1; pointer-events: auto; visibility: visible; transition: transform .5s var(--bounce), opacity .25s ease, visibility 0s; }
+.orbe-tit { display: block; margin: 2px 4px 10px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.orbe-crear { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.orbe-crear button { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 4px; border: 0; border-radius: 20px; background: var(--fill2); color: var(--ink); font: inherit; transform: translateY(14px); opacity: 0; transition: transform .45s var(--bounce) var(--d), opacity .3s ease var(--d); }
+.orbe-crear button span { width: 46px; height: 46px; border-radius: 15px; background: var(--c); display: grid; place-items: center; box-shadow: 0 6px 14px color-mix(in srgb, var(--c) 35%, transparent); }
+.orbe-crear b { font-size: 13px; }
+.orbe-ir { display: flex; flex-wrap: wrap; gap: 8px; }
+.orbe-ir button { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 13px; border: 0; border-radius: 20px; background: var(--fill); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; transform: translateY(10px); opacity: 0; transition: transform .45s var(--bounce) var(--d), opacity .3s ease var(--d); }
+.orbe-ir button.on { background: var(--accent-soft); color: var(--accent-text); }
+.orbe-ir em { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 9px; background: var(--out); color: #fff; }
+.orbe-panel.on .orbe-crear button, .orbe-panel.on .orbe-ir button { transform: none; opacity: 1; }
+.orbe-panel:not(.on) .orbe-crear button, .orbe-panel:not(.on) .orbe-ir button { transition-delay: 0s; }
+.tel-raiz.con-hoja .boton-orbe { opacity: 0; pointer-events: none; transform: scale(.7); }
+html.en-recorrido .orbe-velo { -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (prefers-reduced-motion: reduce) { .boton-orbe, .bo-logo, .bo-x, .orbe-panel, .orbe-crear button, .orbe-ir button { transition-duration: .01ms !important; transition-delay: 0s !important; } }
+
+/* La app se usa como app, no como página: un solo tamaño, sin zoom con doble toque,
+   sin selección azul al dejar presionado y sin que la pantalla se deslice de lado. */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { overflow-x: hidden; overscroll-behavior: none; }
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+svg, img { -webkit-user-drag: none; }
+.tel-raiz .app-fondo { overflow-x: hidden; }
+.hoja { overflow: hidden; }
+.hoja-cuerpo { overflow-x: hidden; touch-action: pan-y; }
+.chips.desliza, .barra-tasas-lista, .tabla-caja { touch-action: pan-x pan-y; }
+/* En el iPhone, un campo con letra de menos de 16 px hace zoom al tocarlo: en el celular todos van a 16 px. */
+@media (max-width: 899px) {
+  html:root input, html:root select, html:root textarea { font-size: 16px !important; }
+}

@@ -10,6 +10,7 @@ import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera, MarcaNegoci
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
 import { Ordenes } from './pantallas/ordenes.js';
+import { BotonOrbe } from './pantallas/menuorbe.js';
 import { Vender } from './pantallas/vender.js';
 import { Clientes } from './pantallas/clientes.js';
 import { Inventario } from './pantallas/inventario.js';
@@ -85,7 +86,7 @@ function App() {
   const yo = perfilActual();
   if (!yo) return html`<${Acceso} tel=${tel} /><${Avisos} />`;
   const pd = k => puede(S, yo, k);
-  const permitida = s => SECCIONES[s] && (s !== 'ordenes' || !!S.negocio.ordenes) && (!PERMISO_SEC[s] || pd(PERMISO_SEC[s]));
+  const permitida = s => SECCIONES[s] && (!PERMISO_SEC[s] || pd(PERMISO_SEC[s]));
 
   const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasa.valor, S.negocio.euro ? tasaEuro() : 0);
   // Varios locales: aparece el selector de sucursal y los gráficos por sucursal (sea negocio o empresa).
@@ -93,28 +94,31 @@ function App() {
   const valida = permitida(sec) && !(sec === 'gastos' && tel) ? sec : 'hoy';
   const ir = s => { if (location.hash !== '#' + s) location.hash = s; else setSec(s); const p = document.querySelector('.principal') || document.querySelector('.app-fondo'); if (p) p.scrollTop = 0; };
   const abrir = (t, datos) => setHoja({ t, datos: datos || {}, n: Date.now() });
+  // Solo para las pruebas automáticas (con «?prueba» en la dirección): abrir una hoja directamente.
+  if (/[?&]prueba\b/.test(location.search)) window.__abrir = abrir;
   const marcarTour = v => guardarPerfil({ id: yo.id, tour: v });
   const ctx = { S, P, T, D, E, tel, ir, abrir, suc: E ? suc : '', setSuc, enLinea, yo, rol: rolDe(S, yo), puede: pd, ver: permitida,
     verRecorrido: () => { setHoja(null); setTour(true); }, omitirRecorrido: () => { marcarTour('omitido'); avisar('Lo encuentras en Ajustes → Ayuda'); } };
   const Tour = tour ? html`<${Recorrido} onFin=${() => { setTour(false); if (!yo.tour) marcarTour(Date.now()); }} />` : null;
   const nombreSec = s => s === 'vender' ? (tel ? T.vender : 'Caja') : s === 'inventario' && !T.inv ? 'Servicios' : tel ? SECCIONES[s].n : (SECCIONES[s].npc || SECCIONES[s].n);
   const Pantalla = SECCIONES[valida].C;
-  const cuenta = { clientes: deudores().filter(c => c.deuda > 0).length, inventario: bajoMinimo().length, gastos: porPagar().length, ordenes: S.negocio.ordenes ? S.ordenes.filter(o => ordenAtrasada(o)).length : 0 };
+  const cuenta = { clientes: deudores().filter(c => c.deuda > 0).length, inventario: bajoMinimo().length, gastos: porPagar().length, ordenes: S.ordenes.filter(o => ordenAtrasada(o)).length };
 
   if (tel) {
-    // Con órdenes, «Órdenes» ocupa el lugar de «Clientes» en la barra, y Clientes pasa a «Más».
-    const conOrdenes = permitida('ordenes');
-    const tabs = ['hoy', 'vender', conOrdenes ? 'ordenes' : 'clientes', 'inventario', 'mas'].filter(permitida);
-    const marcada = valida === 'equipo' || valida === 'reportes' || (conOrdenes && valida === 'clientes') ? 'mas' : valida;
+    // Barra de abajo: cuatro secciones y, en el centro, el botón Orbe con lo demás (crear y otras secciones).
+    const tabs = ['hoy', 'vender', 'inventario', 'mas'].filter(permitida);
+    const mitad = Math.ceil(tabs.length / 2);
+    const Tab = t => html`<button type="button" key=${t} class=${'toca' + (t === valida ? ' on' : '')} aria-current=${t === valida ? 'page' : 'false'} onClick=${() => ir(t)}>
+            <${Icono} n=${t === 'inventario' && !T.inv ? 'lista' : SECCIONES[t].i} t=${22} /><span>${nombreSec(t)}</span></button>`;
     return html`<${Ctx.Provider} value=${ctx}>
       <div class=${'tel-raiz' + (hoja ? ' con-hoja' : '')}>
         <div class="app-fondo">
           <main class="pantalla" key=${valida}><${Pantalla} /></main>
         </div>
-        <nav class="nav-tel" aria-label="Secciones" style=${{ gridTemplateColumns: 'repeat(' + tabs.length + ', minmax(0, 1fr))' }}>
-          ${tabs.map(t => html`<button type="button" class=${'toca' + (t === marcada ? ' on' : '')} aria-current=${t === marcada ? 'page' : 'false'} onClick=${() => ir(t)}>
-            <${Icono} n=${t === 'inventario' && !T.inv ? 'lista' : SECCIONES[t].i} t=${22} /><span>${nombreSec(t)}</span></button>`)}
+        <nav class="nav-tel" aria-label="Secciones" style=${{ gridTemplateColumns: 'repeat(' + (tabs.length + 1) + ', minmax(0, 1fr))' }}>
+          ${tabs.slice(0, mitad).map(Tab)}<span class="nav-hueco" aria-hidden="true"></span>${tabs.slice(mitad).map(Tab)}
         </nav>
+        <${BotonOrbe} seccion=${valida} />
       </div>
       ${hoja && html`<${HojaActual} key=${hoja.n} hoja=${hoja} cerrar=${() => setHoja(null)} />`}
       ${Tour}

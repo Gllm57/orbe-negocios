@@ -35,8 +35,7 @@ function migrar(d) {
   if (!Array.isArray(d.turnos)) d.turnos = [];
   // Costos anotados antes de guardar su tasa: desde hoy se toma la tasa actual como punto de partida.
   if (Array.isArray(d.productos) && d.productos.some(p => p.cT === undefined)) d.productos = d.productos.map(p => p.cT === undefined ? Object.assign({}, p, { cT: (d.tasa && d.tasa.valor) || 0 }) : p);
-  // Órdenes de trabajo y pedidos: encendidas de entrada en talleres y servicios; el permiso, para administrador y encargado.
-  if (d.negocio && d.negocio.ordenes === undefined) d.negocio = Object.assign({}, d.negocio, { ordenes: d.negocio.tipo === 'citas' || d.negocio.tipo === 'indep' });
+  // Órdenes de trabajo y pedidos (siempre activas): el permiso, de entrada, para administrador y encargado.
   d.roles = d.roles.map(r => r.p && r.p.ordenes === undefined ? Object.assign({}, r, { p: Object.assign({}, r.p, { ordenes: r.id === 'admin' || r.id === 'encargado' }) }) : r);
   if (d.negocio && d.negocio.pedirRef === undefined) d.negocio = Object.assign({}, d.negocio, { pedirRef: d.negocio.pais === 'VE', tasaPago: d.negocio.tasaPago || {} });
   // Datos de antes de la cadena de integridad: se firman al cargarlos (la cadena empieza ahí).
@@ -225,7 +224,7 @@ export function crearNegocio(cfg, conEjemplo) {
   const nSuc = Math.max(1, Math.min(5, cfg.sucN || 1)), NOM = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur'];
   const sucursales = nSuc === 1 ? ['Principal'] : Array.from({ length: nSuc }, (_, i) => ((cfg.sucNombres || [])[i] || '').trim() || NOM[i]);
   const productos = CATALOGO[T.id].map((x, i) => ({ id: 'p' + i, ab: x[0], n: x[1], p: D.precio(x[2]), c: D.precio(x[3]), q: x[4] < 0 ? null : Math.round(x[4] * (E ? 3 : 1)), min: Math.round(x[5] * (E ? 3 : 1)), dur: x[6] || 0, pop: x[7], cod: '759' + String(1234000 + i * 37) }));
-  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now(), ordenes: T.id === 'citas' || T.id === 'indep', pedirRef: P.id === 'VE', igtf: false, fiadoUsd: false, tasaPago: {} };
+  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now(), pedirRef: P.id === 'VE', igtf: false, fiadoUsd: false, tasaPago: {} };
   const perfiles = [{ id: 'u0', n: (cfg.dueno || '').trim() || 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }];
   if (conEjemplo) perfiles.push(
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },

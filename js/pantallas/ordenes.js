@@ -324,7 +324,6 @@ export function CancelarOrden({ d, cerrar }) {
 // Panel para Hoy: atrasadas y las que se entregan hoy.
 export function OrdenesHoy() {
   const { S, ir, abrir } = useApp();
-  if (!S.negocio.ordenes) return null;
   const ahora = Date.now(), fin = new Date(); fin.setHours(23, 59, 59, 999);
   const abiertas = S.ordenes.filter(ordenAbierta);
   const atrasadas = abiertas.filter(o => ordenAtrasada(o, ahora)), hoy = abiertas.filter(o => !ordenAtrasada(o, ahora) && o.entrega && o.entrega <= fin.getTime()), listas = abiertas.filter(o => o.estado === 'lista');
