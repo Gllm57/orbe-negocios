@@ -53,6 +53,10 @@ export function Reportes() {
   serie.forEach(d => { const w = new Date(d.t).getDay(); porSem[w] += d.total; cuenta[w]++; });
   const semana = [1, 2, 3, 4, 5, 6, 0].map(w => ({ l: SEMANA[w], v: cuenta[w] ? porSem[w] / cuenta[w] : 0, tip: SEMANA[w] + ' · promedio ' + D.m(cuenta[w] ? porSem[w] / cuenta[w] : 0) }));
   const mejor = semana.reduce((a, b) => b.v > a.v ? b : a, semana[0]);
+  // Ventas por hora en el período (de 7 am a 9 pm): ayuda a saber cuándo reforzar la caja.
+  const horas = []; for (let h = 7; h <= 21; h++) horas.push({ l: (h > 12 ? h - 12 : h) + (h >= 12 ? ' pm' : ' am'), v: r.porHora[h], tip: (h > 12 ? h - 12 : h) + (h >= 12 ? ' pm' : ' am') + ' · ' + D.m(r.porHora[h]) });
+  horas.forEach((x, i) => { x.n = x.l; if (i % 2) x.l = ''; });
+  const horaPico = horas.reduce((a, b) => b.v > a.v ? b : a, horas[0]);
   const resultado = [
     { l: 'Ventas', v: tot(r), tip: 'Ventas · ' + fm(tot(r)), segs: [{ v: tot(r), c: 'var(--c1)' }] },
     { l: 'Costo', v: tot(r) - gan(r), tip: 'Costo de lo vendido · ' + fm(tot(r) - gan(r)), segs: [{ v: tot(r) - gan(r), c: 'var(--c4)' }] },
@@ -82,6 +86,8 @@ export function Reportes() {
       <${BarrasH} datos=${prods.slice(0, 6).map(p => ({ n: p.n, v: p.v, txt: D.m(p.v), sub: p.q + ' vendidos · ganas ' + D.m(p.g) }))} /></section>`,
     semana: html`<section class="tarjeta entra llena" style="--i:8"><div class="tarjeta-tit">Tu mejor día<span class="sub">${mejor.l}, en promedio ${D.m(mejor.v)}</span></div>
       <${Barras} key=${'sem' + dias + suc} datos=${semana} alto=${tel ? 120 : 170} resaltar=${semana.indexOf(mejor)} llenar=${!tel} /></section>`,
+    horas: html`<section class="tarjeta entra llena" style="--i:9"><div class="tarjeta-tit">Tus horas de más venta<span class="sub">${horaPico.n} es la mejor</span></div>
+      <${Barras} key=${'hor' + dias + suc} datos=${horas} alto=${tel ? 110 : 150} resaltar=${horas.indexOf(horaPico)} llenar=${!tel} /></section>`,
     sucursales: E && !suc ? html`<section class="tarjeta entra" style="--i:9"><div class="tarjeta-tit">Por sucursal</div>
       <${BarrasH} datos=${S.negocio.sucursales.map((s, i) => ({ n: s, v: r.porSuc[s] || 0, txt: D.m(r.porSuc[s] || 0), c: color(i) }))} /></section>` : null
   };
@@ -90,12 +96,13 @@ export function Reportes() {
     <div class="fila entra"><h1 class="titulo crece">Reportes</h1>${Acciones}</div>
     <div class="fila" style="gap:8px;flex-wrap:wrap"><${Chips} opciones=${PERIODOS} valor=${per} onCambio=${setPer} chico /><span style="flex:1"></span>${Moneda}</div>
     <div class="rejilla-2">${Cifras.map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="fila" style="gap:8px"><span class="simb-c" style=${{ '--c': k[3] === 'var(--ink)' ? 'var(--c1)' : k[3] }}><${Icono} n=${k[5]} t=${14} g=${2.2} /></span><span class="sub">${k[0]}</span></span><${Monto} key=${mon} v=${k[1]} f=${fm} clase="v" /><span class="faint" style=${{ fontSize: '11px', color: k[4] }}>${k[2]}</span></div>`)}</div>
-    ${bloques.linea}${bloques.resultado}${bloques.pagos}${bloques.productos}${bloques.semana}${bloques.sucursales}`;
+    ${bloques.linea}${bloques.resultado}${bloques.pagos}${bloques.productos}${bloques.semana}${bloques.horas}${bloques.sucursales}`;
 
   return html`
     <div class="fila"><${Chips} opciones=${PERIODOS} valor=${per} onCambio=${setPer} chico /><span style="flex:1"></span>${Moneda}${Acciones}</div>
     <div class="cifras">${Cifras.map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="fila" style="gap:8px"><span class="simb-c" style=${{ '--c': k[3] === 'var(--ink)' ? 'var(--c1)' : k[3] }}><${Icono} n=${k[5]} t=${14} g=${2.2} /></span><span class="sub">${k[0]}</span></span><${Monto} key=${mon} v=${k[1]} f=${fm} clase="v" /><span class="sub" style=${{ color: k[4] || 'var(--faint)' }}>${k[2]}</span></div>`)}</div>
     <div class="dos-uno">${bloques.linea}${bloques.resultado}</div>
     <div class="tres estira">${bloques.pagos}${bloques.productos}${bloques.semana}</div>
+    ${bloques.horas}
     ${bloques.sucursales}`;
 }

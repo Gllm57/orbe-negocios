@@ -670,3 +670,61 @@ svg, img { -webkit-user-drag: none; }
 @media (max-width: 899px) {
   html:root input, html:root select, html:root textarea { font-size: 16px !important; }
 }
+
+/* ===================== Estilo B: vivo, con tarjeta oscura ===================== */
+:root { --oscuro: #16142a; --oscuro-2: #221f3d; --oscuro-txt: #ffffff; --oscuro-suave: rgba(255, 255, 255, .7); --oscuro-linea: rgba(255, 255, 255, .12);
+  --barra-flota: max(10px, calc(var(--sa-bottom) - 12px)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --oscuro: #1d1a36; --oscuro-2: #2a2650; } }
+:root[data-theme=dark] { --oscuro: #1d1a36; --oscuro-2: #2a2650; }
+/* Tarjeta oscura con los colores del logo: la cifra que importa */
+.hero { position: relative; overflow: hidden; border-radius: 26px; padding: 18px; color: var(--oscuro-txt); display: flex; flex-direction: column; gap: 12px; isolation: isolate;
+  background: radial-gradient(120% 90% at 0% 0%, rgba(143, 132, 255, .55), transparent 55%), radial-gradient(80% 80% at 100% 100%, rgba(61, 220, 159, .32), transparent 60%), radial-gradient(60% 60% at 96% 0%, rgba(240, 160, 32, .32), transparent 60%), var(--oscuro);
+  box-shadow: 0 16px 36px rgba(22, 20, 42, .28); }
+:root[data-theme=dark] .hero { box-shadow: inset 0 0 0 1px var(--oscuro-linea); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) .hero { box-shadow: inset 0 0 0 1px var(--oscuro-linea); } }
+.hero .sub, .hero small { color: var(--oscuro-suave); }
+.hero .grande { font-size: 38px; font-weight: 750; letter-spacing: -.03em; line-height: 1.05; }
+.hero-tasa { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--oscuro-linea); color: var(--oscuro-txt); font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.hero-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.hero-kpis button { display: flex; flex-direction: column; gap: 2px; padding: 10px 11px; border: 0; border-radius: 15px; background: rgba(255, 255, 255, .09); color: var(--oscuro-txt); font: inherit; text-align: left; min-width: 0; cursor: pointer; transition: background-color .2s ease; }
+.hero-kpis button:active { background: rgba(255, 255, 255, .16); }
+.hero-kpis b { font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero .v-verde { color: #7ff0c3; } .hero .v-ambar { color: #f5c26b; } .hero .v-rojo { color: #ffb0bd; }
+.hero-anillo { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.hero .eti { color: var(--oscuro-suave); }
+.hero-vs { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; align-self: flex-start; }
+/* Íconos de color sólido en las listas */
+.ic.t-vio { background: #7b6cff; color: #fff; } .ic.t-ver { background: #12a37a; color: #fff; } .ic.t-amb { background: #e8961a; color: #fff; } .ic.t-ros { background: #e8436a; color: #fff; } .ic.t-azu { background: #3d9be9; color: #fff; }
+/* Celular: barra flotante oscura con el botón Orbe en medio */
+html.tel { --nav-alto: calc(64px + var(--barra-flota) + 8px); }
+.nav-tel { left: 14px; right: 14px; bottom: var(--barra-flota); width: auto; height: 64px; max-width: 560px; margin: 0 auto; padding: 6px 8px; border-radius: 32px; border: 0; background: var(--oscuro); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 14px 34px rgba(22, 20, 42, .35); }
+.nav-tel button { color: rgba(255, 255, 255, .55); border-radius: 26px; }
+.nav-tel button.on { color: #fff; background: rgba(255, 255, 255, .13); }
+html.en-recorrido .nav-tel { background: var(--oscuro); }
+.boton-orbe { bottom: calc(var(--barra-flota) + 12px); width: 62px; height: 62px; margin-left: -31px; background: linear-gradient(145deg, #2c2852, #16142a); box-shadow: 0 10px 26px rgba(22, 20, 42, .45), 0 0 0 4px var(--bg); }
+.orbe-panel { bottom: calc(var(--barra-flota) + 86px); }
+.aviso-toast { bottom: calc(var(--nav-alto) + 14px); }
+/* Computadora: menú lateral oscuro */
+.lateral { background: var(--oscuro); border-right: 0; color: rgba(255, 255, 255, .62); }
+.lateral .grupo > small { color: rgba(255, 255, 255, .42); }
+.lateral .nav-btn { color: rgba(255, 255, 255, .66); }
+.lateral .nav-btn:hover { background: rgba(255, 255, 255, .07); }
+.lateral .nav-btn.on { background: rgba(255, 255, 255, .13); color: #fff; }
+.lateral .cab-negocio { background: rgba(255, 255, 255, .07) !important; box-shadow: none !important; color: #fff; }
+.lateral .cab-negocio .sub { color: rgba(255, 255, 255, .55); }
+.lateral .logo-lapiz { background: var(--oscuro-2); color: #fff; }
+.lateral > .fila b { color: #fff; }
+.lateral .nav-btn.ajustes-abajo { margin-top: auto; }
+/* Panel de la computadora y «Para hacer hoy» */
+.panel-cifras { display: grid; grid-template-columns: minmax(0, 1.55fr) repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.panel-cifras .hero { padding: 16px 18px; gap: 8px; }
+.panel-cifras .hero .grande { font-size: 32px; }
+.panel-cifras > .cifra { display: flex; flex-direction: column; gap: 4px; justify-content: center; font: inherit; }
+.panel-cifras > .cifra .v { font-size: 28px; letter-spacing: -.02em; }
+@media (max-width: 1180px) { .panel-cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); } .panel-cifras .hero { grid-column: 1 / -1; } }
+.ver-mas { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); background: none; padding: 10px 0 6px; color: var(--accent-text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lateral [data-tour=usuario] { background: rgba(255, 255, 255, .07); box-shadow: none; color: #fff; }
+.lateral [data-tour=usuario] .sub { color: rgba(255, 255, 255, .55); }
+.lateral [data-tour=usuario] .icono-btn { background: rgba(255, 255, 255, .1); color: #fff; }
+.lateral > div > .nav-btn { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: transparent; color: rgba(255, 255, 255, .66); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.lateral > div > .nav-btn.on { background: rgba(255, 255, 255, .13); color: #fff; }

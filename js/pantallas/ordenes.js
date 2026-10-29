@@ -321,17 +321,17 @@ export function CancelarOrden({ d, cerrar }) {
   })} />`;
 }
 
-// Panel para Hoy: atrasadas y las que se entregan hoy.
+// Panel de la computadora: las órdenes abiertas, primero las atrasadas y luego por fecha de entrega.
 export function OrdenesHoy() {
   const { S, ir, abrir } = useApp();
-  const ahora = Date.now(), fin = new Date(); fin.setHours(23, 59, 59, 999);
-  const abiertas = S.ordenes.filter(ordenAbierta);
-  const atrasadas = abiertas.filter(o => ordenAtrasada(o, ahora)), hoy = abiertas.filter(o => !ordenAtrasada(o, ahora) && o.entrega && o.entrega <= fin.getTime()), listas = abiertas.filter(o => o.estado === 'lista');
-  if (!abiertas.length) return null;
-  const fila = (o, txt, tono) => html`<button type="button" key=${o.id} class="item toca" style="color:var(--ink)" onClick=${() => abrir('orden', { oid: o.id })}><b class="num orden-num">${numeroOrden(o)}</b><span class="crece corta">${o.que}</span><span class=${'pildora ' + tono}>${txt}</span></button>`;
-  const lista = atrasadas.map(o => fila(o, atrasoTxt(o, ahora), 't-ros')).concat(hoy.map(o => fila(o, 'Hoy ' + hora(o.entrega), 't-amb'))).slice(0, 5);
-  return html`<section class="tarjeta entra" data-tour="ordenes-hoy">
-    <div class="tarjeta-tit">Órdenes<button type="button" class="enlace-tasa toca" onClick=${() => ir('ordenes')}>Ver todas (${abiertas.length})</button></div>
-    ${lista.length ? html`<div class="lista">${lista}</div>` : html`<p class="sub" style="margin:2px 0 4px">Nada atrasado ni para hoy. ${listas.length ? listas.length + (listas.length === 1 ? ' lista' : ' listas') + ' para entregar.' : ''}</p>`}
+  const ahora = Date.now();
+  const abiertas = S.ordenes.filter(ordenAbierta).sort((a, b) => (ordenAtrasada(b, ahora) - ordenAtrasada(a, ahora)) || ((a.entrega || 9e15) - (b.entrega || 9e15)));
+  const pill = o => ordenAtrasada(o, ahora) ? [atrasoTxt(o, ahora), 't-ros'] : o.estado === 'lista' ? ['Lista', 't-ver'] : [o.entrega ? cuando(o.entrega) : estadoDe(o.estado).n, estadoDe(o.estado).tono];
+  return html`<section class="tarjeta" data-tour="ordenes-hoy" style="padding-bottom:6px">
+    <div class="tarjeta-tit">Órdenes abiertas<button type="button" class="enlace-tasa toca" onClick=${() => ir('ordenes')}>Ver tablero →</button></div>
+    ${abiertas.length ? html`<div class="lista">${abiertas.slice(0, 5).map(o => { const pl = pill(o), cli = (S.clientes.find(c => c.id === o.cli) || {}).n; return html`<button type="button" key=${o.id} class="item toca" style="color:var(--ink)" onClick=${() => abrir('orden', { oid: o.id })}>
+      <span class="crece" style="display:flex;flex-direction:column;gap:1px;min-width:0"><b class="corta" style="font-size:14px;font-weight:600"><span class="orden-num">${numeroOrden(o)}</span> · ${o.que}</b><span class="sub faint corta">${cli || 'Sin cliente'}</span></span>
+      <span class=${'pildora ' + pl[1]}>${pl[0]}</span></button>`; })}</div>`
+      : html`<p class="vacio" style="padding:10px 0">No hay órdenes abiertas.</p>`}
   </section>`;
 }

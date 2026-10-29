@@ -91,7 +91,7 @@ function App() {
   const P = pais(S.negocio.pais), T = tipo(S.negocio.tipo), D = dinero(P, S.tasa.valor, S.negocio.euro ? tasaEuro() : 0);
   // Varios locales: aparece el selector de sucursal y los gráficos por sucursal (sea negocio o empresa).
   const E = S.negocio.sucursales.length > 1;
-  const valida = permitida(sec) && !(sec === 'gastos' && tel) ? sec : 'hoy';
+  const valida = permitida(sec) ? sec : 'hoy';
   const ir = s => { if (location.hash !== '#' + s) location.hash = s; else setSec(s); const p = document.querySelector('.principal') || document.querySelector('.app-fondo'); if (p) p.scrollTop = 0; };
   const abrir = (t, datos) => setHoja({ t, datos: datos || {}, n: Date.now() });
   // Solo para las pruebas automáticas (con «?prueba» en la dirección): abrir una hoja directamente.
@@ -126,7 +126,7 @@ function App() {
     </${Ctx.Provider}>`;
   }
 
-  const grupos = [['Día a día', ['hoy', 'vender', 'ordenes', 'clientes']], ['Operación', ['inventario', 'gastos']], ['Gestión', ['reportes', 'equipo', 'mas']]].map(g => [g[0], g[1].filter(permitida)]).filter(g => g[1].length);
+  const grupos = [['Día a día', ['hoy', 'vender', 'ordenes', 'clientes']], ['Operación', ['inventario', 'gastos']], ['Gestión', ['reportes', 'equipo']]].map(g => [g[0], g[1].filter(permitida)]).filter(g => g[1].length);
   const colores = { clientes: 'var(--c3)', inventario: 'var(--c3)', gastos: 'var(--c5)', ordenes: 'var(--c5)' };
   return html`<${Ctx.Provider} value=${ctx}>
     <div class="marco-pc">
@@ -144,6 +144,7 @@ function App() {
             </button>`)}</div>`)}
         </nav>
         <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+          ${permitida('mas') && html`<button type="button" class=${'nav-btn toca' + (valida === 'mas' ? ' on' : '')} aria-current=${valida === 'mas' ? 'page' : 'false'} onClick=${() => ir('mas')}><${Icono} n="ajustes" t=${18} />Ajustes</button>`}
           <div class="tarjeta fila" data-tour="usuario" style="padding:10px 12px;gap:10px">
             <span class=${'logo redondo ' + TONOS[S.perfiles.indexOf(yo) % 5]} style="width:34px;height:34px;font-size:12px">${iniciales(yo.n)}</span>
             <span class="crece" style="display:flex;flex-direction:column"><b class="corta" style="font-size:13px">${yo.n}</b><span class="sub corta" style="font-size:12px">${(rolDe(S, yo) || {}).n || ''}</span></span>

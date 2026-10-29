@@ -38,7 +38,7 @@ const Llena = ({ activo, refCaja, minimo, children }) => activo
   : children;
 
 // Barras verticales, simples o apiladas. datos: [{ l, v, segs?: [{ v, c }], tip }]
-export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resaltar = -1, hueco = 6, llenar = false }) {
+export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', colorRes = 'var(--c1)', resaltar = -1, hueco = 6, llenar = false }) {
   const [refLibre, libre] = useAltoLibre(llenar, alto0);
   const alto = llenar ? libre - 4 : alto0;
   const [sel, setSel] = useState(-1);
@@ -56,7 +56,7 @@ export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resa
     <div class=${'gr-barras' + (sel >= 0 ? ' atenua' : '')} style=${{ height: alto + 'px', '--hueco': hueco + 'px' }} role="img" aria-label=${datos.map(d => d.l + ': ' + (d.tip || d.v)).join(', ')}>
       ${datos.map((d, i) => {
         const h = d.v > 0 ? Math.max(3, d.v / max * (alto - 20)) : 2;
-        const segs = d.segs && d.segs.length ? d.segs : [{ v: d.v, c: i === resaltar ? 'var(--c1)' : colorBase }];
+        const segs = d.segs && d.segs.length ? d.segs : [{ v: d.v, c: i === resaltar ? colorRes : colorBase }];
         const suma = segs.reduce((a, s) => a + s.v, 0) || 1;
         return html`<button type="button" key=${d.l + i} class=${'col' + (sel === i ? ' on' : '')} onMouseEnter=${e => mostrar(i, e)} onClick=${e => sel === i ? quitar() : mostrar(i, e)} aria-label=${d.l + ': ' + (d.tip || d.v)}>
           <span class="barra" style=${{ height: h + 'px', '--i': i, opacity: d.v > 0 ? 1 : 0.35 }}>

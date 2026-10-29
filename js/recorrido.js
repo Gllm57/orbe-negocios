@@ -12,9 +12,8 @@ function pasosPara({ S, T, tel, puede, ver, E }) {
     { titulo: 'Bienvenido a Orbe Negocios', texto: 'Te muestro lo principal en un minuto. Puedes salir cuando quieras y verlo otra vez en Ajustes.', icono: true },
     tel
       ? { sec: 'hoy', sel: '[data-tour=resumen]', titulo: 'Cómo va el día', texto: 'Lo vendido hoy, comparado con ayer y con tu promedio. Las barras muestran a qué hora vendes más.' }
-      : { sec: 'hoy', sel: '.cifras', titulo: 'Tu panel', texto: 'Lo vendido hoy, lo que ganaste, lo que te deben y lo que tienes por pagar. Todo se actualiza al instante.' },
-    tel ? { sec: 'hoy', sel: '[data-tour=accesos]', titulo: 'Lo de todos los días', texto: 'Desde aquí vendes, anotas un gasto o haces el cierre del día con un toque.' } : null,
-    { sec: 'hoy', sel: '[data-tour=pendientes]', titulo: 'Pendientes de hoy', texto: 'Orbe te avisa a quién cobrarle, qué reponer, qué cuentas vencen' + (dual ? ' y la tasa del dólar' : '') + '. Toca cualquiera para resolverlo.' },
+      : { sec: 'hoy', sel: '.panel-cifras', titulo: 'Tu panel', texto: 'Lo vendido hoy, lo que ganaste, lo que te deben y lo que tienes por pagar. Todo se actualiza al instante.' },
+    { sec: 'hoy', sel: '[data-tour=pendientes]', titulo: 'Para hacer hoy', texto: 'Orbe te avisa a quién cobrarle, qué reponer, qué cuentas vencen' + (dual ? ' y la tasa del dólar' : '') + '. Toca cualquiera para resolverlo.' },
     tel ? { sel: '.nav-tel', titulo: 'Las secciones', texto: 'Abajo cambias de sección. Solo ves las que tu perfil tiene permitidas.' } : null,
     tel ? { sel: '.boton-orbe', titulo: 'El botón Orbe', texto: 'Tócalo para crear una venta, una orden, un gasto o un cliente, y para ir a Clientes, Órdenes, Reportes y Equipo.' }
       : { sel: '.lateral nav', titulo: 'El menú', texto: 'Ordenado en Día a día, Operación y Gestión. Los números de colores son cosas pendientes.' },
