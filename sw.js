@@ -1,10 +1,10 @@
 // Orbe Negocios · funciona sin internet. Guarda la app y responde desde la copia si no hay conexión.
-const VERSION = 'orbe-negocios-v26';
+const VERSION = 'orbe-negocios-v27';
 const ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'css/orbe.css', 'icons/icono.svg', 'icons/icono-192.png',
   'js/lib/preact-htm.js', 'js/app.js', 'js/ctx.js', 'js/paises.js', 'js/datos.js', 'js/graficos.js', 'js/ui.js',
   'js/pantallas/inicio.js', 'js/pantallas/hoy.js', 'js/pantallas/vender.js', 'js/pantallas/clientes.js', 'js/pantallas/inventario.js',
   'js/pantallas/gastos.js', 'js/pantallas/reportes.js', 'js/pantallas/mas.js', 'js/pantallas/hojas.js',
-  'js/permisos.js', 'js/pantallas/acceso.js', 'js/pantallas/equipo.js', 'js/pantallas/pagos.js', 'js/recorrido.js', 'js/hash.js', 'js/pantallas/tasas.js', 'js/buscar.js', 'js/pantallas/grupos.js', 'js/pantallas/escaner.js', 'js/lib/zxing.min.js', 'js/pantallas/ordenes.js', 'js/ordenpdf.js', 'js/pantallas/precios.js', 'js/pantallas/caja.js', 'js/impresora.js'];
+  'js/permisos.js', 'js/pantallas/acceso.js', 'js/pantallas/equipo.js', 'js/pantallas/pagos.js', 'js/recorrido.js', 'js/hash.js', 'js/pantallas/tasas.js', 'js/buscar.js', 'js/pantallas/grupos.js', 'js/pantallas/escaner.js', 'js/lib/zxing.min.js', 'js/pantallas/ordenes.js', 'js/ordenpdf.js', 'js/pantallas/precios.js', 'js/pantallas/caja.js', 'js/impresora.js', 'js/carrito.js', 'js/pantallas/lineas.js', 'js/pantallas/promos.js', 'js/pantallas/factura.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

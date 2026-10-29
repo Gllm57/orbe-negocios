@@ -1,7 +1,8 @@
 // Inventario (tienda, comida, venta en línea) o Servicios (citas, independientes).
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { bajoMinimo, bajoMeta, resumen, inicioDia, listaProductos } from '../datos.js';
+import { bajoMinimo, bajoMeta, resumen, inicioDia, listaProductos, promosVigentes } from '../datos.js';
+import { verQ } from '../carrito.js';
 import { BarrasH, Reparto, color } from '../graficos.js';
 import { Chips, Icono, TONOS, avisar } from '../ui.js';
 import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo } from './grupos.js';
@@ -42,6 +43,13 @@ export function Inventario() {
   }
 
   const conStock = listaProductos().filter(p => p.q != null);
+  // Servicios dentro de una tienda (mano de obra, instalación…): no llevan existencia.
+  const servicios = elegir(listaProductos().filter(p => p.q == null));
+  const Servicios = servicios.length || pp ? html`<section class="tarjeta entra" style="padding-bottom:6px">
+    <div class="tarjeta-tit">Servicios<span class="fila" style="gap:8px"><span class="sub">mano de obra, instalación…</span>${pp && html`<button type="button" class="btn2 chico acento toca" onClick=${() => editarP({ svc: true })}>+ Servicio</button>`}</span></div>
+    ${servicios.length ? html`<div class="lista">${servicios.map(p => html`<button type="button" key=${p.id} class="item toca" style="color:var(--ink)" onClick=${() => editarP({ pid: p.id })}><span class="ic t-azu" style="width:32px;height:32px;font-size:11px;font-weight:700">${p.ab}</span><span class="crece corta" style="font-size:14px">${p.n}</span><b class="num">${D.m(p.p)}</b></button>`)}</div>`
+      : html`<p class="sub" style="margin:2px 0 8px">Agrega lo que cobras sin ser un producto: instalación, revisión, envío… También puedes agregarlos al vender con «+ Servicio o cargo».</p>`}
+  </section>` : null;
   const bajos = bajoMinimo();
   const valor = conStock.reduce((a, p) => a + p.q * p.c, 0);
   const margen = conStock.length ? conStock.reduce((a, p) => a + (p.p > 0 ? (p.p - p.c) / p.p : 0), 0) / conStock.length : 0;
@@ -61,9 +69,10 @@ export function Inventario() {
     <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
       <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
       <span class="crece" style="display:flex;flex-direction:column;gap:6px">
-        <span class="fila" style="gap:8px"><b class="crece corta" style="font-size:14px;font-weight:600">${p.n}</b>${vg && p.c > 0 && p.p < p.c * 1.05 ? html`<span class="pildora t-ros">Sin ganancia</span>` : null}<b class="num" style=${{ fontSize: '13px', color: e[2] }}>${p.q} und</b></span>
+        <span class="fila" style="gap:8px"><b class="crece corta" style="font-size:14px;font-weight:600">${p.n}</b>${vg && p.c > 0 && p.p < p.c * 1.05 ? html`<span class="pildora t-ros">Sin ganancia</span>` : null}<b class="num" style=${{ fontSize: '13px', color: e[2] }}>${verQ(p.q, p.u || 'und')}</b></span>
         <span class="barra-prog"><i style=${{ width: Math.min(100, Math.round(p.q / Math.max(1, p.min * 2) * 100)) + '%', background: e[2] }}></i></span>
-        <span class="sub faint num" style="font-size:11px">${vg ? 'Costo ' + D.m(p.c) + ' · ' : ''}Precio ${D.m(p.p)}${vg ? ' · Ganas ' + (p.p ? Math.round((p.p - p.c) / p.p * 100) : 0) + ' %' : ''}</span>
+        ${p.vars && p.vars.length ? html`<span class="sub num" style="font-size:11px">${p.vars.map(v => v.n + ' ' + verQ(v.q || 0)).join(' · ')}</span>` : null}
+        <span class="sub faint num" style="font-size:11px">${vg ? 'Costo ' + D.m(p.c) + ' · ' : ''}Precio ${D.m(p.p)}${p.u ? ' / ' + p.u : ''}${vg ? ' · Ganas ' + (p.p ? Math.round((p.p - p.c) / p.p * 100) : 0) + ' %' : ''}</span>
       </span>
     </button>`; })}</div>`;
 
@@ -74,6 +83,8 @@ export function Inventario() {
       <span class="crece" style="display:flex;flex-direction:column;gap:1px;text-align:left"><b>Escanear con la cámara</b><span class="sub">Lee el código o el nombre: suma, resta o crea el producto</span></span>
       <${Icono} n="sig" t=${16} c="var(--faint)" />
     </button>
+    ${(pp || puede('reponer')) && html`<button type="button" class="tarjeta fila toca entra" style="border:0;color:var(--ink);text-align:left;gap:12px;padding:12px 14px" onClick=${() => abrir('factura')}><span class="ic t-vio"><${Icono} n="doc" t=${17} /></span><span class="crece" style="display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Cargar factura del proveedor</b><span class="sub">Con una foto: suma lo que llegó y actualiza costos</span></span><${Icono} n="sig" t=${16} c="var(--faint)" /></button>`}
+    ${pp && html`<button type="button" class="tarjeta fila toca entra" style="border:0;color:var(--ink);text-align:left;gap:12px;padding:12px 14px" onClick=${() => abrir('promos')}><span class="ic t-ros"><${Icono} n="porciento" t=${17} /></span><span class="crece" style="display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Promociones</b><span class="sub">${promosVigentes().length ? promosVigentes().length + (promosVigentes().length === 1 ? ' activa' : ' activas') : '2x1, 3x2, % o precio por mayor'}</span></span><${Icono} n="sig" t=${16} c="var(--faint)" /></button>`}
     ${Cifras}
     ${bajos.length > 0 && html`<button type="button" class="tarjeta fila toca entra" style="border:0;background:var(--amber-soft);box-shadow:none;color:var(--ink);text-align:left" onClick=${() => setFiltro(filtro === 'Por reponer' ? 'Todo' : 'Por reponer')}>
       <span class="ic t-amb"><${Icono} n="alerta" t=${18} /></span><span class="crece" style="display:flex;flex-direction:column"><b style="font-size:14px;font-weight:600">${bajos.length} ${bajos.length === 1 ? 'producto' : 'productos'} por debajo del mínimo</b><span class="sub">${filtro === 'Por reponer' ? 'Toca para ver todo' : 'Toca para verlos'}</span></span></button>`}
@@ -81,7 +92,8 @@ export function Inventario() {
     ${Buscador}
     <${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico />
     ${NoHay(lista, base)}
-    ${Tarjetas}`;
+    ${Tarjetas}
+    ${Servicios}`;
 
   return html`
     <div class="cifras">
@@ -91,7 +103,7 @@ export function Inventario() {
       <div class="tarjeta cifra entra" style="--i:3"><span class="sub">Productos</span><span class="v num">${conStock.length}</span><span class="sub faint">con existencia</span></div>
     </div>
     <div class="pila">
-        <div class="fila" style="flex-wrap:wrap;gap:10px"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('precios')}><${Icono} n="etiqueta" t=${15} />Cuidar precios${bajoMeta().length ? html` <span class="pildora t-amb">${bajoMeta().length}</span>` : null}</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}>+ Producto</button>`}</div>
+        <div class="fila" style="flex-wrap:wrap;gap:10px"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('factura')}><${Icono} n="camara" t=${15} />Cargar factura</button><button type="button" class="btn2 toca" onClick=${() => abrir('promos')}><${Icono} n="porciento" t=${15} />Promociones${promosVigentes().length ? html` <span class="pildora t-ros">${promosVigentes().length}</span>` : null}</button><button type="button" class="btn2 toca" onClick=${() => abrir('precios')}><${Icono} n="etiqueta" t=${15} />Cuidar precios${bajoMeta().length ? html` <span class="pildora t-amb">${bajoMeta().length}</span>` : null}</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}>+ Producto</button>`}</div>
         ${Buscador}
         <div class="tabla-caja"><table class="tabla">
           <thead><tr><th>Producto</th><th>Grupo</th><th>Código</th><th class="der">Costo</th><th class="der">Precio</th><th class="der">Tienes</th><th class="der">Mínimo</th><th>Estado</th><th></th></tr></thead>
@@ -103,6 +115,7 @@ export function Inventario() {
             <td class="der"><span class="fila" style="gap:6px;justify-content:flex-end">${puede('reponer') && html`<button type="button" class="btn2 chico verde toca" onClick=${() => abrir('reponer', { pid: p.id })}>Reponer</button>`}${pp && html`<button type="button" class="btn2 chico toca" onClick=${() => editarP({ pid: p.id })}>Editar</button>`}</span></td>
           </tr>`; })}</tbody>
         </table>${lista.length ? null : q.trim() ? NoHay(lista, base) : html`<p class="vacio">${grupo ? 'No hay nada en este grupo.' : 'Nada por reponer.'}</p>`}</div>
+        ${Servicios}
     </div>
     <div class="tres">
       ${Top}

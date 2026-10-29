@@ -1,7 +1,7 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, turnoActual, cajaEntre, cerrarTurno, inicioVisible, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, claveItem, turnoActual, cajaEntre, cerrarTurno, inicioVisible, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { telInternacional, PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTRA, esDivisa, esElectronico, monedaEfectivo, billetesDe } from '../paises.js';
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera, MarcaNegocio, achicarImagen } from '../ui.js';
@@ -12,6 +12,10 @@ import { Grupos, Grupo, colorGrupo, textosProducto, iniciales2 } from './grupos.
 import { Escaner, mismoCodigo } from './escaner.js';
 import { Precios } from './precios.js';
 import { Caja, MovCaja } from './caja.js';
+import { Variante, Cantidad, Linea as LineaVenta, Descuento, Cargo } from './lineas.js';
+import { Promos, Promo } from './promos.js';
+import { Factura } from './factura.js';
+import { verQ } from '../carrito.js';
 import { imprimir, lineasRecibo, lineasZ, ajustesImpresora } from '../impresora.js';
 import { Orden, NuevaOrden, AbonoOrden, CancelarOrden } from './ordenes.js';
 import { buscar, parecidos } from '../buscar.js';
@@ -42,7 +46,7 @@ function Confirmar({ d, cerrar }) {
 }
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin, orden: Orden, nuevaOrden: NuevaOrden, abonoOrden: AbonoOrden, cancelarOrden: CancelarOrden, precios: Precios, caja: Caja, movCaja: MovCaja }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin, orden: Orden, nuevaOrden: NuevaOrden, abonoOrden: AbonoOrden, cancelarOrden: CancelarOrden, precios: Precios, caja: Caja, movCaja: MovCaja, variante: Variante, cantidad: Cantidad, linea: LineaVenta, descuento: Descuento, cargo: Cargo, factura: Factura, promos: Promos, promo: Promo }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
@@ -89,6 +93,9 @@ function Cobrar({ d, cerrar }) {
     const items = d.items.map(it => Object.assign({}, it));
     const venta = vender({ items, pagos: (anticipo > 0 ? [{ m: 'Anticipo', v: anticipo }] : []).concat(total > 0 ? partes : []), cli, suc: suc || S.negocio.sucursales[0], fiado: fiado || usaSaldo > 0, total: total + anticipo, igtf });
     if (d.orden) venta.orden = d.orden;
+    // Lo que se ahorró por promociones y descuentos queda en la venta (sale en el recibo).
+    const ahorro = D.redondo(items.reduce((a, it) => a + (it.pLista != null ? it.q * (it.pLista - it.p) : 0), 0));
+    if (ahorro > 0) venta.descuento = ahorro;
     venta.recibido = vuelto > 0 ? totalCobrar + vuelto : 0; venta.imp = d.tt.imp; venta.impTxt = d.tt.txt; if (d.tt.desglose && d.tt.desglose.length > 1) venta.impDesglose = d.tt.desglose;
     if (vuelto > 0 && comoSaldo && cli) { venta.vueltoSaldo = vuelto; abonar(cli, [{ m: efectivo ? fp.m : (partes.find(p => esEfectivo(p.m)) || partes[0]).m, v: vuelto }], 'Vuelto como saldo a favor'); }
     else if (vuelto > 0 && vueltoEn !== 'p') venta.vueltoEn = vueltoEn;
@@ -135,7 +142,7 @@ function Recibo({ d, cerrar }) {
   const { S, P, D, tel, abrir, puede } = useApp();
   const v = S.ventas.find(x => x.id === d.venta.id) || d.venta, cli = S.clientes.find(c => c.id === v.cli), atendio = S.perfiles.find(p => p.id === v.por);
   const quien = id => { const p = S.perfiles.find(x => x.id === id); return p ? p.n.split(' ')[0] : ''; };
-  const quedan = v.items.some(it => it.q - ((v.devuelto || {})[it.pid] || 0) > 0);
+  const quedan = v.items.some(it => it.q - ((v.devuelto || {})[claveItem(it)] || 0) > 0);
   const corregir = puede('anular') && !v.anulada && !v.dev;
   const enviar = () => { abrirWA(cli && cli.tel, textoRecibo(v, S, D, P)); };
   const imprimirTicket = (venta, cajon) => imprimir(lineasRecibo(venta, { S, P, D }), { cajon, logo: S.negocio.logo }).catch(er => avisar(er && er.message === 'sin-bluetooth' ? 'Este aparato no permite Bluetooth: usa la impresión del sistema' : 'No se pudo imprimir: revisa que la impresora esté encendida'));
@@ -146,7 +153,7 @@ function Recibo({ d, cerrar }) {
       ${d.nueva && html`<div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:64px;height:64px;border-radius:50%;background:var(--in);display:grid;place-items:center;animation:pop .55s var(--spring) both"><${Icono} n="check" t=${30} g=${2.8} c="#0b0a14" /></span>
         <span class="sub">${navigator.onLine ? (v.fiado ? 'Sumado a lo que te debe ' + (cli ? cli.n.split(' ')[0] : '') + '.' : 'Sumada a la caja de hoy.') : 'Guardada en este aparato. Se sube cuando vuelva el internet.'}</span></div>`}
       ${v.anulada && html`<div class="tarjeta fila entra" style="background:var(--out-soft, color-mix(in srgb, var(--out) 14%, transparent));box-shadow:none;gap:10px"><${Icono} n="deshacer" t=${18} c="var(--out)" /><span class="sub" style="color:var(--ink);line-height:1.4"><b>Venta anulada</b> ${hace(v.anulada.t)}${quien(v.anulada.por) ? ' por ' + quien(v.anulada.por) : ''}. Motivo: ${v.anulada.motivo}. No cuenta en la caja ni en los reportes.</span></div>`}
-      ${v.devuelto && !v.anulada && html`<div class="tarjeta fila entra" style="background:var(--fill2);box-shadow:none;gap:10px"><${Icono} n="deshacer" t=${18} c="var(--muted)" /><span class="sub" style="color:var(--ink)">Devolvieron: ${v.items.filter(it => v.devuelto[it.pid]).map(it => v.devuelto[it.pid] + ' × ' + it.n).join(', ')}</span></div>`}
+      ${v.devuelto && !v.anulada && html`<div class="tarjeta fila entra" style="background:var(--fill2);box-shadow:none;gap:10px"><${Icono} n="deshacer" t=${18} c="var(--muted)" /><span class="sub" style="color:var(--ink)">Devolvieron: ${v.items.filter(it => v.devuelto[claveItem(it)]).map(it => v.devuelto[claveItem(it)] + ' × ' + it.n).join(', ')}</span></div>`}
       ${v.dev && html`<div class="tarjeta fila entra" style="background:var(--fill2);box-shadow:none;gap:10px"><${Icono} n="deshacer" t=${18} c="var(--muted)" /><span class="sub" style="color:var(--ink)">Devolución de la venta #${v.dev}${v.motivo ? ' · ' + v.motivo : ''}</span></div>`}
       <div style=${'border-radius:16px;background:#f7f6fc;color:#1a1733;padding:16px;display:flex;flex-direction:column;gap:7px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace;position:relative;overflow:hidden' + (v.anulada ? ';opacity:.75' : '')}>
         ${v.anulada && html`<span class="sello">ANULADA</span>`}
@@ -156,7 +163,9 @@ function Recibo({ d, cerrar }) {
         <span style="text-align:center;color:#625f7d">${v.dev ? 'Devolución' : 'Recibo'} #${v.n} · ${fechaCorta(v.t)} ${hora(v.t)}${cli ? ' · ' + cli.n : ''}</span>
         ${atendio && html`<span style="text-align:center;color:#625f7d">Te atendió ${atendio.n.split(' ')[0]}${S.negocio.sucursales.length > 1 ? ' · ' + v.suc : ''}</span>`}
         <span style="border-top:1px dashed #c9c6e0"></span>
-        ${v.items.map(it => html`<span class="fila" style="justify-content:space-between;gap:8px"><span>${Math.abs(it.q)} x ${it.n}</span><span>${D.m(it.q * it.p)}</span></span>`)}
+        ${v.items.map(it => html`<span class="fila" style="justify-content:space-between;gap:8px"><span>${verQ(Math.abs(it.q), it.u)} x ${it.n}</span><span>${D.m(it.q * (it.pLista != null ? it.pLista : it.p))}</span></span>
+          ${it.pLista != null && Math.abs(it.pLista - it.p) > 1e-9 && html`<span class="fila" style="justify-content:space-between;gap:8px;color:#0d7f5f;font-size:12px"><span>  ${it.promo ? 'Promo ' + it.promo : it.desc ? 'Descuento ' + it.desc + ' %' : 'Descuento'}</span><span>−${D.m(it.q * (it.pLista - it.p))}</span></span>`}`)}
+        ${v.descuento > 0 && html`<span class="fila" style="justify-content:space-between;color:#0d7f5f;font-weight:600"><span>Ahorraste</span><span>${D.m(v.descuento)}</span></span>`}
         <span style="border-top:1px dashed #c9c6e0"></span>
         ${v.imp > 0 && !v.impDesglose && html`<span class="fila" style="justify-content:space-between;color:#625f7d"><span>${v.impTxt}</span><span>${D.m(v.imp)}</span></span>`}
         ${v.impDesglose && v.impDesglose.map(x => html`<span class="fila" style="justify-content:space-between;color:#625f7d"><span>${x.r ? P.tax[0] + ' ' + x.r + ' % sobre ' + D.m(x.base) : 'Exento: ' + D.m(x.base)}</span><span>${x.r ? D.m(x.imp) : ''}</span></span>`)}
@@ -195,16 +204,16 @@ function Devolver({ d, cerrar }) {
   const [q, setQ] = useState({});
   const [motivo, setMotivo] = useState(MOTIVOS_DEV[0]);
   const vv = v || { items: [], pagos: [], total: 0 };
-  const max = it => it.q - ((vv.devuelto || {})[it.pid] || 0);
+  const max = it => it.q - ((vv.devuelto || {})[claveItem(it)] || 0);
   // Si el impuesto se cobró aparte, se devuelve en la misma proporción.
   const bruto = vv.items.reduce((a, it) => a + it.q * it.p, 0), factor = bruto ? vv.total / bruto : 1;
-  const monto = D.redondo(vv.items.reduce((a, it) => a + (q[it.pid] || 0) * it.p, 0) * factor);
+  const monto = D.redondo(vv.items.reduce((a, it) => a + (q[claveItem(it)] || 0) * it.p, 0) * factor);
   // Lo que se fió se descuenta de la deuda; el resto se devuelve en dinero (también combinado).
   const aDeuda = Math.min(monto, fiadoDe(vv)), enDinero = D.redondo(monto - aDeuda);
   const pv = vv.pagos.find(p => p.m !== 'Fiado');
   const fp = usePagos(enDinero, S.negocio.pays, pv && pv.m);
   if (!v) return null;
-  const pon = (it, dd) => setQ(Object.assign({}, q, { [it.pid]: Math.max(0, Math.min(max(it), (q[it.pid] || 0) + dd)) }));
+  const pon = (it, dd) => setQ(Object.assign({}, q, { [claveItem(it)]: Math.max(0, Math.min(max(it), (q[claveItem(it)] || 0) + dd)) }));
   const listo = c => {
     if (!monto) { avisar('Elige qué devuelven'); return; }
     if (enDinero > 0 && !fp.ok) { avisar('Reparte bien lo que devuelves'); return; }
@@ -214,7 +223,7 @@ function Devolver({ d, cerrar }) {
   };
   return html`<${Hoja} titulo=${'Devolver de la venta #' + v.n} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`<span class="sub" style="margin-top:-6px">Elige qué y cuántos devuelven. Vuelve al inventario.</span>
-      <div class="tarjeta" style="background:var(--fill2);box-shadow:none;padding:4px 14px"><div class="lista">${v.items.map(it => { const mx = max(it), x = q[it.pid] || 0; return html`<div class="item" key=${it.pid} style=${{ opacity: mx ? 1 : 0.5 }}>
+      <div class="tarjeta" style="background:var(--fill2);box-shadow:none;padding:4px 14px"><div class="lista">${v.items.map(it => { const mx = max(it), x = q[claveItem(it)] || 0; return html`<div class="item" key=${claveItem(it)} style=${{ opacity: mx ? 1 : 0.5 }}>
         <span class="crece" style="display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;font-weight:600">${it.n}</b><span class="sub faint num">${mx ? 'Compró ' + it.q + (mx < it.q ? ' · quedan ' + mx : '') + ' · ' + D.m(it.p) + ' c/u' : 'Ya se devolvió todo'}</span></span>
         ${mx ? html`<span class="fila" style="gap:6px"><button type="button" class="icono-btn chico toca" aria-label=${'Uno menos de ' + it.n} onClick=${() => pon(it, -1)}><${Icono} n="menos1" t=${14} g=${2.6} /></button><b class="num" style="min-width:26px;text-align:center">${x}</b><button type="button" class="icono-btn chico toca" aria-label=${'Uno más de ' + it.n} onClick=${() => pon(it, 1)}><${Icono} n="mas1" t=${14} g=${2.6} /></button></span>` : null}
       </div>`; })}</div></div>
@@ -394,6 +403,14 @@ function Producto({ d, cerrar }) {
   // Grupo: uno de los que hay o uno nuevo escrito aquí mismo.
   const [grupo, setGrupo] = useState(p0 ? p0.g || '' : d.g || '');
   const [grupoNuevo, setGrupoNuevo] = useState(null);
+  // Se vende por unidad o por peso o medida (kilo, gramo, litro, metro); y puede tener variantes (talla, color…).
+  const [u, setU] = useState(p0 && p0.u ? p0.u : '');
+  // En una tienda, un servicio (mano de obra, instalación, revisión…) no lleva existencia.
+  const [svc, setSvc] = useState(p0 ? T.inv && p0.q == null : !!d.svc);
+  const inv = T.inv && !svc;
+  const [vars, setVars] = useState(() => (p0 && p0.vars ? p0.vars : []).map(v => ({ id: v.id, n: v.n, q: v.q != null ? String(v.q).replace('.', ',') : '', p: v.p ? String(v.p).replace('.', ',') : '', cod: v.cod || '' })));
+  const ponVar = (i, o) => setVars(vs => vs.map((v, k) => k === i ? Object.assign({}, v, o) : v));
+  const nuevaVar = n => ({ id: 'v' + Math.random().toString(36).slice(2, 8), n: n || '', q: '', p: '', cod: '' });
   const gen = S.negocio.taxGen != null ? S.negocio.taxGen : P.tax[1];
   const opcionesImp = [{ v: 'gen', n: 'General ' + gen + ' %' }].concat((P.red || []).filter(r => r > 0).map(r => ({ v: r, n: r + ' %' })), [{ v: 0, n: 'Exento' }]);
   const pon = o => setF(x => Object.assign({}, x, o));
@@ -405,27 +422,46 @@ function Producto({ d, cerrar }) {
     const cod = f.cod.trim();
     const otroCon = cod && listaProductos().find(x => mismoCodigo(x.cod, cod) && (!p0 || x.id !== p0.id));
     if (otroCon) { avisar('Ese código ya lo tiene ' + otroCon.n); return; }
-    guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: iniciales2(f.n.trim()), p, c: co, q: T.inv ? Math.round(numero(f.q)) : null, min: T.inv ? Math.round(numero(f.min)) : 0, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp, g: grupoNuevo && grupoNuevo.trim() ? guardarGrupo({ n: grupoNuevo.trim() }) : grupo });
+    const varsOk = vars.filter(v => v.n.trim()).map(v => Object.assign({ id: v.id, n: v.n.trim(), q: T.inv ? (u ? numero(v.q) : Math.round(numero(v.q))) : null }, numero(v.p) > 0 ? { p: numero(v.p) } : {}, v.cod.trim() ? { cod: v.cod.trim() } : {}));
+    const codRep = varsOk.find(v => v.cod && (mismoCodigo(v.cod, cod) || varsOk.some(w => w !== v && mismoCodigo(w.cod, v.cod)) || listaProductos().some(x => (!p0 || x.id !== p0.id) && (mismoCodigo(x.cod, v.cod) || (x.vars || []).some(w => mismoCodigo(w.cod, v.cod))))));
+    if (codRep) { avisar('El código de ' + codRep.n + ' ya lo tiene otro producto o variante'); return; }
+    const cant = x => u ? Math.round(numero(x) * 1000) / 1000 : Math.round(numero(x));
+    guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: iniciales2(f.n.trim()), p, c: co, q: inv ? (varsOk.length ? varsOk.reduce((a2, v) => a2 + (v.q || 0), 0) : cant(f.q)) : null, min: inv ? cant(f.min) : 0, u: inv && u ? u : undefined, vars: inv && varsOk.length ? varsOk : undefined, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp, g: grupoNuevo && grupoNuevo.trim() ? guardarGrupo({ n: grupoNuevo.trim() }) : grupo });
     // Si se creó desde el escáner, se vuelve a él con el producto ya reconocido.
     c(() => { avisar('Guardado: ' + f.n.trim()); if (d.escaner && cod) abrir('escaner', Object.assign({}, d.escaner, { mostrar: cod })); });
   };
   const borrar = c => c(() => abrir('confirmar', { titulo: '¿Borrar ' + p0.n + '?', texto: 'Ya no sale para vender ni en el inventario. Las ventas que tuvo se quedan en los reportes.', boton: 'Sí, borrar', si: () => { borrarProducto(p0.id); avisar('Borrado: ' + p0.n); } }));
-  return html`<${Hoja} titulo=${(p0 ? 'Editar ' : 'Nuevo ') + (T.inv ? 'producto' : 'servicio')} onCerrar=${cerrar} contenido=${c => ({
+  return html`<${Hoja} titulo=${(p0 ? 'Editar ' : 'Nuevo ') + (inv ? 'producto' : 'servicio')} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <label class="campo"><span>Nombre</span><input type="text" value=${f.n} placeholder=${T.inv ? 'Ej.: Arroz 1 kg' : 'Ej.: Corte de cabello'} onInput=${e => pon({ n: e.target.value })} /></label>
       ${atable && html`<${Interruptor} on=${enDolar} onCambio=${setEnDolar} titulo="Precio atado al dólar" sub=${'Se recalcula solo con el ' + nombreTasa(P, S.tasa).toLowerCase()} />`}
       ${enDolar && atable && html`<label class="campo entra"><span>Precio en dólares</span><input class="num" type="text" inputmode="decimal" value=${f.usd} placeholder="0" onInput=${e => pon({ usd: e.target.value })} /></label>${usd > 0 && html`<span class="sub num">Hoy son ${D.m(p)} (US$ 1 = ${D.m(D.tasa)})</span>`}`}
       <div class="rejilla-2" style="gap:10px">${enDolar && atable ? html`<div class="campo"><span>Precio</span><b class="num" style="min-height:52px;display:flex;align-items:center;font-size:18px">${D.m(p)}</b></div>` : html`<label class="campo"><span>Precio</span><input type="text" inputmode="decimal" value=${f.p} placeholder="0" onInput=${e => pon({ p: e.target.value })} /></label>`}<label class="campo"><span>Te cuesta</span><input type="text" inputmode="decimal" value=${f.c} placeholder="0" onInput=${e => pon({ c: e.target.value })} /></label></div>
       ${p > 0 && html`<span class="sub entra">Ganas <b class="in num">${D.m(p - co)}</b> por cada uno (${Math.round((p - co) / p * 100)} %)</span>`}
-      ${T.inv ? html`<div class="rejilla-2" style="gap:10px"><label class="campo"><span>Tienes</span><input type="text" inputmode="numeric" value=${f.q} placeholder="0" onInput=${e => pon({ q: e.target.value })} /></label><label class="campo"><span>Avísame con menos de</span><input type="text" inputmode="numeric" value=${f.min} placeholder="0" onInput=${e => pon({ min: e.target.value })} /></label></div>`
-        : html`<div class="campo"><span>Dura</span><${Chips} opciones=${[{ v: 30, n: '30 min' }, { v: 45, n: '45 min' }, { v: 60, n: '1 hora' }, { v: 120, n: '2 horas' }]} valor=${f.dur} onCambio=${v => pon({ dur: v })} /></div>`}
+      ${T.inv && html`<${Interruptor} on=${svc} onCambio=${setSvc} titulo="Es un servicio" sub="Mano de obra, instalación, revisión, envío… No lleva existencia." />`}
+      ${inv && html`<div class="campo"><span>Se vende por</span><${Chips} opciones=${[{ v: '', n: 'Unidad' }, { v: 'kg', n: 'Kilo' }, { v: 'g', n: 'Gramo' }, { v: 'l', n: 'Litro' }, { v: 'm', n: 'Metro' }]} valor=${u} onCambio=${setU} chico />${u && html`<span class="sub faint entra" style="font-size:12px">El precio es por ${u}. Al vender se escribe cuánto lleva (o cuánto quiere gastar). Lee las etiquetas de balanza que empiezan con 2.</span>`}</div>`}
+      ${inv && vars.length > 0 ? html`<span class="sub">Tienes ${vars.reduce((a2, v) => a2 + numero(v.q), 0)}${u ? ' ' + u : ''} en total (la suma de las variantes).</span>`
+      : inv ? html`<div class="rejilla-2" style="gap:10px"><label class="campo"><span>Tienes${u ? ' (' + u + ')' : ''}</span><input type="text" inputmode=${u ? 'decimal' : 'numeric'} value=${f.q} placeholder="0" onInput=${e => pon({ q: e.target.value })} /></label><label class="campo"><span>Avísame con menos de</span><input type="text" inputmode="numeric" value=${f.min} placeholder="0" onInput=${e => pon({ min: e.target.value })} /></label></div>`
+        : T.inv ? null : html`<div class="campo"><span>Dura</span><${Chips} opciones=${[{ v: 30, n: '30 min' }, { v: 45, n: '45 min' }, { v: 60, n: '1 hora' }, { v: 120, n: '2 horas' }]} valor=${f.dur} onCambio=${v => pon({ dur: v })} /></div>`}
       <div class="campo"><span>Grupo</span><div class="chips">
         <button type="button" class=${'chip chico toca' + (!grupo && grupoNuevo == null ? ' on' : '')} onClick=${() => { setGrupo(''); setGrupoNuevo(null); }}>Sin grupo</button>
         ${S.grupos.map(g => html`<button type="button" key=${g.id} class=${'chip chico toca' + (grupo === g.id && grupoNuevo == null ? ' on' : '')} onClick=${() => { setGrupo(g.id); setGrupoNuevo(null); }}><i class="punto-grupo" style=${{ background: colorGrupo(g) }}></i>${g.n}</button>`)}
         <button type="button" class=${'chip chico toca' + (grupoNuevo != null ? ' on' : '')} style="border:1.5px dashed var(--line)" onClick=${() => setGrupoNuevo(grupoNuevo == null ? '' : null)}>+ Nuevo</button></div>
         ${grupoNuevo != null && html`<input class="entra" type="text" value=${grupoNuevo} placeholder="Nombre del grupo nuevo" autocomplete="off" onInput=${e => setGrupoNuevo(e.target.value)} />`}</div>
       ${S.negocio.taxOn && html`<div class="campo"><span>${P.tax[0]} de este ${T.inv ? 'producto' : 'servicio'}</span><${Chips} opciones=${opcionesImp} valor=${imp} onCambio=${setImp} chico /></div>`}
-      ${T.inv && html`<label class="campo"><span>Código de barras (opcional)</span><input class="num" type="text" inputmode="numeric" autocomplete="off" value=${f.cod} placeholder="Pásalo por el lector o escríbelo" onInput=${e => pon({ cod: e.target.value })} /></label>`}`,
+      ${inv && !u && html`<div class="campo"><span>Variantes (talla, color, sabor…)</span>
+        ${vars.length ? html`<div class="tarjeta pila" style="box-shadow:none;background:var(--fill2);padding:8px 12px;gap:0">${vars.map((v, i) => html`<div class="variante-fila entra" key=${v.id}>
+          <div class="fila" style="gap:6px"><input type="text" class="crece" value=${v.n} placeholder="Ej.: M · Rojo" aria-label="Nombre de la variante" autocomplete="off" onInput=${e => ponVar(i, { n: e.target.value })} /><button type="button" class="icono-btn chico toca" style="width:30px;height:30px" aria-label="Quitar variante" onClick=${() => setVars(vars.filter((_, k) => k !== i))}><${Icono} n="cerrar" t=${12} g=${2.6} /></button></div>
+          <div class="variante-datos">
+            <label><span>Tiene</span><input class="num" type="text" inputmode="numeric" value=${v.q} placeholder="0" aria-label="Existencia de la variante" onInput=${e => ponVar(i, { q: e.target.value })} /></label>
+            <label><span>Precio</span><input class="num" type="text" inputmode="decimal" value=${v.p} placeholder=${p ? D.m(p) : 'igual'} aria-label="Precio de la variante" onInput=${e => ponVar(i, { p: e.target.value })} /></label>
+            <label><span>Código</span><input class="num" type="text" inputmode="numeric" value=${v.cod} placeholder="opcional" aria-label="Código de la variante" autocomplete="off" onInput=${e => ponVar(i, { cod: e.target.value })} /></label>
+          </div>
+        </div>`)}</div>` : null}
+        <div class="chips"><button type="button" class="chip chico toca" onClick=${() => setVars(vars.concat([nuevaVar()]))}>+ Variante</button>
+          ${!vars.length && [['S', 'M', 'L', 'XL'], ['Chico', 'Mediano', 'Grande']].map(g => html`<button type="button" class="chip chico toca" onClick=${() => setVars(g.map(nuevaVar))}>${g.join(' · ')}</button>`)}</div>
+        ${vars.length > 0 && html`<span class="sub faint" style="font-size:12px">Sin precio, la variante usa el del producto. Al vender se elige cuál.</span>`}</div>`}
+      ${inv && html`<label class="campo"><span>Código de barras (opcional)</span><input class="num" type="text" inputmode="numeric" autocomplete="off" value=${f.cod} placeholder="Pásalo por el lector o escríbelo" onInput=${e => pon({ cod: e.target.value })} /></label>`}`,
     pie: html`<button type="button" class="btn toca" onClick=${() => guardar(c)}>Guardar</button>${p0 ? Pie2('Borrar ' + (T.inv ? 'producto' : 'servicio'), () => borrar(c), 'rojo') : null}`
   })} />`;
 }

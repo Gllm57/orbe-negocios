@@ -43,9 +43,13 @@ export function lineasRecibo(v, { S, P, D }) {
   if (cli) L.push({ t: 'Cliente: ' + cli.n });
   if (at) L.push({ t: 'Atendió: ' + at.n.split(' ')[0] + (n.sucursales.length > 1 ? ' · ' + v.suc : '') });
   L.push({ sep: '-' });
-  v.items.forEach(it => { L.push({ t: it.n }); L.push({ a: '  ' + fmtQ(it.q) + ' x ' + D.m(it.p) + (it.desc ? ' (-' + it.desc + '%)' : ''), b: D.m(it.q * it.p - (it.descV || 0)) }); });
+  v.items.forEach(it => {
+    const lista = it.pLista != null ? it.pLista : it.p;
+    L.push({ t: it.n }); L.push({ a: '  ' + fmtQ(it.q) + (it.u ? ' ' + it.u : '') + ' x ' + D.m(lista), b: D.m(it.q * lista) });
+    if (it.pLista != null && Math.abs(it.pLista - it.p) > 1e-9) L.push({ a: '  ' + (it.promo ? 'Promo ' + it.promo : it.desc ? 'Descuento ' + it.desc + '%' : 'Descuento'), b: '-' + D.m(it.q * (it.pLista - it.p)) });
+  });
   L.push({ sep: '-' });
-  if (v.descuento > 0) L.push({ a: 'Descuento' + (v.descTxt ? ' ' + v.descTxt : ''), b: '-' + D.m(v.descuento) });
+  if (v.descuento > 0) L.push({ a: 'Ahorraste', b: D.m(v.descuento), n: 1 });
   if (v.imp > 0 && !v.impDesglose) L.push({ a: v.impTxt || P.tax[0], b: D.m(v.imp) });
   (v.impDesglose || []).forEach(x => L.push({ a: x.r ? P.tax[0] + ' ' + x.r + '% s/ ' + D.m(x.base) : 'Exento ' + D.m(x.base), b: x.r ? D.m(x.imp) : '' }));
   L.push({ a: 'TOTAL', b: D.m(v.total), g: 1, n: 1 });

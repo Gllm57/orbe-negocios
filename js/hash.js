@@ -28,7 +28,7 @@ export function sha256(texto) {
 }
 
 // Lo que se firma de cada cosa: solo los datos que no deben cambiar nunca.
-export const firmaVenta = v => [v.n, v.t, v.total, v.cli, v.por, v.dev || '', v.items.map(it => it.pid + ':' + it.q + ':' + it.p).join(','), v.pagos.map(p => p.m + ':' + p.v).join(',')].join('|');
+export const firmaVenta = v => [v.n, v.t, v.total, v.cli, v.por, v.dev || '', v.items.map(it => it.pid + (it.vid ? '~' + it.vid : '') + ':' + it.q + ':' + it.p).join(','), v.pagos.map(p => p.m + ':' + p.v).join(',')].join('|');
 export const firmaRegistro = r => [r.t, r.por, r.que].join('|');
 export const firmaCierre = c => [c.n, c.t, c.dia, JSON.stringify(c.contado), c.resumen ? c.resumen.total : 0].join('|');
 

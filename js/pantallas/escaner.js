@@ -3,7 +3,7 @@
 // si no está, se crea su ficha con el código y, si se encuentra en internet, con el nombre puesto.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { listaProductos, ajustarStock, asignarCodigo } from '../datos.js';
+import { listaProductos, ajustarStock, asignarCodigo, mismoCodigo, porCodigo } from '../datos.js';
 import { Hoja, Icono, avisar } from '../ui.js';
 import { buscar, normal } from '../buscar.js';
 import { textosProducto, grupoDe, colorGrupo } from './grupos.js';
@@ -12,9 +12,7 @@ const BASE = new URL('../lib/', import.meta.url).href;
 const cargar = src => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + src)); document.head.appendChild(s); });
 // Solo los códigos de los productos de tienda: ITF y Codabar dan lecturas falsas con la cámara.
 const FORMATOS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
-// Mismo código aunque uno venga como UPC (12 dígitos) y otro como EAN (13, con un 0 delante).
-const limpio = c => { const x = String(c || '').replace(/\s+/g, ''); return /^\d+$/.test(x) ? x.replace(/^0+/, '') : x.toUpperCase(); };
-export const mismoCodigo = (a, b) => !!limpio(a) && limpio(a) === limpio(b);
+export { mismoCodigo };
 
 // Lector de códigos: el del sistema cuando existe (Android) o ZXing (iPhone y el resto), que se carga al usarlo.
 async function crearLector() {
@@ -42,7 +40,7 @@ async function crearLector() {
 
 // Lector de nombres (texto en la foto). Pesa unos 6 MB: se descarga la primera vez y después funciona sin internet.
 let ocr = null;
-async function leerTexto(cv, progreso) {
+export async function leerTexto(cv, progreso) {
   if (!ocr) {
     if (!window.Tesseract) await cargar(BASE + 'ocr/tesseract.min.js');
     ocr = await window.Tesseract.createWorker('spa', 1, {
@@ -145,13 +143,14 @@ export function Escaner({ d, cerrar }) {
 
   function encontrado(cod) {
     pitido();
-    const p = listaProductos().find(x => mismoCodigo(x.cod, cod));
+    // Código del producto, de una variante (talla, color…) o etiqueta de balanza con el peso.
+    const hit = porCodigo(cod), p = hit && hit.p;
     if (p && vender) {
-      if (d.onAgregar && d.onAgregar(p) !== false) setUltimo({ p, t: Date.now() });
+      if (d.onAgregar && d.onAgregar(p, hit.vid, hit.q) !== false) setUltimo({ p: hit.vid ? Object.assign({}, p, { n: p.n + ' · ' + ((p.vars || []).find(v => v.id === hit.vid) || {}).n }) : p, t: Date.now() });
       return;
     }
     setCuanto(1);
-    if (p) { setRes({ tipo: 'esta', pid: p.id, cod }); return; }
+    if (p) { setRes({ tipo: 'esta', pid: p.id, vid: hit.vid, cod }); return; }
     setRes({ tipo: 'nuevo', cod, n: '', buscando: true });
     nombreEnInternet(cod).then(n => setRes(r => r && r.tipo === 'nuevo' && r.cod === cod ? Object.assign({}, r, { n, buscando: false }) : r));
   }
@@ -183,14 +182,16 @@ export function Escaner({ d, cerrar }) {
 
   const mover = (p, signo, c) => {
     if (!puedeStock) { avisar('Tu perfil no puede cambiar el inventario'); return; }
-    if (signo < 0 && (p.q || 0) === 0) { avisar(p.n + ' ya está en 0'); return; }
-    const q = ajustarStock(p.id, signo * cuanto);
+    const v = res.vid && (p.vars || []).find(x => x.id === res.vid), ya = v ? v.q || 0 : p.q || 0;
+    if (signo < 0 && ya === 0) { avisar(p.n + ' ya está en 0'); return; }
+    const q = ajustarStock(p.id, signo * cuanto, res.vid);
     setRes(Object.assign({}, res, { hecho: { signo, n: cuanto, q, t: Date.now() } }));
     avisar(p.n + ': ahora tienes ' + q);
   };
 
   const Producto = (p, c) => {
-    const g = grupoDe(S, p), hecho = res.hecho;
+    const g = grupoDe(S, p), hecho = res.hecho, va = res.vid && (p.vars || []).find(x => x.id === res.vid);
+    if (va) p = Object.assign({}, p, { n: p.n + ' · ' + va.n, q: va.q || 0, cod: va.cod || p.cod });
     return html`<div class="escaner-res entra">
       <div class="fila" style="gap:12px">
         <span class="escaner-ic" style=${g ? { background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 18%, transparent)', color: colorGrupo(g) } : null}><${Icono} n="check" t=${20} g=${2.6} /></span>
