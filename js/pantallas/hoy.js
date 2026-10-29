@@ -1,7 +1,7 @@
 // Hoy (teléfono) y Panel (computadora): cómo va el día, con gráficos en vivo.
 import { html } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, bajoCosto, cierreDeHoy, leer, diaClave, vigentes } from '../datos.js';
+import { resumen, serieDias, inicioDia, deudores, porPagar, bajoMinimo, bajoCosto, bajoMeta, margenMeta, cierreDeHoy, leer, diaClave, vigentes } from '../datos.js';
 import { esElectronico } from '../paises.js';
 import { Barras, Linea, Reparto, Monto, Anillo, color } from '../graficos.js';
 import { Icono, LogoOrbe, iniciales, hora, fechaCorta, Bandera, MarcaNegocio, avisar } from '../ui.js';
@@ -39,9 +39,10 @@ export function Hoy() {
   if (D.dual && S.negocio.euro) pendientes.push({ i: 'sube', t: 't-azu', txt: 'Euro: ' + (P.id === 'VE' ? 'Bs ' : P.s + ' ') + new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(D.tasaEur), sub: S.tasas.euro && S.tasas.euro.valor ? (S.tasas.euro.modo === 'manual' ? 'Escrita a mano' : 'Leída ' + (S.tasas.euro.fecha === diaClave(Date.now()) ? 'hoy' : 'el ' + S.tasas.euro.fecha)) : 'Estimada con el dólar: léela o escríbela', go: () => abrir('tasa') });
   // La tasa saltó desde ayer: conviene revisar precios (o, en Venezuela, la tasa con la que cobras).
   if (D.dual) { const h = (S.historialTasas || []).filter(x => x.f === (S.tasa.fuente || 'oficial')); const q = h.length > 1 ? (h[h.length - 1].v / h[h.length - 2].v - 1) * 100 : 0;
-    if (Math.abs(q) >= 3) pendientes.unshift({ i: 'alerta', t: 't-amb', txt: 'El dólar ' + (q > 0 ? 'subió ' : 'bajó ') + Math.abs(q).toFixed(1).replace('.', ',') + ' % desde ayer', sub: P.id === 'VE' || !puede('productos') ? 'Revisa las tasas con las que cobras' : 'Revisa tus precios', go: puede('productos') && P.id !== 'VE' ? () => abrir('remarcar') : () => abrir('tasa') }); }
-  const sinGan = bajoCosto();
-  if (sinGan.length && puede('productos')) pendientes.push({ i: 'etiqueta', t: 't-ros', txt: sinGan.length + (sinGan.length === 1 ? ' producto casi no deja ganancia' : ' productos casi no dejan ganancia'), sub: sinGan.slice(0, 2).map(p => p.n).join(', ') + ': cuesta reponerlos casi lo que cobras', go: () => abrir('remarcar', { alcance: 'margen' }) });
+    if (Math.abs(q) >= 3) pendientes.unshift({ i: 'alerta', t: 't-amb', txt: 'El dólar ' + (q > 0 ? 'subió ' : 'bajó ') + Math.abs(q).toFixed(1).replace('.', ',') + ' % desde ayer', sub: P.id === 'VE' || !puede('productos') ? 'Revisa las tasas con las que cobras' : 'Revisa tus precios', go: puede('productos') && P.id !== 'VE' ? () => abrir('precios') : () => abrir('tasa') }); }
+  // Precios que se quedaron atrás: por debajo de la meta de ganancia (los que casi no dejan nada, en rojo).
+  const sinGan = bajoCosto(), flojos = bajoMeta();
+  if (flojos.length && puede('productos')) pendientes.push({ i: 'etiqueta', t: sinGan.length ? 't-ros' : 't-amb', txt: flojos.length + (flojos.length === 1 ? ' precio gana' : ' precios ganan') + ' menos de tu meta del ' + Math.round(margenMeta() * 100) + ' %', sub: sinGan.length ? sinGan.length + (sinGan.length === 1 ? ' casi no deja nada' : ' casi no dejan nada') + ': ' + sinGan.slice(0, 2).map(p => p.n).join(', ') : 'Toca para ajustarlos de un toque', go: () => abrir('precios') });
   if (S.negocio.pedirRef && puede('ajustes')) { const n = vigentes().filter(v => v.t > Date.now() - 7 * DIA).reduce((a, v) => a + v.pagos.filter(p => p.ref && !p.ok && esElectronico(p.m)).length, 0);
     if (n) pendientes.push({ i: 'check', t: 't-azu', txt: n + (n === 1 ? ' pago por verificar' : ' pagos por verificar') + ' con el banco', sub: 'Sube el estado de cuenta y Orbe los busca', go: () => abrir('conciliar') }); }
   if (puede('cierre')) pendientes.push(cierre ? { i: 'check', t: 't-ver', txt: 'Día cerrado', sub: 'Cerraste a las ' + hora(cierre.t), go: null } : { i: 'candado', t: 't-ver', txt: 'Cierre del día', sub: 'Cuenta la caja cuando cierres', go: () => abrir('cierre') });

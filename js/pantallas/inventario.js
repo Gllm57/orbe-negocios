@@ -1,7 +1,7 @@
 // Inventario (tienda, comida, venta en línea) o Servicios (citas, independientes).
 import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { bajoMinimo, resumen, inicioDia, listaProductos } from '../datos.js';
+import { bajoMinimo, bajoMeta, resumen, inicioDia, listaProductos } from '../datos.js';
 import { BarrasH, Reparto, color } from '../graficos.js';
 import { Chips, Icono, TONOS, avisar } from '../ui.js';
 import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo } from './grupos.js';
@@ -68,7 +68,7 @@ export function Inventario() {
     </button>`; })}</div>`;
 
   if (tel) return html`
-    <div class="fila entra" style="gap:8px"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="btn2 chico toca" onClick=${() => abrir('remarcar')}>Remarcar</button><button type="button" class="btn2 chico acento toca" onClick=${() => editarP({})}>+ Agregar</button>`}</div>
+    <div class="fila entra" style="gap:8px"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="btn2 chico toca" onClick=${() => abrir('precios')}>${bajoMeta().length ? html`<i class="punto-aviso" style="position:static"></i>` : null}Precios</button><button type="button" class="btn2 chico acento toca" onClick=${() => editarP({})}>+ Agregar</button>`}</div>
     <button type="button" class="escanear-btn toca entra" data-tour="escanear" onClick=${() => abrir('escaner', { para: 'inventario' })}>
       <span class="escanear-ic"><${Icono} n="camara" t=${20} /></span>
       <span class="crece" style="display:flex;flex-direction:column;gap:1px;text-align:left"><b>Escanear con la cámara</b><span class="sub">Lee el código o el nombre: suma, resta o crea el producto</span></span>
@@ -91,7 +91,7 @@ export function Inventario() {
       <div class="tarjeta cifra entra" style="--i:3"><span class="sub">Productos</span><span class="v num">${conStock.length}</span><span class="sub faint">con existencia</span></div>
     </div>
     <div class="pila">
-        <div class="fila" style="flex-wrap:wrap;gap:10px"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('remarcar')}><${Icono} n="etiqueta" t=${15} />Remarcar precios</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}>+ Producto</button>`}</div>
+        <div class="fila" style="flex-wrap:wrap;gap:10px"><${Chips} opciones=${['Todo', 'Por reponer']} valor=${filtro} onCambio=${setFiltro} chico /><span style="flex:1"></span>${pp && html`<button type="button" class="btn2 toca" onClick=${() => abrir('precios')}><${Icono} n="etiqueta" t=${15} />Cuidar precios${bajoMeta().length ? html` <span class="pildora t-amb">${bajoMeta().length}</span>` : null}</button><button type="button" class="btn2 lleno toca" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}>+ Producto</button>`}</div>
         ${Buscador}
         <div class="tabla-caja"><table class="tabla">
           <thead><tr><th>Producto</th><th>Grupo</th><th>Código</th><th class="der">Costo</th><th class="der">Precio</th><th class="der">Tienes</th><th class="der">Mínimo</th><th>Estado</th><th></th></tr></thead>

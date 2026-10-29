@@ -10,6 +10,7 @@ import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
 import { infoTasas } from './tasas.js';
 import { Grupos, Grupo, colorGrupo, textosProducto, iniciales2 } from './grupos.js';
 import { Escaner, mismoCodigo } from './escaner.js';
+import { Precios } from './precios.js';
 import { Orden, NuevaOrden, AbonoOrden, CancelarOrden } from './ordenes.js';
 import { buscar, parecidos } from '../buscar.js';
 
@@ -39,7 +40,7 @@ function Confirmar({ d, cerrar }) {
 }
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin, orden: Orden, nuevaOrden: NuevaOrden, abonoOrden: AbonoOrden, cancelarOrden: CancelarOrden }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin, orden: Orden, nuevaOrden: NuevaOrden, abonoOrden: AbonoOrden, cancelarOrden: CancelarOrden, precios: Precios }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
