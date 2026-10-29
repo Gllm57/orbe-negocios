@@ -117,7 +117,7 @@ export function Vender() {
     const ultimas = S.ventas.filter(v => v.t >= hoy0 && (!suc || v.suc === suc)).slice(-6).reverse();
     const pagos = Object.keys(r.porPago).map((k, i) => ({ n: k, v: r.porPago[k], c: k === 'Fiado' ? 'var(--c3)' : color(i) }));
     return html`<div class="mitades">
-      <section class="tarjeta entra" style="--i:3"><div class="tarjeta-tit">Hoy${suc ? ' en ' + suc : ' en la caja'}<span class="sub">${r.n} ventas</span></div>
+      <section class="tarjeta entra" style="--i:3"><div class="tarjeta-tit">Hoy${suc ? ' en ' + suc : ' en la caja'}<span class="fila" style="gap:8px"><span class="sub">${r.n} ventas</span><button type="button" class="btn2 chico acento toca" onClick=${() => abrir('caja')}><${Icono} n="billete" t=${14} />Caja</button></span></div>
         <div class="rejilla-3" style="margin-bottom:14px">
           <div class="cifra"><span class="sub">Vendido</span><${Monto} v=${r.total} f=${D.m} clase="v" /></div>
           <div class="cifra"><span class="sub">Ticket promedio</span><${Monto} v=${r.ticket} f=${D.m} clase="v" /></div>

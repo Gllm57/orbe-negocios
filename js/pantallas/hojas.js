@@ -1,7 +1,7 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, turnoActual, cajaEntre, cerrarTurno, inicioVisible, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { telInternacional, PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTRA, esDivisa, esElectronico, monedaEfectivo, billetesDe } from '../paises.js';
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera, MarcaNegocio, achicarImagen } from '../ui.js';
@@ -11,6 +11,8 @@ import { infoTasas } from './tasas.js';
 import { Grupos, Grupo, colorGrupo, textosProducto, iniciales2 } from './grupos.js';
 import { Escaner, mismoCodigo } from './escaner.js';
 import { Precios } from './precios.js';
+import { Caja, MovCaja } from './caja.js';
+import { imprimir, lineasRecibo, lineasZ, ajustesImpresora } from '../impresora.js';
 import { Orden, NuevaOrden, AbonoOrden, CancelarOrden } from './ordenes.js';
 import { buscar, parecidos } from '../buscar.js';
 
@@ -40,7 +42,7 @@ function Confirmar({ d, cerrar }) {
 }
 
 export function HojaActual({ hoja, cerrar }) {
-  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin, orden: Orden, nuevaOrden: NuevaOrden, abonoOrden: AbonoOrden, cancelarOrden: CancelarOrden, precios: Precios }[hoja.t];
+  const H = { cobrar: Cobrar, recibo: Recibo, anular: Anular, devolver: Devolver, gasto: Gasto, abono: Abono, recordar: Recordar, cierre: Cierre, producto: Producto, reponer: Reponer, nuevoCliente: NuevoCliente, cliente: Cliente, buscar: Buscar, borrar: Borrar, confirmar: Confirmar, locales: Locales, perfil: Perfil, rol: Rol, negocio: Negocio, tasa: Tasa, copias: Copias, registro: Registro, remarcar: Remarcar, conciliar: Conciliar, ceros: Ceros, cierres: Cierres, cierreZ: CierreZ, grupos: Grupos, grupo: Grupo, escaner: Escaner, pin: Pin, orden: Orden, nuevaOrden: NuevaOrden, abonoOrden: AbonoOrden, cancelarOrden: CancelarOrden, precios: Precios, caja: Caja, movCaja: MovCaja }[hoja.t];
   return H ? html`<${H} d=${hoja.datos} cerrar=${cerrar} />` : null;
 }
 
@@ -136,6 +138,9 @@ function Recibo({ d, cerrar }) {
   const quedan = v.items.some(it => it.q - ((v.devuelto || {})[it.pid] || 0) > 0);
   const corregir = puede('anular') && !v.anulada && !v.dev;
   const enviar = () => { abrirWA(cli && cli.tel, textoRecibo(v, S, D, P)); };
+  const imprimirTicket = (venta, cajon) => imprimir(lineasRecibo(venta, { S, P, D }), { cajon, logo: S.negocio.logo }).catch(er => avisar(er && er.message === 'sin-bluetooth' ? 'Este aparato no permite Bluetooth: usa la impresión del sistema' : 'No se pudo imprimir: revisa que la impresora esté encendida'));
+  // Impresión automática al cobrar (y el cajón, si se pagó en efectivo).
+  useEffect(() => { if (d.nueva && !v.anulada && ajustesImpresora().auto) imprimirTicket(v, v.pagos.some(p => esEfectivo(p.m))); }, []);
   return html`<${Hoja} titulo=${d.nueva ? (v.fiado ? 'Anotado' : 'Venta guardada') : v.dev ? 'Devolución #' + v.n : 'Venta #' + v.n} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       ${d.nueva && html`<div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:64px;height:64px;border-radius:50%;background:var(--in);display:grid;place-items:center;animation:pop .55s var(--spring) both"><${Icono} n="check" t=${30} g=${2.8} c="#0b0a14" /></span>
@@ -164,7 +169,7 @@ function Recibo({ d, cerrar }) {
       </div>
       ${corregir && html`<div class="chips" style="justify-content:center">${quedan ? html`<button type="button" class="btn2 chico toca" onClick=${() => c(() => abrir('devolver', { vid: v.id }))}><${Icono} n="deshacer" t=${14} />Devolver productos</button>` : null}<button type="button" class="btn2 chico rojo toca" onClick=${() => c(() => abrir('anular', { vid: v.id }))}>Anular venta</button></div>`}`,
     pie: html`${!v.anulada && html`<button type="button" class="btn wa toca" onClick=${enviar}>Enviar por WhatsApp</button>`}
-      ${!tel && !v.anulada && html`<button type="button" class="btn2 toca" style="min-height:54px;border-radius:27px" onClick=${() => window.print()}>Imprimir</button>`}
+      ${!v.anulada && html`<button type="button" class="btn2 toca" style="min-height:54px;border-radius:27px" onClick=${() => imprimirTicket(v)}><${Icono} n="doc" t=${16} />Imprimir ticket</button>`}
       ${Pie2('Listo', () => c())}`
   })} />`;
 }
@@ -295,22 +300,30 @@ function Recordar({ d, cerrar }) {
 // ---------- cierre del día ----------
 function Cierre({ d, cerrar }) {
   const { S, P, D, puede, abrir } = useApp();
-  const hoy0 = inicioDia(Date.now());
-  const r0 = resumen(hoy0, Date.now() + 1, '');
-  // Lo que entró hoy: ventas y abonos de clientes, por forma de pago.
+  // Dos modos: cierre del día (todo el día) o cierre de turno (desde el turno anterior, con lo que este dejó en la caja).
+  const turno = !!d.turno, tu = turnoActual();
+  const hoy0 = inicioDia(Date.now()), desde = turno ? tu.desde : hoy0;
+  const r0 = resumen(desde, Date.now() + 1, '');
+  // Lo que entró: ventas y abonos de clientes, por forma de pago.
   const porPago = Object.assign({}, r0.porPago);
-  S.abonos.filter(a => a.t >= hoy0).forEach(a => pagosDeAbono(a).forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; }));
+  S.abonos.filter(a => a.t >= desde).forEach(a => pagosDeAbono(a).forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; }));
   // Lo que se pagó con el anticipo de una orden ya entró a la caja el día del anticipo.
   delete porPago.Anticipo;
   const r = Object.assign({}, r0, { porPago });
-  const gastosHoy = gastosEntre(hoy0, Date.now() + 1).reduce((a, g) => a + g.v, 0);
-  const metodos = Object.keys(r.porPago).filter(k => k !== 'Fiado' && k !== 'Saldo a favor');
+  // El efectivo esperado suma el fondo, los ingresos y los ajustes, y resta retiros y gastos pagados en efectivo.
+  const caja = turno ? cajaEntre(tu.desde, Date.now() + 1, tu.base) : cajaEntre(hoy0, Date.now() + 1);
+  const esp = k => D.redondo(esEfectivo(k) ? (caja.esperado[k] || 0) : (r.porPago[k] || 0));
+  const gastosHoy = gastosEntre(desde, Date.now() + 1).reduce((a, g) => a + g.v, 0);
+  const metodos = Object.keys(r.porPago).concat(Object.keys(caja.esperado).filter(k => esEfectivo(k) && Math.abs(caja.esperado[k]) > 0.004)).filter((k, i, a) => a.indexOf(k) === i && k !== 'Fiado' && k !== 'Saldo a favor');
   const efectivos = metodos.filter(esEfectivo), digitales = metodos.filter(k => !esEfectivo(k)).sort((a, b) => r.porPago[b] - r.porPago[a]);
-  const [contado, setContado] = useState(() => { const o = {}; metodos.forEach(k => { o[k] = D.redondo(r.porPago[k]); }); return o; });
+  const [contado, setContado] = useState(() => { const o = {}; metodos.forEach(k => { o[k] = esp(k); }); return o; });
   // Cada efectivo se cuenta en su moneda: en Venezuela, «Efectivo Bs» en bolívares; «Efectivo €» en euros.
   const fmt2 = new Intl.NumberFormat(P.loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const enSu = k => { const mon = monedaEfectivo(P, k); return { mon, a: v => mon.eur ? D.aEur(v) : mon.otra ? D.aOtra(v, tasaMetodo(k)) : v, de: x => mon.eur ? D.deEur(x) : mon.otra ? D.deOtra(x, tasaMetodo(k)) : x, ver: x => mon.otra ? mon.s + ' ' + fmt2.format(x) : D.m(x) }; };
-  const [texto, setTexto] = useState(() => { const o = {}; efectivos.forEach(k => { const e = enSu(k); o[k] = String(Math.round(e.a(r.porPago[k]) * 100) / 100).replace('.', ','); }); return o; });
+  const [texto, setTexto] = useState(() => { const o = {}; efectivos.forEach(k => { const e = enSu(k); o[k] = String(Math.round(e.a(esp(k)) * 100) / 100).replace('.', ','); }); return o; });
+  // Al cerrar un turno: cuánto se queda en la caja para el siguiente (de entrada, el fondo con que se empezó).
+  const fondoDe = k => { const x = caja.partes[k] || {}; return D.redondo((x.base || 0) + (x.fondo || 0)); };
+  const [deja, setDeja] = useState(() => { const o = {}; efectivos.forEach(k => { o[k] = Math.max(0, Math.min(fondoDe(k), esp(k))); }); return o; });
   const ponContado = (k, vMain, txt) => { setContado(cc => Object.assign({}, cc, { [k]: Math.max(0, D.redondo(vMain)) })); setTexto(tt => Object.assign({}, tt, { [k]: txt != null ? txt : String(Math.round(enSu(k).a(Math.max(0, vMain)) * 100) / 100).replace('.', ',') })); };
   // Contar por billetes.
   const [billetes, setBilletes] = useState({});
@@ -321,23 +334,26 @@ function Cierre({ d, cerrar }) {
     setBilletes(Object.assign({}, billetes, { [k]: bk }));
     ponContado(k, enSu(k).de(suma));
   };
-  const dif = D.redondo(efectivos.reduce((a, k) => a + (contado[k] - D.redondo(r.porPago[k])), 0));
+  const dif = D.redondo(efectivos.reduce((a, k) => a + (contado[k] - esp(k)), 0));
   const totalDigital = digitales.reduce((a, k) => a + r.porPago[k], 0);
   const estado = df => Math.abs(df) < 0.005 ? ['Cuadra', 't-ver'] : df < 0 ? ['Faltan ' + D.m(-df), 't-amb'] : ['Sobran ' + D.m(df), 't-azu'];
   const cifras = [puede('ganancias') ? ['Ganancia', D.m(r.ganancia), 'var(--in)'] : ['Ventas', String(r.n), 'var(--ink)'], ['Fiado', D.m(r.fiado), 'var(--amber)'], ['Gastos', D.m(gastosHoy), 'var(--out)']];
-  return html`<${Hoja} titulo="Cierre del día" onCerrar=${cerrar} contenido=${c => ({
+  return html`<${Hoja} titulo=${turno ? 'Cerrar turno' : 'Cierre del día'} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
       <div class="cierre-resumen">
-        <span class="sub">Vendido hoy · ${r.n} ${r.n === 1 ? 'venta' : 'ventas'}</span>
+        <span class="sub">${turno ? 'Vendido en este turno · desde las ' + hora(inicioVisible(desde)) : 'Vendido hoy'} · ${r.n} ${r.n === 1 ? 'venta' : 'ventas'}</span>
         <b class="num cierre-total">${D.m(r.total)}</b>
         ${D.dual && html`<span class="sub num">${D.s(r.total)}</span>`}
         <div class="cierre-cifras">${cifras.map(k => html`<div><span class="sub">${k[0]}</span><b class="num" style=${{ color: k[2] }}>${k[1]}</b></div>`)}</div>
       </div>
 
       ${efectivos.length > 0 && html`<div class="cierre-seccion"><span class="cierre-tit"><${Icono} n="billete" t=${15} />Cuenta el efectivo</span>
-        ${efectivos.map(k => { const esp = D.redondo(r.porPago[k]), df = D.redondo(contado[k] - esp), e = enSu(k), bk = billetes[k] || {}, est = estado(df); return html`<div class="cierre-efectivo" key=${k}>
+        ${efectivos.map(k => { const ek = esp(k), df = D.redondo(contado[k] - ek), e = enSu(k), bk = billetes[k] || {}, est = estado(df), x = caja.partes[k] || {};
+          const det = [x.base ? 'dejaron ' + D.m(x.base) : '', x.fondo ? 'fondo ' + D.m(x.fondo) : '', x.ventas ? 'ventas ' + D.m(x.ventas) : '', x.ingresos ? 'ingresos ' + D.m(x.ingresos) : '', x.retiros ? 'retiros −' + D.m(x.retiros) : '', x.gastos ? 'gastos −' + D.m(x.gastos) : '', x.ajustes ? 'turnos ' + D.m(x.ajustes) : ''].filter(Boolean);
+          return html`<div class="cierre-efectivo" key=${k}>
           <div class="fila" style="gap:8px"><b class="crece" style="font-size:15px">${k}</b><span class=${'pildora ' + est[1]}>${est[0]}</span></div>
-          <span class="sub num">Esperado ${e.ver(e.a(esp))}${e.mon.otra ? ' · ' + D.m(esp) : ''}</span>
+          <span class="sub num">Esperado ${e.ver(e.a(ek))}${e.mon.otra ? ' · ' + D.m(ek) : ''}</span>
+          ${det.length > 1 && html`<span class="sub faint num" style="font-size:12px;margin-top:-6px">${det.join(' · ')}</span>`}
           <div class="cierre-contador">
             <button type="button" class="icono-btn toca" aria-label=${'Contar menos en ' + k} onClick=${() => ponContado(k, contado[k] - (e.mon.otra ? e.de(billetesDe(e.mon.cod)[1]) : D.paso))}><${Icono} n="menos1" t=${16} g=${2.6} /></button>
             <label class="cierre-monto"><span class="sub">${e.mon.otra ? e.mon.s : P.s}</span><input class="num" type="text" inputmode="decimal" autocomplete="off" aria-label=${'Contado en ' + k} value=${texto[k]} onInput=${ev => ponContado(k, e.de(numero(ev.target.value)), ev.target.value)} /></label>
@@ -354,9 +370,15 @@ function Cierre({ d, cerrar }) {
           <div class="fila cierre-suma"><span class="crece">Total digital</span><b class="num">${D.m(totalDigital)}</b></div></div>
       </div>`}
 
-      ${metodos.length ? null : html`<p class="vacio">Todavía no hay ventas hoy.</p>`}
-      ${efectivos.length > 0 && html`<div class=${'cierre-resultado ' + (Math.abs(dif) < 0.005 ? 'ok' : 'mal')}><${Icono} n=${Math.abs(dif) < 0.005 ? 'check' : 'alerta'} t=${18} /><span class="crece">${Math.abs(dif) < 0.005 ? 'La caja cuadra' : (dif < 0 ? 'Faltan ' : 'Sobran ') + D.m(Math.abs(dif)) + ' en efectivo'}</span></div>`}`,
-    pie: html`<button type="button" class="btn toca" onClick=${() => { const z = cerrarDia(contado, { total: r.total, ganancia: r.ganancia, dif, billetes, porPago: r.porPago }); c(() => { avisar(dif === 0 ? 'Día cerrado. Todo cuadra' : 'Día cerrado con ' + (dif < 0 ? 'faltante' : 'sobrante') + ' de ' + D.m(Math.abs(dif))); abrir('cierreZ', { id: z.id }); }); }}>Cerrar el día</button>
+      ${metodos.length ? null : html`<p class="vacio">${turno ? 'Todavía no hay movimientos en este turno.' : 'Todavía no hay ventas hoy.'}</p>`}
+      ${efectivos.length > 0 && html`<div class=${'cierre-resultado ' + (Math.abs(dif) < 0.005 ? 'ok' : 'mal')}><${Icono} n=${Math.abs(dif) < 0.005 ? 'check' : 'alerta'} t=${18} /><span class="crece">${Math.abs(dif) < 0.005 ? 'La caja cuadra' : (dif < 0 ? 'Faltan ' : 'Sobran ') + D.m(Math.abs(dif)) + ' en efectivo'}</span></div>`}
+      ${turno && efectivos.length > 0 && html`<div class="cierre-seccion"><span class="cierre-tit"><${Icono} n="candado" t=${15} />Se queda en la caja para el siguiente turno</span>
+        ${efectivos.map(k => { const e = enSu(k); return html`<div class="cierre-efectivo" key=${'d' + k}><div class="fila" style="gap:8px"><b class="crece" style="font-size:14px">${k}</b>
+          <div class="chips">${[['Todo', contado[k]], ['El fondo', Math.min(fondoDe(k), contado[k])], ['Nada', 0]].map(o => html`<button type="button" class=${'chip chico toca' + (Math.abs((deja[k] || 0) - o[1]) < 0.005 ? ' on' : '')} onClick=${() => setDeja(Object.assign({}, deja, { [k]: D.redondo(o[1]) }))}>${o[0]}</button>`)}</div></div>
+          <span class="sub num">Deja ${e.ver(deja[k] || 0)} · entrega ${e.ver(Math.max(0, contado[k] - (deja[k] || 0)))}</span></div>`; })}
+      </div>`}`,
+    pie: turno ? html`<button type="button" class="btn toca" onClick=${() => { const dejaOk = {}; efectivos.forEach(k => { dejaOk[k] = Math.min(deja[k] || 0, contado[k]); }); const esperado = {}; efectivos.forEach(k => { esperado[k] = esp(k); }); const cont = {}; efectivos.forEach(k => { cont[k] = contado[k]; }); const t = cerrarTurno(cont, dejaOk, esperado); c(() => { avisar('Turno ' + t.n + ' cerrado' + (Math.abs(dif) < 0.005 ? ': todo cuadra' : ' con ' + (dif < 0 ? 'faltante' : 'sobrante') + ' de ' + D.m(Math.abs(dif)))); abrir('caja'); }); }}>Cerrar turno</button>`
+      : html`<button type="button" class="btn toca" onClick=${() => { const turnos = S.turnos.filter(x => x.hasta >= hoy0).map(x => ({ n: x.n, por: x.por, desde: x.desde, hasta: x.hasta, dif: Object.keys(x.dif || {}).reduce((a, k) => a + x.dif[k], 0) })); const movs = cajaEntre(hoy0, Date.now() + 1).partes; const z = cerrarDia(contado, { total: r.total, ganancia: r.ganancia, dif, billetes, porPago: r.porPago, turnos, caja: movs }); c(() => { avisar(dif === 0 ? 'Día cerrado. Todo cuadra' : 'Día cerrado con ' + (dif < 0 ? 'faltante' : 'sobrante') + ' de ' + D.m(Math.abs(dif))); abrir('cierreZ', { id: z.id }); }); }}>Cerrar el día</button>
       ${S.cierres.length > 0 && Pie2('Cierres anteriores', () => c(() => abrir('cierres')))}`
   })} />`;
 }
@@ -899,9 +921,13 @@ function CierreZ({ d, cerrar }) {
       ${z.igtf ? linea('IGTF', D.m(z.igtf)) : null}
       ${linea('TOTAL', D.m(z.resumen ? z.resumen.total : 0), true)}
       ${z.resumen && z.resumen.dif ? linea(z.resumen.dif < 0 ? 'Faltante en caja' : 'Sobrante en caja', D.m(Math.abs(z.resumen.dif))) : linea('Caja', 'cuadra')}
+      ${(() => { const cj = (z.resumen && z.resumen.caja) || {}, suma = k => Object.keys(cj).reduce((a, m) => a + (cj[m][k] || 0), 0);
+        const filas = [['Fondo inicial', suma('fondo')], ['Ingresos de efectivo', suma('ingresos')], ['Retiros de efectivo', -suma('retiros')], ['Gastos pagados en efectivo', -suma('gastos')]].filter(x => Math.abs(x[1]) > 0.004);
+        return filas.length ? html`<span style="border-top:1px dashed #c9c6e0"></span>${filas.map(x => linea(x[0], D.m(x[1])))}` : null; })()}
+      ${((z.resumen && z.resumen.turnos) || []).map(t => linea('Turno ' + t.n + ' · ' + ((S.perfiles.find(p => p.id === t.por) || {}).n || '').split(' ')[0] + ' ' + hora(t.desde) + '–' + hora(t.hasta), Math.abs(t.dif) < 0.005 ? 'cuadró' : (t.dif < 0 ? 'faltó ' : 'sobró ') + D.m(Math.abs(t.dif))))}
       <span style="border-top:1px dashed #c9c6e0"></span>
       <span style="color:#8a87a6;font-size:11px;word-break:break-all">Firma ${(z.h || '').slice(0, 32)}</span>
     </div>`,
-    pie: html`${!tel ? html`<button type="button" class="btn toca" onClick=${() => window.print()}>Imprimir</button>` : null}${Pie2('Listo', () => c())}`
+    pie: html`<button type="button" class="btn toca" onClick=${() => imprimir(lineasZ(z, { S, P, D }), { logo: S.negocio.logo }).catch(() => avisar('No se pudo imprimir: revisa la impresora'))}><${Icono} n="doc" t=${16} />Imprimir</button>${Pie2('Listo', () => c())}`
   })} />`;
 }

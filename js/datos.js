@@ -9,7 +9,7 @@ const CLAVE = 'orbe-negocios';
 const subs = new Set();
 let S = vacio();
 
-function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], ordenes: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [], grupos: [] }; }
+function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], ordenes: [], movCaja: [], turnos: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [], grupos: [] }; }
 // Datos guardados con versiones anteriores: se completan sin perder nada.
 function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
@@ -25,6 +25,8 @@ function migrar(d) {
   if (!Array.isArray(d.historialTasas)) d.historialTasas = [];
   if (!Array.isArray(d.grupos)) d.grupos = [];
   if (!Array.isArray(d.ordenes)) d.ordenes = [];
+  if (!Array.isArray(d.movCaja)) d.movCaja = [];
+  if (!Array.isArray(d.turnos)) d.turnos = [];
   // Costos anotados antes de guardar su tasa: desde hoy se toma la tasa actual como punto de partida.
   if (Array.isArray(d.productos) && d.productos.some(p => p.cT === undefined)) d.productos = d.productos.map(p => p.cT === undefined ? Object.assign({}, p, { cT: (d.tasa && d.tasa.valor) || 0 }) : p);
   // Órdenes de trabajo y pedidos: encendidas de entrada en talleres y servicios; el permiso, para administrador y encargado.
@@ -524,6 +526,55 @@ export function anonimizarCliente(cid) {
   const c = S.clientes.find(x => x.id === cid); if (!c || deudaDe(cid) > 0.004) return false;
   cambiar(s => Object.assign({ clientes: s.clientes.map(x => x.id === cid ? { id: x.id, n: 'Cliente borrado', tipo: x.tipo, tel: '', limite: 0, borrado: Date.now(), anonimo: true } : x) }, nota(s, 'Borró los datos personales de un cliente')));
   return true;
+}
+// ---------- caja: fondo, retiros, ingresos y turnos ----------
+// Movimientos de efectivo que no son ventas: fondo inicial, retiros (depósito, pago, para el dueño), ingresos (sencillo)
+// y ajustes (lo que faltó o sobró al cerrar un turno, para que el cierre del día no lo cuente otra vez).
+const SIGNO_MOV = { fondo: 1, ingreso: 1, ajuste: 1, retiro: -1 };
+const NO_CAJA = ['Fiado', 'Saldo a favor', 'Anticipo'];
+export function movCaja(tipo, pagos, motivo) {
+  const v = pagos.reduce((a, p) => a + p.v, 0); if (!(v > 0) && tipo !== 'ajuste') return;
+  const mv = { id: id(), t: Date.now(), por: S.ajustes.perfil || '', tipo, pagos, motivo: motivo || '' };
+  const nombre = { fondo: 'Abrió la caja con ', retiro: 'Retiró ', ingreso: 'Agregó ' }[tipo];
+  cambiar(s => Object.assign({ movCaja: s.movCaja.concat([mv]) }, nombre ? nota(s, nombre + pagos.map(p => p.m + ' ' + Math.round(p.v * 100) / 100).join(' + ') + (motivo ? ' (' + motivo + ')' : '')) : {}));
+}
+export const movsEntre = (desde, hasta) => S.movCaja.filter(x => x.t >= desde && x.t < hasta);
+// Lo que debería haber en la caja por forma de pago, entre dos momentos, partiendo de «base».
+export function cajaEntre(desde, hasta, base) {
+  const partes = {}, parte = m => partes[m] || (partes[m] = { base: 0, ventas: 0, fondo: 0, ingresos: 0, retiros: 0, gastos: 0, ajustes: 0 });
+  Object.keys(base || {}).forEach(m => { parte(m).base += base[m]; });
+  S.ventas.filter(v => v.t >= desde && v.t < hasta && !v.anulada).forEach(v => v.pagos.forEach(p => { if (!NO_CAJA.includes(p.m)) parte(p.m).ventas += p.v; }));
+  S.abonos.filter(a => a.t >= desde && a.t < hasta).forEach(a => pagosDeAbono(a).forEach(p => { if (!NO_CAJA.includes(p.m)) parte(p.m).ventas += p.v; }));
+  S.gastos.filter(g => g.pagado && g.t >= desde && g.t < hasta).forEach(g => (g.pagos && g.pagos.length ? g.pagos : [{ m: g.m, v: g.v }]).forEach(p => { if (p.m) parte(p.m).gastos += p.v; }));
+  movsEntre(desde, hasta).forEach(x => x.pagos.forEach(p => { const k = x.tipo === 'fondo' ? 'fondo' : x.tipo === 'ingreso' ? 'ingresos' : x.tipo === 'retiro' ? 'retiros' : 'ajustes'; parte(p.m)[k] += p.v; }));
+  const esperado = {}; Object.keys(partes).forEach(m => { const x = partes[m]; esperado[m] = x.base + x.ventas + x.fondo + x.ingresos + x.ajustes - x.retiros - x.gastos; });
+  return { esperado, partes };
+}
+// Turno en curso: empieza al cerrar el turno anterior de hoy (con lo que se dejó en la caja) o al empezar el día.
+export function turnoActual() {
+  const hoy0 = inicioDia(Date.now()), t = S.turnos.filter(x => x.hasta >= hoy0).slice(-1)[0];
+  return t ? { desde: t.hasta, base: t.deja, anterior: t } : { desde: hoy0, base: {}, anterior: null };
+}
+// Hora en que de verdad empezó un turno: el primer fondo, venta o movimiento desde «desde».
+export function inicioVisible(desde) {
+  const ts = [].concat(S.movCaja.filter(x => x.t >= desde).map(x => x.t), S.ventas.filter(v => v.t >= desde).map(v => v.t), S.abonos.filter(a => a.t >= desde).map(a => a.t));
+  return ts.length ? Math.min(...ts) : desde;
+}
+export const cajaAbierta = () => S.movCaja.some(x => x.tipo === 'fondo' && x.t >= inicioDia(Date.now()));
+// Cerrar turno: queda el arqueo; lo que faltó o sobró se anota como ajuste y lo que se entrega sale como retiro.
+export function cerrarTurno(contado, deja, esperado) {
+  const ahora = Date.now(), n = S.turnos.filter(x => x.hasta >= inicioDia(ahora)).length + 1;
+  const ms = Object.keys(Object.assign({}, contado, esperado));
+  const dif = {}; ms.forEach(m => { dif[m] = Math.round(((contado[m] || 0) - (esperado[m] || 0)) * 100) / 100; });
+  const ajuste = ms.filter(m => Math.abs(dif[m]) > 0.004).map(m => ({ m, v: dif[m] }));
+  const entrega = ms.map(m => ({ m, v: Math.round(((contado[m] || 0) - (deja[m] || 0)) * 100) / 100 })).filter(p => p.v > 0.004);
+  const tu = { id: id(), n, desde: inicioVisible(turnoActual().desde), hasta: ahora, por: S.ajustes.perfil || '', esperado, contado, deja, dif, entrega };
+  const movs = [];
+  if (ajuste.length) movs.push({ id: id(), t: ahora - 1, por: tu.por, tipo: 'ajuste', pagos: ajuste, motivo: 'Diferencia del turno ' + n });
+  if (entrega.length) movs.push({ id: id(), t: ahora - 1, por: tu.por, tipo: 'retiro', pagos: entrega, motivo: 'Entregado al cerrar el turno ' + n });
+  const totalDif = ajuste.reduce((a, p) => a + p.v, 0);
+  cambiar(s => Object.assign({ turnos: s.turnos.concat([tu]), movCaja: s.movCaja.concat(movs) }, nota(s, 'Cerró el turno ' + n + (Math.abs(totalDif) > 0.004 ? (totalDif < 0 ? ' con faltante de ' : ' con sobrante de ') + Math.round(Math.abs(totalDif) * 100) / 100 : ' cuadrado'))));
+  return tu;
 }
 export function cerrarDia(contado, resumen) {
   const n = (S.cierres.length ? S.cierres[S.cierres.length - 1].n || S.cierres.length : 0) + 1;

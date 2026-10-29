@@ -1,5 +1,5 @@
 // Más (teléfono): gastos, cierre, reportes y ajustes. En la computadora es la pantalla de Ajustes.
-import { html } from '../lib/preact-htm.js';
+import { html, useState } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { cambiarAjustes, cambiarNegocio, exportar, resumen, gastosEntre, inicioDia, salir } from '../datos.js';
 import { Monto } from '../graficos.js';
@@ -8,6 +8,26 @@ import { nombreTasa } from '../paises.js';
 import { BloqueGastos, inicioMes } from './gastos.js';
 import { descargar, ventasCSV } from './reportes.js';
 import { COND_ORDEN } from '../ordenpdf.js';
+import { ajustesImpresora, hayBluetooth, conectarBluetooth, olvidarBluetooth, conectada, nombreImpresora, imprimir } from '../impresora.js';
+
+// Impresora térmica: tamaño del papel, cómo se imprime, cajón y prueba.
+function Impresora() {
+  const { S, P } = useApp();
+  const a = ajustesImpresora(), bt = hayBluetooth();
+  const [nombre, setNombre] = useState(conectada() ? nombreImpresora() : '');
+  const pon = x => cambiarNegocio({ impresora: Object.assign({}, a, x) });
+  const conectar = async () => { try { setNombre(await conectarBluetooth()); avisar('Impresora conectada'); } catch (e) { avisar(e && e.message === 'sin-canal' ? 'Esa impresora no recibe datos por Bluetooth' : 'No se conectó. Enciende la impresora y vuelve a intentar'); } };
+  const prueba = () => imprimir([{ t: S.negocio.nombre, c: 1, g: 1, n: 1 }, { t: 'Prueba de impresión', c: 1 }, { sep: '-' }, { a: 'Papel', b: a.ancho + ' mm' }, { a: 'Acentos', b: 'áéíóú ñ ¿¡ €' }, { a: 'Moneda', b: P.s + ' 1.234,56' }, { sep: '-' }, { t: 'Orbe Negocios', c: 1 }], { logo: S.negocio.logo }).catch(() => avisar('No se pudo imprimir'));
+  return html`<div class="pila" style="gap:10px;margin-top:6px">
+    <div class="campo"><span>Papel</span><${Chips} opciones=${[{ v: 58, n: '58 mm' }, { v: 80, n: '80 mm' }]} valor=${a.ancho} onCambio=${v => pon({ ancho: v })} chico /></div>
+    <div class="campo"><span>Cómo imprime</span><${Chips} opciones=${[{ v: 'sistema', n: 'Del sistema (AirPrint, Wi-Fi, USB)' }, { v: 'bluetooth', n: 'Bluetooth directa' }]} valor=${a.modo} onCambio=${v => { if (v === 'bluetooth' && !bt) { avisar('Este navegador no permite Bluetooth. En iPhone usa una impresora con AirPrint.'); return; } pon({ modo: v }); }} chico /></div>
+    ${a.modo === 'bluetooth' && html`<div class="fila entra" style="gap:8px"><span class="sub crece">${nombre ? 'Conectada: ' + nombre : 'Sin conectar'}</span>${nombre ? html`<button type="button" class="btn2 chico toca" onClick=${() => { olvidarBluetooth(); setNombre(''); }}>Desconectar</button>` : html`<button type="button" class="btn2 chico acento toca" onClick=${conectar}>Buscar impresora</button>`}</div>
+      <${Interruptor} on=${!!a.cajon} onCambio=${v => pon({ cajon: v })} titulo="Abrir el cajón al cobrar en efectivo" sub="El cajón va conectado a la impresora." />`}
+    ${!bt && html`<span class="sub faint" style="font-size:12px;line-height:1.4">En iPhone y iPad la impresión va por AirPrint (impresoras térmicas Wi-Fi compatibles). Bluetooth directa funciona en Android y computadoras con Chrome.</span>`}
+    <${Interruptor} on=${!!a.auto} onCambio=${v => pon({ auto: v })} titulo="Imprimir el ticket al cobrar" sub="Sin tocar nada más." />
+    <div class="chips"><button type="button" class="btn2 chico acento toca" onClick=${prueba}>Imprimir prueba</button></div>
+  </div>`;
+}
 
 function Ajustes() {
   const { S, P, T, D, abrir, tel, puede, yo, rol, ir, verRecorrido } = useApp();
@@ -45,6 +65,7 @@ function Ajustes() {
         <div class="fila" style="gap:10px;margin-top:10px"><span class="sub crece" style="line-height:1.4">Tasa general. A cada producto le puedes poner una reducida o exento.</span>
           <div class="pago-monto" style="width:110px;min-height:44px"><input class="num" type="text" inputmode="decimal" aria-label="Tasa general" placeholder=${String(P.tax[1])} value=${n.taxGen != null ? String(n.taxGen).replace('.', ',') : ''} onChange=${e => { const v = parseFloat(e.target.value.replace(',', '.')); cambiarNegocio({ taxGen: isFinite(v) && v >= 0 && v < 100 ? v : undefined }); }} /><span class="sub" style="padding-right:10px">%</span></div></div>`}`, 3),
     Tarjeta('Apariencia', 'sol', html`<div style="margin-top:6px"><${Chips} opciones=${[{ v: 'auto', n: 'Automático' }, { v: 'claro', n: 'Claro' }, { v: 'oscuro', n: 'Oscuro' }]} valor=${S.ajustes.tema || 'auto'} onCambio=${v => cambiarAjustes({ tema: v })} chico /></div>`, 4),
+    Tarjeta('Impresora de tickets', 'doc', html`<${Impresora} />`, 5),
     Tarjeta('Copias y sin conexión', 'guardar', html`
       ${Dato('Dónde se guarda', 'En este aparato')}${Dato('Copias automáticas', 'Una por día · las últimas 7')}${Dato('Sin internet', 'Sigue funcionando')}
       <div class="chips" style="margin-top:8px">
@@ -91,6 +112,7 @@ export function Mas() {
     <div class="rejilla-2" data-tour="mas-acciones">
       ${puede('gastos') && html`<button type="button" class="btn2 rojo toca" style="min-height:52px" onClick=${() => abrir('gasto')}>Anotar gasto</button>`}
       ${puede('cierre') && html`<button type="button" class="btn2 acento toca" style="min-height:52px" onClick=${() => abrir('cierre')}>Cierre del día</button>`}
+      ${puede('vender') && html`<button type="button" class="btn2 toca" style="min-height:52px" onClick=${() => abrir('caja')}><${Icono} n="billete" t=${16} />Caja y turnos</button>`}
       ${S.negocio.ordenes && puede('ordenes') && html`<button type="button" class="btn2 verde toca" style="min-height:52px" onClick=${() => ir('clientes')}><${Icono} n="personas" t=${16} />Clientes</button>`}
     </div>
     ${puede('gastos') && html`${b.PorPagar}${b.Mes}${b.Recientes}`}
