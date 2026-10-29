@@ -728,3 +728,19 @@ html.en-recorrido .nav-tel { background: var(--oscuro); }
 .lateral [data-tour=usuario] .icono-btn { background: rgba(255, 255, 255, .1); color: #fff; }
 .lateral > div > .nav-btn { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: transparent; color: rgba(255, 255, 255, .66); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .lateral > div > .nav-btn.on { background: rgba(255, 255, 255, .13); color: #fff; }
+/* Inventario: buscador oscuro con la cámara, herramientas en una fila y pestañas */
+.buscador-oscuro { width: 100%; min-height: 50px; border-radius: 17px; background: var(--oscuro); color: rgba(255, 255, 255, .6); padding: 0 6px 0 14px; }
+.buscador-oscuro input { color: #fff; background: transparent !important; border: 0 !important; min-height: 48px !important; padding: 0 !important; }
+.buscador-oscuro input::placeholder { color: rgba(255, 255, 255, .5); }
+.buscador-cam { flex: none; width: 38px; height: 38px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .12); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.boton-agregar { width: 42px; height: 42px; background: var(--oscuro); color: #fff; }
+.herramientas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.herramientas button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border: 0; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.herramientas button span { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; }
+.herramientas button b { font-weight: 600; }
+.herramientas em { position: absolute; top: 6px; right: 10px; min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px; background: var(--out); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; }
+.pc .herramientas { display: flex; gap: 8px; } .pc .herramientas button { flex-direction: row; padding: 6px 12px 6px 6px; border-radius: 16px; font-size: 13px; } .pc .herramientas button span { width: 28px; height: 28px; border-radius: 9px; }
+.segmento.ancho { display: flex; } .tel .segmento.ancho { width: 100%; } .tel .segmento.ancho button { flex: 1; padding: 0 6px; }
+.segmento.ancho { background: var(--oscuro); } .segmento.ancho button { color: rgba(255, 255, 255, .62); } .segmento.ancho button.on { background: #fff; color: #1a1733; }
+.resumen-inv { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0 4px; font-size: 13px; color: var(--muted); }
+.resumen-inv b { color: var(--ink); }
