@@ -744,3 +744,29 @@ html.en-recorrido .nav-tel { background: var(--oscuro); }
 .segmento.ancho { background: var(--oscuro); } .segmento.ancho button { color: rgba(255, 255, 255, .62); } .segmento.ancho button.on { background: #fff; color: #1a1733; }
 .resumen-inv { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0 4px; font-size: 13px; color: var(--muted); }
 .resumen-inv b { color: var(--ink); }
+/* Más (celular) y Ajustes (computadora) por temas */
+.grupo-menu { margin: 6px 6px -2px; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.menu-lista { padding: 2px 14px; }
+.opcion-menu { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 0; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.opcion-menu:first-child { border-top: 0; }
+.opcion-menu b { font-size: 15px; font-weight: 600; }
+.volver { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 4px 2px; color: var(--accent-text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.ajustes-dos { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1100px; }
+.ajustes-temas { position: sticky; top: 86px; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); }
+.ajustes-temas small { display: block; padding: 6px 10px 4px; font-size: 11px; font-weight: 800; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+.ajustes-temas button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 4px 10px 4px 6px; border: 0; border-radius: 12px; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.ajustes-temas button .ic { width: 28px; height: 28px; border-radius: 9px; }
+.ajustes-temas button:hover { background: var(--fill2); }
+.ajustes-temas button.on { background: var(--accent-soft); color: var(--ink); }
+.ajustes-tema { padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; min-height: 320px; }
+/* Computadora: botón «Nuevo ▾» */
+.nuevo-menu { position: relative; }
+.nuevo-flecha { margin-left: 2px; opacity: .75; display: inline-block; transition: transform .3s var(--spring); }
+.nuevo-flecha.on { transform: rotate(180deg); }
+.nuevo-lista { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: 270px; padding: 8px; border-radius: 20px; background: var(--surface); box-shadow: 0 18px 44px rgba(22, 20, 42, .2), 0 0 0 1px var(--line);
+  transform-origin: 90% 0; transform: translateY(-6px) scale(.96); opacity: 0; visibility: hidden; pointer-events: none; transition: transform .35s var(--bounce), opacity .2s ease, visibility 0s linear .35s; }
+.nuevo-lista.on { transform: none; opacity: 1; visibility: visible; pointer-events: auto; transition: transform .35s var(--bounce), opacity .2s ease, visibility 0s; }
+.nuevo-lista button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 14px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.nuevo-lista button:hover, .nuevo-lista button:focus-visible { background: var(--fill2); }
+.nuevo-lista button > span:first-child { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+.nuevo-lista b { font-size: 14px; font-weight: 600; } .nuevo-lista small { color: var(--muted); font-size: 12px; }

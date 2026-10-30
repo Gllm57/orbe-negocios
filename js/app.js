@@ -10,7 +10,7 @@ import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera, MarcaNegoci
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
 import { Ordenes } from './pantallas/ordenes.js';
-import { BotonOrbe } from './pantallas/menuorbe.js';
+import { BotonOrbe, BotonNuevo } from './pantallas/menuorbe.js';
 import { Vender } from './pantallas/vender.js';
 import { Clientes } from './pantallas/clientes.js';
 import { Inventario } from './pantallas/inventario.js';
@@ -71,6 +71,11 @@ function App() {
   }, []);
   useEffect(() => { document.documentElement.classList.toggle('pc', !tel); document.documentElement.classList.toggle('tel', tel); }, [tel]);
   useEffect(() => { aplicarTema(S.ajustes.tema); }, [S.ajustes.tema]);
+  // Computadora: «/» lleva al buscador de arriba (si no se está escribiendo en otro lado).
+  useEffect(() => {
+    const tecla = e => { if (e.key !== '/' || /INPUT|TEXTAREA|SELECT/.test((e.target || {}).tagName || '') || document.querySelector('.hoja')) return; const b = document.querySelector('.barra-sup input[type=search]'); if (b) { e.preventDefault(); b.focus(); } };
+    window.addEventListener('keydown', tecla); return () => window.removeEventListener('keydown', tecla);
+  }, []);
   // Tasa del día (Venezuela y Argentina): si es automática, una vez al día y cuando vuelve el internet.
   const pid = S.negocio && S.negocio.pais;
   useEffect(() => {
@@ -157,9 +162,9 @@ function App() {
         <div class="barra-sup">
           <div class="crece"><h1>${valida === 'hoy' ? saludo() : nombreSec(valida)}</h1><span class="sub">${subtitulo(valida, ctx)}</span></div>
           <${ChipTasa} />
-          <label class="buscador"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" aria-label="Buscar" placeholder="Buscar producto o cliente" onKeyDown=${e => { if (e.key === 'Enter' && e.target.value.trim()) { abrir('buscar', { q: e.target.value.trim() }); } }} /><span class="tecla">Enter</span></label>
+          <label class="buscador"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" aria-label="Buscar" placeholder="Buscar producto, cliente u orden" onKeyDown=${e => { if (e.key === 'Enter' && e.target.value.trim()) { abrir('buscar', { q: e.target.value.trim() }); } }} /><span class="tecla">/</span></label>
           ${E && (valida === 'hoy' || valida === 'vender' || valida === 'reportes') && html`<div class="segmento" role="group" aria-label="Sucursal">${[''].concat(S.negocio.sucursales).map(x => html`<button type="button" class=${suc === x ? 'on' : ''} aria-pressed=${suc === x ? 'true' : 'false'} onClick=${() => setSuc(x)}>${x || 'Todas'}</button>`)}</div>`}
-          ${valida !== 'vender' && pd('vender') && html`<button type="button" class="btn2 lleno toca" onClick=${() => ir('vender')}><${Icono} n="mas1" t=${16} g=${2.4} />${T.vender === 'Pedido' ? 'Nuevo pedido' : T.vender === 'Cobrar' ? 'Cobrar' : 'Nueva venta'}</button>`}
+          <${BotonNuevo} />
         </div>
         <div class="contenido" key=${valida}><${Pantalla} /></div>
       </div>

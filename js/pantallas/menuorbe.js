@@ -49,3 +49,28 @@ export function BotonOrbe({ seccion }) {
       ${atrasadas > 0 && !abierto && html`<i class="bo-punto" aria-label=${atrasadas + ' órdenes atrasadas'}></i>`}
     </button>`;
 }
+
+// Computadora: botón «Nuevo ▾» en la barra de arriba, con lo que se crea a diario.
+export function BotonNuevo() {
+  const { T, ir, abrir, puede } = useApp();
+  const [abierto, setAbierto] = useState(false);
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = e => { if (!e.target.closest('.nuevo-menu')) setAbierto(false); };
+    const tecla = e => { if (e.key === 'Escape') setAbierto(false); };
+    document.addEventListener('pointerdown', fuera); window.addEventListener('keydown', tecla);
+    return () => { document.removeEventListener('pointerdown', fuera); window.removeEventListener('keydown', tecla); };
+  }, [abierto]);
+  const ops = [
+    puede('vender') && ['venta', 'carrito', T.vender === 'Pedido' ? 'Pedido' : 'Venta', 'F12 para cobrar', () => ir('vender')],
+    puede('ordenes') && ['orden', 'orden', 'Orden de trabajo', 'O un pedido con entrega', () => abrir('nuevaOrden', {})],
+    puede('gastos') && ['gasto', 'dinero', 'Gasto', 'Lo que pagas o debes', () => abrir('gasto')],
+    puede('clientes') && ['cliente', 'personas', 'Cliente', 'Con su teléfono', () => abrir('nuevoCliente', {})],
+    puede('productos') && ['escanear', 'etiqueta', T.inv ? 'Producto' : 'Servicio', 'Con precio y existencia', () => abrir('producto', {})]
+  ].filter(Boolean);
+  if (!ops.length) return null;
+  return html`<div class="nuevo-menu">
+    <button type="button" class="btn2 lleno toca" aria-haspopup="menu" aria-expanded=${abierto ? 'true' : 'false'} onClick=${() => setAbierto(!abierto)}><${Icono} n="mas1" t=${16} g=${2.4} />Nuevo<span class=${'nuevo-flecha' + (abierto ? ' on' : '')}>▾</span></button>
+    <div class=${'nuevo-lista' + (abierto ? ' on' : '')} role="menu">${ops.map((o, i) => html`<button type="button" key=${o[0]} role="menuitem" class="toca" style=${{ '--d': i * 25 + 'ms' }} tabindex=${abierto ? 0 : -1} onClick=${() => { setAbierto(false); o[4](); }}><span style=${{ background: COLORES[o[0]] }}><${Icono} n=${o[1]} t=${16} c="#fff" /></span><span class="crece" style="display:flex;flex-direction:column"><b>${o[2]}</b><small>${o[3]}</small></span></button>`)}</div>
+  </div>`;
+}

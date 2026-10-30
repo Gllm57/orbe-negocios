@@ -1,7 +1,7 @@
 // Todas las hojas (teléfono) o ventanas (computadora) de la app.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, claveItem, turnoActual, cajaEntre, cerrarTurno, inicioVisible, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
+import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, claveItem, numeroOrden, turnoActual, cajaEntre, cerrarTurno, inicioVisible, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { telInternacional, PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTRA, esDivisa, esElectronico, monedaEfectivo, billetesDe } from '../paises.js';
 import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera, MarcaNegocio, achicarImagen } from '../ui.js';
@@ -534,9 +534,12 @@ function Buscar({ d, cerrar }) {
   // Tolerante a acentos, errores de tipeo y plurales; si no hay nada, sugiere lo más parecido.
   const prods = buscar(listaProductos(), d.q, textosProducto(S)).slice(0, 30);
   const clis = buscar(listaClientes(), d.q, x => [x.n, x.tel]).slice(0, 20);
-  const sugeridos = !prods.length && !clis.length ? parecidos(listaProductos(), d.q, textosProducto(S)) : [];
+  // También las órdenes: por número, cliente o lo que se recibió.
+  const ords = buscar(S.ordenes.slice().reverse(), d.q, o => [numeroOrden(o), o.que, (S.clientes.find(x => x.id === o.cli) || {}).n, o.det], true).slice(0, 10);
+  const sugeridos = !prods.length && !clis.length && !ords.length ? parecidos(listaProductos(), d.q, textosProducto(S)) : [];
   return html`<${Hoja} titulo=${'Buscar «' + d.q + '»'} onCerrar=${cerrar} contenido=${c => ({
-    cuerpo: html`${!prods.length && !clis.length && html`<p class="vacio">No encontré nada con «${d.q}».</p>`}
+    cuerpo: html`${!prods.length && !clis.length && !ords.length && html`<p class="vacio">No encontré nada con «${d.q}».</p>`}
+      ${ords.length > 0 && html`<span class="sub">Órdenes</span><div class="lista">${ords.map(o => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('orden', { oid: o.id }))}><b class="num orden-num">${numeroOrden(o)}</b><span class="crece corta">${o.que}</span><span class="sub">${(S.clientes.find(x => x.id === o.cli) || {}).n || ''}</span></button>`)}</div>`}
       ${sugeridos.length > 0 && html`<span class="sub">¿Quisiste decir…?</span><div class="lista">${sugeridos.map(p => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('producto', { pid: p.id }))}><span class="crece">${p.n}</span><b class="num">${D.m(p.p)}</b></button>`)}</div>`}
       ${prods.length > 0 && html`<span class="sub">Productos</span><div class="lista">${prods.map(p => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('producto', { pid: p.id }))}><span class="crece">${p.n}</span><span class="sub">${p.q != null ? p.q + ' und · ' : ''}</span><b class="num">${D.m(p.p)}</b></button>`)}</div>`}
       ${clis.length > 0 && html`<span class="sub">Clientes</span><div class="lista">${clis.map(x => html`<button type="button" class="item toca" style="color:var(--ink)" onClick=${() => c(() => abrir('cliente', { cid: x.id }))}><span class="crece">${x.n}</span><${Icono} n="sig" t=${16} c="var(--faint)" /></button>`)}</div>`}`,
