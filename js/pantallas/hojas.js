@@ -4,7 +4,7 @@ import { useApp } from '../ctx.js';
 import { leer, vender, abonar, anotarGasto, editarGasto, borrarGasto, guardarProducto, borrarProducto, reponer, nuevoCliente, editarCliente, borrarCliente, cerrarDia, empezarDeNuevo, fiadoDe, pagosDeAbono, deudores, deudaDe, resumen, inicioDia, gastosEntre, guardarSucursales, guardarPerfil, cambiarPin, borrarPerfil, claveItem, numeroOrden, turnoActual, cajaEntre, cerrarTurno, inicioVisible, nuevoRol, perfilActual, anularVenta, devolver, cambiarNegocio, guardarTasa, listarCopias, leerCopia, restaurar, valido, listaProductos, listaClientes, vigentes, tasaMetodo, tasaDe, guardarTasaExtra, remarcar, quitarCeros, verificarPagos, bajoCosto, revisarIntegridad, anonimizarCliente, guardarGrupo } from '../datos.js';
 import { rolDe, puedeEditarRol, PERMISOS } from '../permisos.js';
 import { telInternacional, PAISES, TIPOS, pais, tipo, leerTasa, nombreTasa, FUENTES_AR, TASAS_EXTRA, esDivisa, esElectronico, monedaEfectivo, billetesDe } from '../paises.js';
-import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera, MarcaNegocio, achicarImagen } from '../ui.js';
+import { Hoja, Icono, Interruptor, Chips, avisar, iniciales, TONOS, hora, fechaCorta, hace, simbolo, Bandera, MarcaNegocio, achicarImagen, FotoProd } from '../ui.js';
 import { Monto, Linea } from '../graficos.js';
 import { usePagos, conSimbolo, numero, esEfectivo } from './pagos.js';
 import { infoTasas } from './tasas.js';
@@ -394,8 +394,17 @@ function Cierre({ d, cerrar }) {
 
 // ---------- producto o servicio ----------
 function Producto({ d, cerrar }) {
-  const { S, D, T, P, abrir } = useApp();
+  const { S, D, T, P, abrir, tel } = useApp();
   const p0 = S.productos.find(p => p.id === d.pid) || null;
+  // Foto del producto: se toma con la cámara o se elige; se guarda recortada en cuadrado y pequeña.
+  const [foto, setFoto] = useState(p0 && p0.foto || d.foto || '');
+  const [latido, setLatido] = useState(false);
+  const elegirFoto = async e => {
+    const a = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!a) return;
+    if (!/^image\//.test(a.type)) { avisar('Elige una imagen (foto, PNG o JPG)'); return; }
+    try { setFoto(await achicarImagen(a, 360, true, 0.82)); setLatido(true); setTimeout(() => setLatido(false), 380); } catch (er) { avisar('No pude abrir esa imagen'); }
+  };
   const [f, setF] = useState(p0 ? { n: p0.n, p: String(p0.p), c: String(p0.c), q: p0.q == null ? '' : String(p0.q), min: String(p0.min), dur: p0.dur || 60, cod: p0.cod || '', usd: p0.usd ? String(p0.usd).replace('.', ',') : '' } : { n: d.n || '', p: '', c: '', q: d.q != null ? String(d.q) : '', min: '', dur: 60, cod: d.cod || '', usd: '' });
   const [enDolar, setEnDolar] = useState(!!(p0 && p0.usd));
   // Impuesto del producto: general, una tasa reducida del país o exento.
@@ -426,13 +435,20 @@ function Producto({ d, cerrar }) {
     const codRep = varsOk.find(v => v.cod && (mismoCodigo(v.cod, cod) || varsOk.some(w => w !== v && mismoCodigo(w.cod, v.cod)) || listaProductos().some(x => (!p0 || x.id !== p0.id) && (mismoCodigo(x.cod, v.cod) || (x.vars || []).some(w => mismoCodigo(w.cod, v.cod))))));
     if (codRep) { avisar('El código de ' + codRep.n + ' ya lo tiene otro producto o variante'); return; }
     const cant = x => u ? Math.round(numero(x) * 1000) / 1000 : Math.round(numero(x));
-    guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: iniciales2(f.n.trim()), p, c: co, q: inv ? (varsOk.length ? varsOk.reduce((a2, v) => a2 + (v.q || 0), 0) : cant(f.q)) : null, min: inv ? cant(f.min) : 0, u: inv && u ? u : undefined, vars: inv && varsOk.length ? varsOk : undefined, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp, g: grupoNuevo && grupoNuevo.trim() ? guardarGrupo({ n: grupoNuevo.trim() }) : grupo });
+    guardarProducto({ id: p0 ? p0.id : undefined, n: f.n.trim(), ab: iniciales2(f.n.trim()), p, c: co, q: inv ? (varsOk.length ? varsOk.reduce((a2, v) => a2 + (v.q || 0), 0) : cant(f.q)) : null, min: inv ? cant(f.min) : 0, u: inv && u ? u : undefined, vars: inv && varsOk.length ? varsOk : undefined, dur: T.inv ? 0 : f.dur, cod, usd: enDolar && atable ? usd : 0, imp: imp === 'gen' ? undefined : imp, foto, g: grupoNuevo && grupoNuevo.trim() ? guardarGrupo({ n: grupoNuevo.trim() }) : grupo });
     // Si se creó desde el escáner, se vuelve a él con el producto ya reconocido.
     c(() => { avisar('Guardado: ' + f.n.trim()); if (d.escaner && cod) abrir('escaner', Object.assign({}, d.escaner, { mostrar: cod })); });
   };
   const borrar = c => c(() => abrir('confirmar', { titulo: '¿Borrar ' + p0.n + '?', texto: 'Ya no sale para vender ni en el inventario. Las ventas que tuvo se quedan en los reportes.', boton: 'Sí, borrar', si: () => { borrarProducto(p0.id); avisar('Borrado: ' + p0.n); } }));
   return html`<${Hoja} titulo=${(p0 ? 'Editar ' : 'Nuevo ') + (inv ? 'producto' : 'servicio')} onCerrar=${cerrar} contenido=${c => ({
     cuerpo: html`
+      <div class="foto-producto">
+        <label class=${'foto-cuadro toca' + (foto ? ' con-foto' : '') + (latido ? ' cambio' : '')} aria-label=${foto ? 'Cambiar la foto' : 'Poner una foto'}>${foto ? html`<img key=${foto.length} src=${foto} alt="" draggable="false" />` : html`<${Icono} n="camara" t=${24} /><small>Foto</small>`}<input type="file" accept="image/*" hidden onChange=${elegirFoto} /></label>
+        <span class="crece" style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <span class="sub" style="line-height:1.4">${foto ? 'Así lo reconoces rápido al vender y en el inventario.' : 'Con foto lo encuentras más rápido al vender.'}</span>
+          <span class="chips">${tel && html`<label class="btn2 chico acento toca" style="cursor:pointer"><${Icono} n="camara" t=${14} />${foto ? 'Otra foto' : 'Tomar foto'}<input type="file" accept="image/*" capture="environment" hidden onChange=${elegirFoto} /></label>`}<label class=${'btn2 chico toca' + (tel ? '' : ' acento')} style="cursor:pointer"><${Icono} n="subir" t=${14} />${tel ? 'Galería' : foto ? 'Cambiar foto' : 'Subir foto'}<input type="file" accept="image/*" hidden onChange=${elegirFoto} /></label>${foto && html`<button type="button" class="btn2 chico toca" onClick=${() => setFoto('')}>Quitar</button>`}</span>
+        </span>
+      </div>
       <label class="campo"><span>Nombre</span><input type="text" value=${f.n} placeholder=${T.inv ? 'Ej.: Arroz 1 kg' : 'Ej.: Corte de cabello'} onInput=${e => pon({ n: e.target.value })} /></label>
       ${atable && html`<${Interruptor} on=${enDolar} onCambio=${setEnDolar} titulo="Precio atado al dólar" sub=${'Se recalcula solo con el ' + nombreTasa(P, S.tasa).toLowerCase()} />`}
       ${enDolar && atable && html`<label class="campo entra"><span>Precio en dólares</span><input class="num" type="text" inputmode="decimal" value=${f.usd} placeholder="0" onInput=${e => pon({ usd: e.target.value })} /></label>${usd > 0 && html`<span class="sub num">Hoy son ${D.m(p)} (US$ 1 = ${D.m(D.tasa)})</span>`}`}

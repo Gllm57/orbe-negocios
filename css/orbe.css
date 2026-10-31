@@ -770,3 +770,14 @@ html.en-recorrido .nav-tel { background: var(--oscuro); }
 .nuevo-lista button:hover, .nuevo-lista button:focus-visible { background: var(--fill2); }
 .nuevo-lista button > span:first-child { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; }
 .nuevo-lista b { font-size: 14px; font-weight: 600; } .nuevo-lista small { color: var(--muted); font-size: 12px; }
+
+/* Fotos de producto */
+.ic.foto-prod { padding: 0; overflow: hidden; background: var(--fill2); box-shadow: inset 0 0 0 1px var(--line); }
+.ic.foto-prod img { width: 100%; height: 100%; object-fit: cover; display: block; animation: foto-entra .35s ease both; }
+@keyframes foto-entra { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+.foto-producto { display: flex; align-items: center; gap: 14px; }
+.foto-cuadro { width: 84px; height: 84px; flex: none; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; overflow: hidden; color: var(--muted); background: var(--fill2); border: 1.5px dashed var(--line); transition: transform .38s var(--bounce), border-color .2s; }
+.foto-cuadro small { font-size: 12px; font-weight: 600; }
+.foto-cuadro.con-foto { border: 0; box-shadow: inset 0 0 0 1px var(--line); }
+.foto-cuadro.cambio { transform: scale(1.08); }
+.foto-cuadro img { width: 100%; height: 100%; object-fit: cover; display: block; animation: foto-entra .35s ease both; }

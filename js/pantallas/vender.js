@@ -1,7 +1,7 @@
 // Vender (teléfono) y Caja (computadora). En la computadora: lector de códigos, F12 cobra, Esc vacía.
 import { html, useState, useEffect, useRef } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
-import { Icono, avisar, TONOS, hora } from '../ui.js';
+import { Icono, avisar, TONOS, hora, FotoProd } from '../ui.js';
 import { resumen, inicioDia, listaProductos, sigNumero, porCodigo, promosVigentes, promoAplica, guardarProducto } from '../datos.js';
 import { nuevoCarrito, lineasDe, cuantos, porPeso, verQ, existencia } from '../carrito.js';
 import { FilaVenta } from './hojas.js';
@@ -101,7 +101,7 @@ export function Vender() {
   const Grilla = html`<div class="productos">${visibles.map((p, i) => { const c = enCarrito(p); return html`
     <button type="button" key=${p.id} class=${'prod toca entra' + (c ? ' on' : '')} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => sumar(p)} aria-label=${'Agregar ' + p.n}>
       ${c ? html`<span class="cant" key=${c}>${c}</span>` : null}
-      ${(() => { const g = grupoDe(S, p); return g ? html`<span class="ic" style=${{ width: '36px', height: '36px', fontSize: '13px', fontWeight: 700, background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 18%, transparent)', color: colorGrupo(g) }}>${p.ab}</span>` : html`<span class=${'ic ' + TONOS[i % 5]} style="width:36px;height:36px;font-size:13px;font-weight:700">${p.ab}</span>`; })()}
+      ${FotoProd(p, 36) || (() => { const g = grupoDe(S, p); return g ? html`<span class="ic" style=${{ width: '36px', height: '36px', fontSize: '13px', fontWeight: 700, background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 18%, transparent)', color: colorGrupo(g) }}>${p.ab}</span>` : html`<span class=${'ic ' + TONOS[i % 5]} style="width:36px;height:36px;font-size:13px;font-weight:700">${p.ab}</span>`; })()}
       <b>${p.n}</b><small class="num">${D.m(p.p)}${porPeso(p) ? ' / ' + p.u : ''}${p.dur ? ' · ' + (p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min') : ''}${p.vars && p.vars.length ? ' · ' + p.vars.length + ' opciones' : ''}</small>
       ${promosVigentes().some(x => promoAplica(x, p)) && html`<span class="promo-chip">Promo</span>`}
       ${T.inv && p.q == null && html`<span class="servicio-chip">Servicio</span>`}

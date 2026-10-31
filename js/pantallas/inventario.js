@@ -4,7 +4,7 @@ import { useApp } from '../ctx.js';
 import { bajoMinimo, bajoMeta, resumen, inicioDia, listaProductos, promosVigentes } from '../datos.js';
 import { verQ } from '../carrito.js';
 import { BarrasH, Reparto, color } from '../graficos.js';
-import { Chips, Icono, TONOS, avisar } from '../ui.js';
+import { Chips, Icono, TONOS, avisar, FotoProd } from '../ui.js';
 import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo } from './grupos.js';
 import { buscar, parecidos } from '../buscar.js';
 
@@ -31,7 +31,7 @@ export function Inventario() {
     const servicios = elegir(listaProductos());
     const Lista = html`<div class="pila" data-tour="productos">${NoHay(servicios, listaProductos())}${servicios.map((p, i) => { const x = mes.porProd[p.id] || { q: 0, v: 0 }; return html`
       <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
-        <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
+        ${FotoProd(p, 0, html`<span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>`)}
         <span class="crece" style="display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;font-weight:600">${p.n}</b><span class="sub">${p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min'} · ${x.q} este mes</span></span>
         <b class="num">${D.m(p.p)}</b>
       </button>`; })}</div>`;
@@ -54,7 +54,7 @@ export function Inventario() {
 
   const Tarjetas = html`<div class="pila" data-tour="productos">${lista.map((p, i) => { const e = estado(p); return html`
     <button type="button" key=${p.id} class="tarjeta fila toca entra" style=${{ '--i': i, border: 0, color: 'var(--ink)', textAlign: 'left' }} onClick=${() => editarP({ pid: p.id })}>
-      <span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>
+      ${FotoProd(p, 0, html`<span class=${'ic ' + TONOS[i % 5]} style="font-size:12px;font-weight:700">${p.ab}</span>`)}
       <span class="crece" style="display:flex;flex-direction:column;gap:6px">
         <span class="fila" style="gap:8px"><b class="crece corta" style="font-size:14px;font-weight:600">${p.n}</b>${vg && p.c > 0 && p.p < p.c * 1.05 ? html`<span class="pildora t-ros">Sin ganancia</span>` : null}<b class="num" style=${{ fontSize: '13px', color: e[2] }}>${verQ(p.q, p.u || 'und')}</b></span>
         <span class="barra-prog"><i style=${{ width: Math.min(100, Math.round(p.q / Math.max(1, p.min * 2) * 100)) + '%', background: e[2] }}></i></span>
@@ -70,7 +70,7 @@ export function Inventario() {
   const servs = listaProductos().filter(p => p.q == null);
   const Pestañas = html`<div class="segmento ancho entra" role="tablist" aria-label="Qué ver">${[['Todo', 'Productos ' + conStock.length], ['Por reponer', 'Por reponer ' + bajos.length]].concat(servs.length || pp ? [['Servicios', 'Servicios' + (servs.length ? ' ' + servs.length : '')]] : []).map(o => html`<button type="button" role="tab" aria-selected=${filtro === o[0] ? 'true' : 'false'} class=${filtro === o[0] ? 'on' : ''} onClick=${() => setFiltro(o[0])}>${o[1]}</button>`)}</div>`;
   const Resumen = vg && conStock.length ? html`<div class="resumen-inv entra"><span><b class="num">${D.m(valor)}</b> en estantes</span><span><b class="num in">${Math.round(margen * 100)} %</b> de ganancia</span>${bajos.length ? html`<span><b class="num amber">${bajos.length}</b> por reponer</span>` : null}</div>` : null;
-  const ListaServicios = html`<div class="pila" data-tour="productos">${servicios.length ? html`<section class="tarjeta" style="padding:4px 14px"><div class="lista">${servicios.map(p => html`<button type="button" key=${p.id} class="item toca" style="color:var(--ink)" onClick=${() => editarP({ pid: p.id })}><span class="ic t-azu" style="width:34px;height:34px;font-size:11px;font-weight:700">${p.ab}</span><span class="crece corta" style="font-size:14px;font-weight:600">${p.n}</span><b class="num">${D.m(p.p)}</b></button>`)}</div></section>`
+  const ListaServicios = html`<div class="pila" data-tour="productos">${servicios.length ? html`<section class="tarjeta" style="padding:4px 14px"><div class="lista">${servicios.map(p => html`<button type="button" key=${p.id} class="item toca" style="color:var(--ink)" onClick=${() => editarP({ pid: p.id })}>${FotoProd(p, 34, html`<span class="ic t-azu" style="width:34px;height:34px;font-size:11px;font-weight:700">${p.ab}</span>`)}<span class="crece corta" style="font-size:14px;font-weight:600">${p.n}</span><b class="num">${D.m(p.p)}</b></button>`)}</div></section>`
     : html`<p class="vacio">Agrega lo que cobras sin ser un producto: instalación, revisión, envío… También al vender, con «+ Servicio o cargo».</p>`}
     ${pp && html`<button type="button" class="btn2 acento toca" style="align-self:flex-start" onClick=${() => editarP({ svc: true })}>+ Servicio</button>`}</div>`;
 
@@ -96,7 +96,7 @@ export function Inventario() {
         ${filtro === 'Servicios' ? ListaServicios : html`<div class="tabla-caja"><table class="tabla">
           <thead><tr><th>Producto</th><th>Grupo</th><th>Código</th><th class="der">Costo</th><th class="der">Precio</th><th class="der">Tienes</th><th class="der">Mínimo</th><th>Estado</th><th></th></tr></thead>
           <tbody>${lista.map((p, i) => { const e = estado(p); return html`<tr key=${p.id} style=${{ animationDelay: i * 25 + 'ms' }}>
-            <td><b style="font-weight:600">${p.n}</b>${p.usd > 0 ? html` <span class="pildora t-ver" title="Precio atado al dólar">US$ ${p.usd}</span>` : null}${vg && p.c > 0 && p.p < p.c * 1.05 ? html` <span class="pildora t-ros">Sin ganancia</span>` : null}</td><td>${PillGrupo(p)}</td><td class="muted num">${p.cod || '—'}</td>
+            <td>${p.foto ? html`<span class="fila" style="gap:10px;display:inline-flex;vertical-align:middle">${FotoProd(p, 30)}<b style="font-weight:600">${p.n}</b></span>` : html`<b style="font-weight:600">${p.n}</b>`}${p.usd > 0 ? html` <span class="pildora t-ver" title="Precio atado al dólar">US$ ${p.usd}</span>` : null}${vg && p.c > 0 && p.p < p.c * 1.05 ? html` <span class="pildora t-ros">Sin ganancia</span>` : null}</td><td>${PillGrupo(p)}</td><td class="muted num">${p.cod || '—'}</td>
             <td class="der num muted">${vg ? D.m(p.c) : '—'}</td><td class="der num">${D.m(p.p)}</td>
             <td class="der num"><b style=${{ color: e[2] }}>${p.q}</b></td><td class="der num muted">${p.min}</td>
             <td><span class=${'pildora ' + e[1]}>${e[0]}</span></td>

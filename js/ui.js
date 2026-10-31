@@ -159,23 +159,27 @@ export const simbolo = n => { const s = SIMBOLOS.find(x => x[0].test(n || '')); 
 export const iniciales = n => (n || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'ON';
 // Logo del negocio: la imagen que subió el dueño o, si no hay, sus iniciales.
 export const MarcaNegocio = ({ n, t = 42, lapiz }) => html`<span class=${'logo marca' + (n.logo ? ' con-imagen' : '')} style=${{ width: t + 'px', height: t + 'px', fontSize: Math.round(t * 0.36) + 'px', borderRadius: Math.round(t * 0.31) + 'px' }}>${n.logo ? html`<img src=${n.logo} alt="" draggable="false" />` : iniciales(n.nombre)}${lapiz && html`<i class="logo-lapiz"><${Icono} n="lapiz" t=${9} g=${2.6} /></i>`}</span>`;
-// Achica una imagen elegida (logo) a lo sumo «lado» píxeles y la devuelve como texto (data URL) para guardarla.
-export function achicarImagen(archivo, lado = 256) {
+// Achica una imagen elegida (logo, foto de producto) a lo sumo «lado» píxeles y la devuelve como texto (data URL) para guardarla.
+// cuadrada: recorta el centro (las fotos de producto se ven en cuadritos).
+export function achicarImagen(archivo, lado = 256, cuadrada = false, calidad = 0.9) {
   return new Promise((ok, mal) => {
     const url = URL.createObjectURL(archivo), img = new Image();
     img.onload = () => {
-      const k = Math.min(1, lado / Math.max(img.width, img.height)), w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+      const m = Math.min(img.width, img.height), sw = cuadrada ? m : img.width, sh = cuadrada ? m : img.height;
+      const k = Math.min(1, lado / Math.max(sw, sh)), w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
       const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-      const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(img, 0, 0, w, h);
+      const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      const webp = cv.toDataURL('image/webp', 0.9);
-      ok(webp.startsWith('data:image/webp') ? webp : cv.toDataURL('image/png'));
+      const webp = cv.toDataURL('image/webp', calidad);
+      ok(webp.startsWith('data:image/webp') ? webp : cuadrada ? cv.toDataURL('image/jpeg', calidad) : cv.toDataURL('image/png'));
     };
     img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('imagen')); };
     img.src = url;
   });
 }
 export const TONOS = ['t-vio', 't-ver', 't-amb', 't-azu', 't-ros'];
+// Cuadrito del producto: su foto si tiene; si no, lo de siempre (sus iniciales en color).
+export const FotoProd = (p, t, sinFoto) => p && p.foto ? html`<span class="ic foto-prod" style=${t ? { width: t + 'px', height: t + 'px' } : null}><img src=${p.foto} alt="" draggable="false" loading="lazy" /></span>` : sinFoto;
 export function hace(t) {
   const d = Math.floor((Date.now() - t) / 86400000);
   if (d <= 0) return 'hoy'; if (d === 1) return 'ayer'; return 'hace ' + d + ' días';
