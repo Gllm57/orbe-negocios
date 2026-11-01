@@ -224,7 +224,7 @@ footer { padding-block: 40px 60px; color: var(--muted); font-size: .9rem; }
   <div class="wrap">
     <div class="cabeza"><div class="eyebrow">Cómo trabajamos</div><h2>Un catálogo, de la primera charla a tus primeros pedidos</h2></div>
     <ol class="pasos">
-      <li data-dia="1"><h3>Me cuentas</h3><p>Una charla de 15 minutos por WhatsApp. Me mandas fotos, precios y tu logo.</p></li>
+      <li data-dia="1"><h3>Me cuentas</h3><p>Una charla de 15 minutos por mensaje. Me mandas fotos, precios y tu logo.</p></li>
       <li data-dia="2"><h3>Ves la muestra</h3><p>Te envío un enlace con tu catálogo armado para que lo pruebes.</p></li>
       <li data-dia="4"><h3>Ajustamos</h3><p>Cambiamos lo que quieras: colores, textos, orden de los productos.</p></li>
       <li data-dia="5"><h3>A vender</h3><p>Lo publicas en tu Instagram y estados. Te enseño a cambiar precios.</p></li>
@@ -238,7 +238,7 @@ footer { padding-block: 40px 60px; color: var(--muted); font-size: .9rem; }
     <details><summary>¿Tengo que pagar todos los meses?</summary><p>No. El catálogo, la página y las apps son un pago único. El mantenimiento de $25 al mes es opcional; sin él solo pagas el dominio propio si lo quieres (unos $12 al año).</p></details>
     <details><summary>¿Cobran comisión por cada pedido?</summary><p>No. Los pedidos te llegan directo a tu WhatsApp y el dinero va directo a ti.</p></details>
     <details><summary>No sé nada de tecnología. ¿Igual puedo?</summary><p>Sí. Yo me encargo de todo y te dejo un video corto que muestra cómo cambiar precios y productos desde el teléfono.</p></details>
-    <details><summary>¿En qué países trabajas?</summary><p>En toda Latinoamérica y con negocios hispanos de EE. UU. y España. Todo se hace por WhatsApp y videollamada.</p></details>
+    <details><summary>¿En qué países trabajas?</summary><p>En toda Latinoamérica y con negocios hispanos de EE. UU. y España. Todo se hace por mensaje y videollamada.</p></details>
   </div>
 </section>
 
@@ -258,7 +258,7 @@ footer { padding-block: 40px 60px; color: var(--muted); font-size: .9rem; }
           </select>
         </label>
         <label for="detalle">Qué vendes y dónde estás<textarea id="detalle" placeholder="Ej. Tortas y postres en Medellín, hoy vendo por Instagram"></textarea></label>
-        <button class="btn btn-wa" type="submit">Enviar por WhatsApp</button>
+        <button class="btn btn-wa" type="submit" id="enviar">Enviar mensaje</button>
         <p class="sincontacto" id="aviso" hidden></p>
       </form>
     </div>
@@ -268,8 +268,11 @@ footer { padding-block: 40px 60px; color: var(--muted); font-size: .9rem; }
 <footer><div class="wrap">Orbe Apps · Páginas, catálogos y apps para negocios de Latinoamérica.</div></footer>
 
 <script>
-const WHATSAPP = ""; // tu número con código de país, solo dígitos, ej. "584121234567"
-const CORREO = "";   // opcional, tu correo de trabajo
+const WHATSAPP = "";          // tu número con código de país, solo dígitos, ej. "584121234567"
+const INSTAGRAM = "orbe.apps"; // usuario de Instagram sin @
+const CORREO = "";             // opcional, tu correo de trabajo
+
+document.getElementById("enviar").textContent = WHATSAPP ? "Enviar por WhatsApp" : INSTAGRAM ? "Enviar por Instagram" : "Enviar mensaje";
 
 document.querySelectorAll("[data-plan]").forEach(a => a.addEventListener("click", () => {
   document.getElementById("plan").value = a.dataset.plan;
@@ -283,6 +286,17 @@ document.getElementById("form").addEventListener("submit", e => {
   const aviso = document.getElementById("aviso");
   if (WHATSAPP) {
     location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(texto);
+  } else if (INSTAGRAM) {
+    // Instagram no deja precargar el mensaje: lo copiamos para que solo lo pegue
+    const abrir = () => { location.href = "https://ig.me/m/" + INSTAGRAM; };
+    aviso.hidden = false;
+    navigator.clipboard.writeText(texto).then(() => {
+      aviso.textContent = "Copiamos tu mensaje. Pégalo en el chat de Instagram que se abre ahora.";
+      setTimeout(abrir, 1500);
+    }, () => {
+      aviso.textContent = "Copia este mensaje y pégalo en el chat de Instagram: " + texto;
+      setTimeout(abrir, 4000);
+    });
   } else if (CORREO) {
     location.href = "mailto:" + CORREO + "?subject=" + encodeURIComponent("Cotización: " + plan) + "&body=" + encodeURIComponent(texto);
   } else {
