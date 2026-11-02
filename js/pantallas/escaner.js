@@ -6,7 +6,7 @@ import { useApp } from '../ctx.js';
 import { listaProductos, ajustarStock, asignarCodigo, mismoCodigo, porCodigo } from '../datos.js';
 import { Hoja, Icono, avisar } from '../ui.js';
 import { buscar, normal } from '../buscar.js';
-import { textosProducto, grupoDe, colorGrupo } from './grupos.js';
+import { textosProducto, grupoDe, colorGrupo, suaveGrupo } from './grupos.js';
 
 const BASE = new URL('../lib/', import.meta.url).href;
 const cargar = src => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => mal(new Error('No se pudo cargar ' + src)); document.head.appendChild(s); });
@@ -69,11 +69,15 @@ async function nombreEnInternet(cod) {
   } catch (e) { return ''; } finally { clearTimeout(t); }
 }
 
+// iPhone solo deja sonar el audio si se activó con un toque: se prepara (o se despierta) en cada toque.
+const audio = () => { const A = window.AudioContext || window.webkitAudioContext; if (!A) return null; const a = pitido.a || (pitido.a = new A()); if (a.state === 'suspended') a.resume().catch(() => {}); return a; };
+// Solo mientras el escáner está abierto (así no se toca el audio del teléfono, por ejemplo la música, el resto del tiempo).
+['touchend', 'pointerdown'].forEach(t => document.addEventListener(t, () => { if (pitido.listo) try { audio(); } catch (e) { /* sin sonido */ } }, { passive: true }));
 function pitido() {
   try { navigator.vibrate && navigator.vibrate(40); } catch (e) { /* sin vibración */ }
   try {
-    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
-    const a = pitido.a || (pitido.a = new A()), o = a.createOscillator(), g = a.createGain();
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
     o.frequency.value = 1320; g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.exponentialRampToValueAtTime(0.18, a.currentTime + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 0.12);
     o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 0.13);
   } catch (e) { /* sin sonido */ }
@@ -101,6 +105,7 @@ export function Escaner({ d, cerrar }) {
   }, []);
   const video = useRef(null), flujo = useRef(null), pausa = useRef(false), modoRef = useRef(modo), lector = useRef(null), visto = useRef({ c: '', t: 0 }), previo = useRef({ c: '', t: 0 });
   modoRef.current = modo;
+  useEffect(() => { pitido.listo = true; try { audio(); } catch (e) { /* sin sonido */ } return () => { pitido.listo = false; if (pitido.a) pitido.a.suspend().catch(() => {}); }; }, []);
   pausa.current = !!res || leyendo != null;
 
   // Encender la cámara de atrás al abrir y apagarla al cerrar.
@@ -194,7 +199,7 @@ export function Escaner({ d, cerrar }) {
     if (va) p = Object.assign({}, p, { n: p.n + ' · ' + va.n, q: va.q || 0, cod: va.cod || p.cod });
     return html`<div class="escaner-res entra">
       <div class="fila" style="gap:12px">
-        <span class="escaner-ic" style=${g ? { background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 18%, transparent)', color: colorGrupo(g) } : null}><${Icono} n="check" t=${20} g=${2.6} /></span>
+        <span class="escaner-ic" style=${g ? { background: suaveGrupo(g, 18), color: colorGrupo(g) } : null}><${Icono} n="check" t=${20} g=${2.6} /></span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="corta" style="font-size:16px">${p.n}</b><span class="sub corta">${[g && g.n, D.m(p.p), p.cod].filter(Boolean).join(' · ')}</span></span>
       </div>
       ${res.nuevo && !hecho && html`<span class="pildora t-ver entra" style="align-self:flex-start"><${Icono} n="check" t=${12} g=${3} /> Listo: la próxima vez lo reconoce con su código</span>`}

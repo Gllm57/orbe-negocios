@@ -113,17 +113,30 @@ export function Chips({ opciones, valor, onCambio, desliza, calido, chico }) {
 
 // ---------- hoja (teléfono) o ventana (computadora) ----------
 // contenido(cerrar) devuelve { cuerpo, pie }. Nunca enfoca un campo al abrir.
+// Botón «atrás» del teléfono (Android) o gesto de volver: con una capa abierta (hoja, menú) la cierra en vez de
+// cambiar de pantalla o salir de la app. Mientras la capa está abierta se deja una entrada en el historial.
+export function useAtras(abierto, cerrar) {
+  const ref = useRef(cerrar); ref.current = cerrar;
+  useEffect(() => {
+    if (!abierto) return;
+    try { history.pushState({ capa: true }, ''); } catch (e) { return; }
+    let porAtras = false;
+    const pop = () => { porAtras = true; ref.current(); };
+    window.addEventListener('popstate', pop);
+    return () => { window.removeEventListener('popstate', pop); if (!porAtras && history.state && history.state.capa) history.back(); };
+  }, [abierto]);
+}
 export function Hoja({ titulo, onCerrar, contenido }) {
   const [sale, setSale] = useState(false);
   const hoja = useRef(null), arrastre = useRef(null);
   const cerrar = despues => { if (sale) return; setSale(true); setTimeout(() => { onCerrar(); if (typeof despues === 'function') despues(); }, 280); };
   useEffect(() => {
-    const tecla = e => { if (e.key === 'Escape') cerrar(); };
-    window.addEventListener('keydown', tecla);
-    return () => window.removeEventListener('keydown', tecla);
+    const tecla = e => { if (e.key === 'Escape') cerrar(); }, atras = () => cerrar();
+    window.addEventListener('keydown', tecla); window.addEventListener('orbe-atras', atras);
+    return () => { window.removeEventListener('keydown', tecla); window.removeEventListener('orbe-atras', atras); };
   }, [sale]);
   // Arrastrar hacia abajo para cerrar: hace falta un gesto claro (14 px para empezar).
-  const baja = e => { if (document.documentElement.classList.contains('pc')) return; arrastre.current = { y: e.clientY, dy: 0, activo: false }; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); };
+  const baja = e => { if (document.documentElement.classList.contains('pc') || (e.target.closest && e.target.closest('button, a, input, select, textarea'))) return; arrastre.current = { y: e.clientY, dy: 0, activo: false }; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); };
   const mueve = e => {
     const a = arrastre.current; if (!a) return;
     a.dy = e.clientY - a.y;

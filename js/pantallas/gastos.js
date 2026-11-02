@@ -14,6 +14,8 @@ export function BloqueGastos({ compacto }) {
   const { D, abrir, tel } = useApp();
   const pp = porPagar(), gm = gastosEntre(inicioMes(), Date.now() + 1);
   const totMes = gm.reduce((a, g) => a + g.v, 0);
+  // Recientes: los últimos 60 días (a principios de mes también se ven los de la semana pasada).
+  const recientes = gastosEntre(Date.now() - 60 * 86400000, Date.now() + 1).slice().sort((a, b) => b.t - a.t);
   const cats = {}; gm.forEach(g => { cats[g.cat] = (cats[g.cat] || 0) + g.v; });
   const segs = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).map(k => ({ n: k, v: cats[k], c: COLOR_CAT[k] || 'var(--c4)' }));
   const pagar = g => { pagarGasto(g.id); avisar('Pagado: ' + g.n); };
@@ -34,7 +36,7 @@ export function BloqueGastos({ compacto }) {
 
   const Recientes = html`<section class="tarjeta entra" style="--i:2;padding-bottom:6px">
     <div class="tarjeta-tit">Gastos recientes<button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('gasto')}>+ Gasto</button></div>
-    <div class="lista">${gm.slice().sort((a, b) => b.t - a.t).slice(0, compacto ? 4 : 12).map((g, i) => html`<button type="button" class="item toca entra" key=${g.id} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('gasto', { gid: g.id })}>
+    <div class="lista">${!recientes.length ? html`<p class="vacio" style="padding:12px 0">Todavía no anotas gastos.</p>` : null}${recientes.slice(0, compacto ? 4 : 12).map((g, i) => html`<button type="button" class="item toca entra" key=${g.id} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('gasto', { gid: g.id })}>
       <span class="simb-c" style=${{ '--c': COLOR_CAT[g.cat] || 'var(--c4)', width: '32px', height: '32px' }}><${Icono} n=${simbolo(g.cat)} t=${16} /></span>
       <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="corta" style="font-size:14px">${g.n}</span><span class="sub faint corta">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
       <b class="num out" style="font-size:14px">−${D.m(g.v)}</b>

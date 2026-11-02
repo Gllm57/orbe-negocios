@@ -97,6 +97,8 @@ export function imprimirSistema(lineas, { ancho = 80, logo = '' } = {}) {
   document.body.appendChild(z); document.documentElement.classList.add('imprimiendo');
   const fin = () => { document.documentElement.classList.remove('imprimiendo'); z.remove(); window.removeEventListener('afterprint', fin); };
   window.addEventListener('afterprint', fin);
+  // Por si el aparato no avisa que terminó (pasa en algunos iPhone): al volver a tocar la pantalla, la app reaparece.
+  setTimeout(() => document.addEventListener('pointerdown', fin, { once: true }), 1500);
   const img = z.querySelector('img');
   if (img && !img.complete) { img.onload = () => window.print(); img.onerror = () => window.print(); } else setTimeout(() => window.print(), 60);
 }

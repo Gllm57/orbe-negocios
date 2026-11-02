@@ -10,11 +10,22 @@ const DIA = 86400000;
 const PERIODOS = [{ v: 7, n: '7 días' }, { v: 30, n: '30 días' }, { v: 'mes', n: 'Este mes' }];
 const SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-export function descargar(nombre, texto, tipo) {
+// Bajar un archivo (copia, Excel). En iPhone, sobre todo con la app instalada, la descarga directa no funciona bien:
+// se abre el menú de compartir para elegir «Guardar en Archivos», WhatsApp o correo.
+const esIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function bajar(blob, nombre) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([texto], { type: tipo }));
+  a.href = URL.createObjectURL(blob);
   a.download = nombre; document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+export function descargar(nombre, texto, tipo) {
+  const blob = texto instanceof Blob ? texto : new Blob([texto], { type: tipo });
+  if (esIOS && navigator.canShare) {
+    const f = new File([blob], nombre, { type: (tipo || blob.type || '').split(';')[0] });
+    if (navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: nombre }).catch(e => { if (!e || e.name !== 'AbortError') bajar(blob, nombre); }); return; }
+  }
+  bajar(blob, nombre);
 }
 export function ventasCSV(desde, hasta) {
   const S = leer(), fila = c => c.map(x => '"' + String(x).replace(/"/g, '""') + '"').join(';');

@@ -4,13 +4,14 @@
 import { html, useState, useEffect } from '../lib/preact-htm.js';
 import { useApp } from '../ctx.js';
 import { ordenAtrasada } from '../datos.js';
-import { Icono } from '../ui.js';
+import { Icono, useAtras } from '../ui.js';
 
 const COLORES = { venta: '#6a5cf2', orden: '#2f7fd1', gasto: '#e8436a', escanear: '#12a37a', cliente: '#c98512', caja: '#8f84ff' };
 
 export function BotonOrbe({ seccion }) {
   const { S, T, ir, abrir, puede, ver } = useApp();
   const [abierto, setAbierto] = useState(false);
+  useAtras(abierto, () => setAbierto(false));
   useEffect(() => {
     if (!abierto) return;
     const tecla = e => { if (e.key === 'Escape') setAbierto(false); };

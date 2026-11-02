@@ -8,7 +8,14 @@ import { tasaMetodo } from '../datos.js';
 import { esElectronico, esEuro, TASAS_EXTRA } from '../paises.js';
 
 export const conSimbolo = lista => lista.map(x => ({ v: x, n: html`<span class="simb"><${Icono} n=${simbolo(x)} t=${13} g=${2.2} /></span>${x}` }));
-export const numero = t => { const v = parseFloat(String(t).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isFinite(v) ? v : 0; };
+// Lee lo que se escribe: «1.250,50», «1250,5», «1,5», «0.125». El punto es de miles solo si está en grupos de tres
+// y no empieza en cero («1.250» = 1250; «0.125» = 0,125).
+export const numero = t => {
+  let s = String(t == null ? '' : t).replace(/\s/g, '');
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  const v = parseFloat(s); return isFinite(v) ? v : 0;
+};
 export const esEfectivo = m => /Efectivo/.test(m);
 
 // Formas que normalmente se pagan en la otra moneda: en Venezuela, bolívares; en Argentina, dólares.

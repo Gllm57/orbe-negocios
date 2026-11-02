@@ -8,6 +8,8 @@ import { buscar } from '../buscar.js';
 // Ocho colores distintos para los grupos (se ven bien en claro y en oscuro).
 export const COLORES_GRUPO = ['#7b6cff', '#22b07d', '#e8961a', '#3d9be9', '#f0567a', '#a35bf0', '#12a5a0', '#b07a3c'];
 export const colorGrupo = g => COLORES_GRUPO[(g ? g.c || 0 : 0) % COLORES_GRUPO.length];
+// Color del grupo aclarado (fondo suave). Con transparencia en hex: sirve también en iPhone viejos sin color-mix.
+export const suaveGrupo = (g, pct) => colorGrupo(g) + Math.round(pct * 2.55).toString(16).padStart(2, '0');
 // Iniciales de un nombre: «Queso blanco» → QB, «Pan» → PA (sin «de», «x» ni números).
 export const iniciales2 = n => { const ps = String(n).split(/\s+/).filter(w => w && !/^(de|del|la|el|los|las|con|en|y|x|\d.*)$/i.test(w)); return (ps.length > 1 ? ps[0][0] + ps[1][0] : (ps[0] || n).slice(0, 2)).toUpperCase(); };
 export const grupoDe = (S, p) => S.grupos.find(g => g.id === p.g) || null;

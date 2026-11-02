@@ -6,7 +6,7 @@ import { Recorrido } from './recorrido.js';
 import { ChipTasa } from './pantallas/tasas.js';
 import { puede, rolDe } from './permisos.js';
 import { pais, tipo, dinero, leerTasa } from './paises.js';
-import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera, MarcaNegocio } from './ui.js';
+import { Icono, LogoOrbe, Avisos, iniciales, avisar, TONOS, Bandera, MarcaNegocio, useAtras } from './ui.js';
 import { Inicio } from './pantallas/inicio.js';
 import { Hoy } from './pantallas/hoy.js';
 import { Ordenes } from './pantallas/ordenes.js';
@@ -69,6 +69,8 @@ function App() {
     window.addEventListener('online', on); window.addEventListener('offline', off);
     return () => { window.removeEventListener('resize', r); window.removeEventListener('hashchange', h); window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
+  // Atrás del teléfono con una hoja abierta: se cierra la hoja (con su animación).
+  useAtras(!!hoja, () => window.dispatchEvent(new Event('orbe-atras')));
   useEffect(() => { document.documentElement.classList.toggle('pc', !tel); document.documentElement.classList.toggle('tel', tel); }, [tel]);
   useEffect(() => { aplicarTema(S.ajustes.tema); }, [S.ajustes.tema]);
   // Computadora: «/» lleva al buscador de arriba (si no se está escribiendo en otro lado).
@@ -197,4 +199,19 @@ iniciarDatos().then(() => {
   render(html`<${App} />`, document.getElementById('app'));
   requestAnimationFrame(() => { if (window.__listo) window.__listo(); });
 });
+// Teclado del teléfono: en iPhone (y Android reciente) el teclado tapa la pantalla sin achicarla.
+// Se mide lo que tapa para que las hojas suban justo encima del teclado y la página no se mueva.
+if (window.visualViewport) {
+  const vv = window.visualViewport, raiz = document.documentElement.style;
+  const medir = () => {
+    const tapa = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+    raiz.setProperty('--teclado', tapa > 80 ? tapa + 'px' : '0px'); document.documentElement.classList.toggle('con-teclado', tapa > 80);
+    raiz.setProperty('--alto-visible', Math.round(vv.height) + 'px');
+  };
+  vv.addEventListener('resize', medir); vv.addEventListener('scroll', medir); medir();
+}
+// iPhone no respeta «user-scalable=no»: se frena el zoom con dos dedos para que la app se quede de un solo tamaño.
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+// Que el navegador no borre los datos por falta de espacio (sobre todo Safari en iPhone).
+if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(ya => ya || navigator.storage.persist()).catch(() => {});
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

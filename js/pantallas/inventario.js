@@ -5,7 +5,7 @@ import { bajoMinimo, bajoMeta, resumen, inicioDia, listaProductos, promosVigente
 import { verQ } from '../carrito.js';
 import { BarrasH, Reparto, color } from '../graficos.js';
 import { Chips, Icono, TONOS, avisar, FotoProd } from '../ui.js';
-import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo } from './grupos.js';
+import { FiltroGrupos, filtrarGrupo, textosProducto, grupoDe, colorGrupo, suaveGrupo } from './grupos.js';
 import { buscar, parecidos } from '../buscar.js';
 
 export function Inventario() {
@@ -23,7 +23,7 @@ export function Inventario() {
     <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} />
   </div>`;
   const NoHay = (lista, base) => q.trim() && !lista.length ? html`<p class="vacio">No encontré «${q}». ${(() => { const s = parecidos(base, q, textosProducto(S)); return s.length ? '¿Quisiste decir ' + s.map(p => p.n).join(', ') + '?' : ''; })()}</p>` : null;
-  const PillGrupo = p => { const g = grupoDe(S, p); return g ? html`<span class="pildora" style=${{ background: 'color-mix(in srgb, ' + colorGrupo(g) + ' 16%, transparent)', color: 'var(--ink)' }}><i class="punto-grupo" style=${{ background: colorGrupo(g) }}></i>${g.n}</span>` : html`<span class="faint">—</span>`; };
+  const PillGrupo = p => { const g = grupoDe(S, p); return g ? html`<span class="pildora" style=${{ background: suaveGrupo(g, 16), color: 'var(--ink)' }}><i class="punto-grupo" style=${{ background: colorGrupo(g) }}></i>${g.n}</span>` : html`<span class="faint">—</span>`; };
   const mes = resumen(inicioDia(Date.now()) - 29 * 86400000, Date.now() + 1, '');
   const top = Object.keys(mes.porProd).map(k => Object.assign({ id: k }, mes.porProd[k])).sort((a, b) => b.v - a.v);
 

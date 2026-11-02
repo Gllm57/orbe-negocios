@@ -19,6 +19,7 @@ import { verQ } from '../carrito.js';
 import { imprimir, lineasRecibo, lineasZ, ajustesImpresora } from '../impresora.js';
 import { Orden, NuevaOrden, AbonoOrden, CancelarOrden } from './ordenes.js';
 import { buscar, parecidos } from '../buscar.js';
+import { descargar } from './reportes.js';
 
 const CATS = ['Mercancía', 'Alquiler', 'Servicios', 'Sueldos', 'Transporte', 'Otro'];
 const VENCE = [{ v: 7, n: 'En 7 días' }, { v: 15, n: 'En 15 días' }, { v: 30, n: 'En 30 días' }];
@@ -393,6 +394,8 @@ function Cierre({ d, cerrar }) {
 }
 
 // ---------- producto o servicio ----------
+// Número para un campo de texto, con coma decimal (así «3,125» no se lee como tres mil).
+const coma = n => String(n == null ? '' : n).replace('.', ',');
 function Producto({ d, cerrar }) {
   const { S, D, T, P, abrir, tel } = useApp();
   const p0 = S.productos.find(p => p.id === d.pid) || null;
@@ -405,7 +408,7 @@ function Producto({ d, cerrar }) {
     if (!/^image\//.test(a.type)) { avisar('Elige una imagen (foto, PNG o JPG)'); return; }
     try { setFoto(await achicarImagen(a, 360, true, 0.82)); setLatido(true); setTimeout(() => setLatido(false), 380); } catch (er) { avisar('No pude abrir esa imagen'); }
   };
-  const [f, setF] = useState(p0 ? { n: p0.n, p: String(p0.p), c: String(p0.c), q: p0.q == null ? '' : String(p0.q), min: String(p0.min), dur: p0.dur || 60, cod: p0.cod || '', usd: p0.usd ? String(p0.usd).replace('.', ',') : '' } : { n: d.n || '', p: '', c: '', q: d.q != null ? String(d.q) : '', min: '', dur: 60, cod: d.cod || '', usd: '' });
+  const [f, setF] = useState(p0 ? { n: p0.n, p: coma(p0.p), c: coma(p0.c), q: p0.q == null ? '' : coma(p0.q), min: coma(p0.min), dur: p0.dur || 60, cod: p0.cod || '', usd: p0.usd ? String(p0.usd).replace('.', ',') : '' } : { n: d.n || '', p: '', c: '', q: d.q != null ? coma(d.q) : '', min: '', dur: 60, cod: d.cod || '', usd: '' });
   const [enDolar, setEnDolar] = useState(!!(p0 && p0.usd));
   // Impuesto del producto: general, una tasa reducida del país o exento.
   const [imp, setImp] = useState(p0 && p0.imp != null ? p0.imp : 'gen');
@@ -492,7 +495,7 @@ function Reponer({ d, cerrar }) {
     cuerpo: html`<span class="sub">Tienes ${p.q}. El mínimo es ${p.min}.</span>
       <div class="fila" style="justify-content:center;gap:18px;padding:8px 0"><button type="button" class="icono-btn toca" aria-label="Menos" onClick=${() => setCuanto(Math.max(1, cuanto - 1))}><${Icono} n="menos1" /></button><b class="num" style="font-size:40px;min-width:90px;text-align:center">+${cuanto}</b><button type="button" class="icono-btn toca" aria-label="Más" onClick=${() => setCuanto(cuanto + 1)}><${Icono} n="mas1" /></button></div>
       <${Chips} opciones=${[6, 12, 24, 48].map(v => ({ v, n: '+' + v }))} valor=${cuanto} onCambio=${setCuanto} />
-      ${puede('ganancias') && html`<label class="campo"><span>¿A cuánto lo compraste esta vez? (c/u)</span><input class="num" type="text" inputmode="decimal" value=${costo} placeholder=${String(p.c)} onInput=${e => setCosto(e.target.value)} /></label>
+      ${puede('ganancias') && html`<label class="campo"><span>¿A cuánto lo compraste esta vez? (c/u)</span><input class="num" type="text" inputmode="decimal" value=${costo} placeholder=${coma(p.c)} onInput=${e => setCosto(e.target.value)} /></label>
         ${subio && html`<div class=${'tarjeta fila entra'} style=${{ background: margen < 0.05 ? 'var(--out-soft)' : 'var(--amber-soft)', boxShadow: 'none', gap: '10px', alignItems: 'flex-start' }}><${Icono} n="alerta" t=${18} c=${margen < 0.05 ? 'var(--out)' : 'var(--amber)'} /><span class="sub" style="color:var(--ink);line-height:1.45">Subió ${Math.round((cN / p.c - 1) * 100)} %. Con el precio de ${D.m(p.p)} ${margen < 0 ? 'pierdes ' + D.m(cN - p.p) + ' en cada uno' : 'ganas ' + Math.round(margen * 100) + ' %'}. ${margen < 0.2 ? 'Conviene subir el precio.' : ''}</span></div>`}`}`,
     pie: html`<button type="button" class="btn toca" onClick=${() => { reponer(p.id, cuanto, cN); c(() => avisar(p.n + ': ahora tienes ' + (p.q + cuanto) + (subio ? ' · costo nuevo ' + D.m(cN) : ''))); }}>Sumar ${cuanto} al inventario</button>`
   })} />`;
@@ -512,7 +515,7 @@ function NuevoCliente({ d, cerrar }) {
   // Privacidad (GDPR, LGPD y similares): el cliente puede pedir sus datos o que se borren.
   const exportarCliente = x => {
     const datos = { cliente: { nombre: x.n, telefono: x.tel, tipo: x.tipo, consentimiento: x.consent ? new Date(x.consent).toISOString() : null }, compras: vigentes().filter(v => v.cli === x.id).map(v => ({ numero: v.n, fecha: new Date(v.t).toISOString(), total: v.total, productos: v.items.map(it => it.q + ' x ' + it.n) })), pagos: S.abonos.filter(a => a.cli === x.id).map(a => ({ fecha: new Date(a.t).toISOString(), monto: a.v, forma: a.m })) };
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' })); a.download = 'datos-' + x.n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').toLowerCase() + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    descargar('datos-' + x.n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').toLowerCase() + '.json', JSON.stringify(datos, null, 2), 'application/json');
     avisar('Datos de ' + x.n.split(' ')[0] + ' descargados');
   };
   const borrar = c => {

@@ -150,7 +150,7 @@ button.item { width: 100%; background: none; border-left: 0; border-right: 0; bo
 /* ---------- hojas (teléfono) y ventanas (computadora) ---------- */
 .velo { position: fixed; inset: 0; z-index: 60; background: var(--velo); animation: fadeIn .3s ease both; transition: opacity .28s ease; }
 .velo.sale { opacity: 0; }
-.hoja { position: fixed; left: 0; right: 0; bottom: 0; z-index: 61; max-height: 92dvh; display: flex; flex-direction: column; background: var(--surface); border-radius: 28px 28px 0 0; animation: hojaSube .45s var(--spring) both; transition: transform .3s var(--spring); touch-action: pan-y; }
+.hoja { position: fixed; left: 0; right: 0; bottom: var(--teclado, 0px); z-index: 61; max-height: 92vh; max-height: 92dvh; max-height: calc(var(--alto-visible, 100dvh) * .92); display: flex; flex-direction: column; background: var(--surface); border-radius: 28px 28px 0 0; animation: hojaSube .45s var(--spring) both; transition: transform .3s var(--spring); touch-action: pan-y; }
 .hoja.sale { transform: translateY(105%); }
 .hoja-cab { padding: 8px 18px 6px; display: flex; flex-direction: column; gap: 6px; touch-action: none; }
 .hoja-cab .rayita { align-self: center; width: 38px; height: 5px; border-radius: 3px; background: var(--line); }
@@ -781,3 +781,18 @@ html.en-recorrido .nav-tel { background: var(--oscuro); }
 .foto-cuadro.con-foto { border: 0; box-shadow: inset 0 0 0 1px var(--line); }
 .foto-cuadro.cambio { transform: scale(1.08); }
 .foto-cuadro img { width: 100%; height: 100%; object-fit: cover; display: block; animation: foto-entra .35s ease both; }
+
+/* Con el teclado abierto la hoja ya queda encima de él: sin el espacio del borde de abajo del iPhone */
+.con-teclado .hoja-pie { padding-bottom: 12px; }
+.hoja { transition: transform .3s var(--spring), bottom .2s ease; }
+/* Fechas en iPhone: Safari las dibuja a su ancho propio (se salen de la hoja) y vacías quedan aplastadas */
+.campo input[type=date], .campo input[type=datetime-local], .campo input[type=time] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; min-height: 52px; line-height: 52px; text-align: left; }
+.campo input::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; }
+/* iPhone con iOS 15 o anterior: sin color-mix, fondos suaves de respaldo */
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .barra-sup { background: var(--bg); }
+  .lista-orbe .simbolo, .lista-orbe .pista, .chip .simb, .simb-c { background: var(--fill2); }
+  .oferta-tour { background: var(--surface); }
+  .bandera { box-shadow: 0 0 0 1px var(--line); }
+  .orbe-crear button span { box-shadow: 0 6px 14px rgba(0,0,0,.18); }
+}
