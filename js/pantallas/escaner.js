@@ -202,7 +202,7 @@ export function Escaner({ d, cerrar }) {
         <span class="escaner-ic" style=${g ? { background: suaveGrupo(g, 18), color: colorGrupo(g) } : null}><${Icono} n="check" t=${20} g=${2.6} /></span>
         <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="corta" style="font-size:16px">${p.n}</b><span class="sub corta">${[g && g.n, D.m(p.p), p.cod].filter(Boolean).join(' · ')}</span></span>
       </div>
-      ${res.nuevo && !hecho && html`<span class="pildora t-ver entra" style="align-self:flex-start"><${Icono} n="check" t=${12} g=${3} /> Listo: la próxima vez lo reconoce con su código</span>`}
+      ${res.nuevo && !hecho && html`<span class="pildora t-ver entra" style="align-self:center;text-align:center"><${Icono} n="check" t=${12} g=${3} /> Listo: la próxima vez lo reconoce con su código</span>`}
       ${T.inv && p.q != null ? html`
         <div class="escaner-stock"><span class="sub">Tienes</span><b class=${'num' + (hecho ? ' latido' : '')} key=${hecho ? hecho.t : 0}>${p.q}</b><span class="sub">${p.min ? 'mínimo ' + p.min : 'unidades'}</span></div>
         ${puedeStock ? html`

@@ -33,6 +33,7 @@ export function Vender() {
   const vaciar = () => setCart(nuevoCarrito());
   const [q, setQ] = useState('');
   const [grupo, setGrupo] = useState('');
+  const [clase, setClase] = useState('prod');
   const lector = useRef(null);
   const prods = listaProductos();
   // Líneas con variante, peso, promociones y descuentos ya aplicados.
@@ -82,7 +83,11 @@ export function Vender() {
     return () => window.removeEventListener('keydown', tecla);
   });
   // Búsqueda tolerante (acentos, errores de tipeo, plurales) dentro del grupo elegido.
-  const enGrupo = filtrarGrupo(prods, S, grupo);
+  // Tienda con servicios (mano de obra, instalación…): productos y servicios van separados; al buscar se encuentra todo.
+  const nServ = T.inv ? prods.filter(p => p.q == null).length : 0, conServ = nServ > 0 && nServ < prods.length;
+  const deClase = conServ && !q.trim() ? prods.filter(p => clase === 'serv' ? p.q == null : p.q != null) : prods;
+  const Clases = conServ ? html`<div class="segmento ancho entra" role="tablist" aria-label="Productos o servicios">${[['prod', 'Productos', prods.length - nServ], ['serv', 'Servicios', nServ]].map(c => html`<button type="button" role="tab" aria-selected=${clase === c[0] ? 'true' : 'false'} class=${'toca' + (clase === c[0] ? ' on' : '')} onClick=${() => { setClase(c[0]); setGrupo(''); }}>${c[1]} <span class="faint num">${c[2]}</span></button>`)}</div>` : null;
+  const enGrupo = filtrarGrupo(deClase, S, grupo);
   const visibles = q.trim() ? buscarEn(enGrupo, q, textosProducto(S)) : enGrupo;
   const sugeridos = q.trim() && !visibles.length ? parecidos(prods, q, textosProducto(S)) : [];
   // Enter (o el lector de códigos): primero el código exacto, si no lo más parecido.
@@ -104,7 +109,7 @@ export function Vender() {
       ${FotoProd(p, 36) || (() => { const g = grupoDe(S, p); return g ? html`<span class="ic" style=${{ width: '36px', height: '36px', fontSize: '13px', fontWeight: 700, background: suaveGrupo(g, 18), color: colorGrupo(g) }}>${p.ab}</span>` : html`<span class=${'ic ' + TONOS[i % 5]} style="width:36px;height:36px;font-size:13px;font-weight:700">${p.ab}</span>`; })()}
       <b>${p.n}</b><small class="num">${D.m(p.p)}${porPeso(p) ? ' / ' + p.u : ''}${p.dur ? ' · ' + (p.dur >= 60 ? p.dur / 60 + ' h' : p.dur + ' min') : ''}${p.vars && p.vars.length ? ' · ' + p.vars.length + ' opciones' : ''}</small>
       ${promosVigentes().some(x => promoAplica(x, p)) && html`<span class="promo-chip">Promo</span>`}
-      ${T.inv && p.q == null && html`<span class="servicio-chip">Servicio</span>`}
+      ${T.inv && p.q == null && (!conServ || q.trim()) && html`<span class="servicio-chip">Servicio</span>`}
       ${p.q === 0 && html`<span class="sin">Agotado</span>`}
     </button>`; })}</div>`;
 
@@ -136,7 +141,7 @@ export function Vender() {
     <${BarraTasas} />
     <div class="fila entra" style="gap:8px"><label class="buscador crece" style="background:var(--surface)"><${Icono} n="buscar" t=${16} c="var(--muted)" /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder=${'Buscar entre ' + prods.length} aria-label="Buscar producto" /></label>
       <button type="button" class="icono-btn toca escanear-mini" aria-label="Escanear con la cámara" onClick=${() => abrir('escaner', { para: 'vender', onAgregar: sumarEscaneado })}><${Icono} n="camara" t=${20} /></button></div>
-    <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${prods} />
+    ${Clases}${(!conServ || deClase.some(p => p.g)) && html`<${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${deClase} />`}
     ${Sugerencias}
     ${Grilla}
     <div class="tarjeta pila entra">${n ? Lineas : null}${BotonCargo}${Total}</div>
@@ -169,7 +174,7 @@ export function Vender() {
         <input ref=${lector} type="text" value=${q} onInput=${e => setQ(e.target.value)} onKeyDown=${buscar} placeholder="Pasa el lector de códigos o escribe el nombre y pulsa Enter" aria-label="Código o nombre" style="font-size:16px" />
         <span class="tecla">F1</span>
       </label>
-      <${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${prods} />
+      ${Clases}${(!conServ || deClase.some(p => p.g)) && html`<${FiltroGrupos} valor=${grupo} onCambio=${setGrupo} lista=${deClase} />`}
       ${Sugerencias}
       ${Grilla}
       ${HoyCaja()}

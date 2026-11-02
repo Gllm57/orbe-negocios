@@ -5,7 +5,7 @@ import { promosVigentes, promoAplica } from './datos.js';
 
 // libres: cargos escritos al momento (mano de obra, instalación…) que no están en la lista de productos.
 export const nuevoCarrito = () => ({ q: {}, meta: {}, desc: null, libres: {} });
-export const UNIDADES = { kg: 'kg', g: 'g', l: 'l', m: 'm' };
+export const UNIDADES = { kg: 'kg', g: 'g', l: 'l', m: 'm', 'm²': 'm²' };
 export const porPeso = p => !!(p && p.u && UNIDADES[p.u]);
 // Cantidad bonita: «3», «0,75 kg».
 export const verQ = (q, u) => (Number.isInteger(q) ? String(q) : String(Math.round(q * 1000) / 1000).replace('.', ',')) + (u ? ' ' + u : '');

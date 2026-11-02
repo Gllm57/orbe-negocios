@@ -6,7 +6,7 @@ import { useApp } from '../ctx.js';
 import { ordenAtrasada } from '../datos.js';
 import { Icono, useAtras } from '../ui.js';
 
-const COLORES = { venta: '#6a5cf2', orden: '#2f7fd1', gasto: '#e8436a', escanear: '#12a37a', cliente: '#c98512', caja: '#8f84ff' };
+const COLORES = { servicio: '#3d9be9', venta: '#6a5cf2', orden: '#2f7fd1', gasto: '#e8436a', escanear: '#12a37a', cliente: '#c98512', caja: '#8f84ff' };
 
 export function BotonOrbe({ seccion }) {
   const { S, T, ir, abrir, puede, ver } = useApp();
@@ -67,7 +67,8 @@ export function BotonNuevo() {
     puede('ordenes') && ['orden', 'orden', 'Orden de trabajo', 'O un pedido con entrega', () => abrir('nuevaOrden', {})],
     puede('gastos') && ['gasto', 'dinero', 'Gasto', 'Lo que pagas o debes', () => abrir('gasto')],
     puede('clientes') && ['cliente', 'personas', 'Cliente', 'Con su teléfono', () => abrir('nuevoCliente', {})],
-    puede('productos') && ['escanear', 'etiqueta', T.inv ? 'Producto' : 'Servicio', 'Con precio y existencia', () => abrir('producto', {})]
+    puede('productos') && ['escanear', 'etiqueta', T.inv ? 'Producto' : 'Servicio', T.inv ? 'Con precio y existencia' : 'Con precio y duración', () => abrir('producto', {})],
+    puede('productos') && T.inv && ['servicio', 'orden', 'Servicio', 'Mano de obra, instalación…', () => abrir('producto', { svc: true })]
   ].filter(Boolean);
   if (!ops.length) return null;
   return html`<div class="nuevo-menu">

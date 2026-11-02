@@ -75,7 +75,7 @@ export function Inventario() {
     ${pp && html`<button type="button" class="btn2 acento toca" style="align-self:flex-start" onClick=${() => editarP({ svc: true })}>+ Servicio</button>`}</div>`;
 
   if (tel) return html`
-    <div class="fila entra" style="gap:8px"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="icono-btn toca boton-agregar" aria-label="Agregar producto" onClick=${() => editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}><${Icono} n="mas1" t=${20} g=${2.6} /></button>`}</div>
+    <div class="fila entra" style="gap:8px"><h1 class="titulo crece">Inventario</h1>${pp && html`<button type="button" class="icono-btn toca boton-agregar" aria-label=${filtro === 'Servicios' ? 'Agregar servicio' : 'Agregar producto'} onClick=${() => filtro === 'Servicios' ? editarP({ svc: true }) : editarP({ g: grupo && grupo !== 'sin' ? grupo : '' })}><${Icono} n="mas1" t=${20} g=${2.6} /></button>`}</div>
     <label class="buscador buscador-oscuro entra"><${Icono} n="buscar" t=${17} /><input type="search" value=${q} onInput=${e => setQ(e.target.value)} placeholder=${'Buscar entre ' + listaProductos().length} aria-label="Buscar en el inventario" />${(pp || puede('reponer')) && html`<button type="button" class="buscador-cam toca" aria-label="Escanear con la cámara" onClick=${() => abrir('escaner', { para: 'inventario' })}><${Icono} n="camara" t=${17} /></button>`}</label>
     ${Herramientas}
     ${Pestañas}
