@@ -121,6 +121,8 @@ section { padding-block: 110px; }
 .vitrina:hover .pc { transform: rotateY(4deg) rotateX(2deg); }
 .movil { position: absolute; width: 230px; aspect-ratio: 300/650; border-radius: 34px; background: #000; padding: 8px; box-shadow: 0 40px 70px -30px #000, 0 0 0 1px #000; overflow: hidden; }
 .movil .pantallas { position: relative; width: 100%; height: 100%; border-radius: 27px; overflow: hidden; background: #000; clip-path: inset(0 round 27px); isolation: isolate; }
+.movil video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0; transition: opacity 1s ease; background: #f4f3fb; }
+.movil video.vis { opacity: 1; }
 .movil img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0; transition: opacity 1s ease; }
 .movil img.vis { opacity: 1; }
 .vitrina .movil { right: 0; bottom: 0; animation: flota 8s ease-in-out infinite; }
@@ -421,15 +423,16 @@ footer a { color: var(--luz); }
       <div>
         <div class="vitrina solo rev" style="--d:.1s">
           <div class="chip-flota" style="left:0;top:6%;animation-delay:-1s"><svg class="anillo" viewBox="0 0 40 40" style="--p:40"><circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/><circle cx="20" cy="20" r="16" fill="none" stroke="#0e9aa7" stroke-width="5" stroke-linecap="round" pathLength="100" transform="rotate(-90 20 20)"/></svg><span><small>Viaje a la playa</small><b>60%</b></span></div>
-          <div class="chip-flota" style="right:0;bottom:10%;animation-delay:-3.5s"><span class="punto"></span><span><small>Te quedó en octubre</small><b>+$505,76</b></span></div>
+          <div class="chip-flota" style="right:0;bottom:10%;animation-delay:-3.5s"><span class="punto"></span><span><small>Te queda este mes</small><b>$684,00</b></span></div>
           <div class="movil" data-carrusel="fin"><div class="pantallas">
-            <img class="vis" src="img/finanzas-ahorro.webp" alt="Ahorro y metas con anillos de progreso" loading="lazy">
-            <img src="img/finanzas-inicio.webp" alt="Inicio con el cierre del mes y saldo total" loading="lazy">
+            <video class="vis" data-dur="11200" muted loop playsinline preload="metadata" poster="img/finanzas-cuentas.webp" aria-label="Orbe finanzas en uso: cuentas con su gráfico y en qué se va el dinero"><source src="img/finanzas-cuentas.webm" type="video/webm"><source src="img/finanzas-cuentas.mp4" type="video/mp4"></video>
+            <img src="img/finanzas-ahorro.webp" alt="Ahorro y metas con anillos de progreso" loading="lazy">
+            <img src="img/finanzas-inicio.webp" alt="Inicio con saldo total, gráfico del mes y cuentas" loading="lazy">
             <img src="img/finanzas-historial.webp" alt="Historial de ingresos y gastos" loading="lazy">
           </div></div>
-          <div class="movil"><div class="pantallas"><img class="vis" src="img/finanzas-historial.webp" alt="" loading="lazy"></div></div>
+          <div class="movil"><div class="pantallas"><img class="vis" src="img/finanzas-ahorro.webp" alt="" loading="lazy"></div></div>
         </div>
-        <div class="puntos-wrap" style="justify-content:center"><div class="puntos" data-puntos="fin"></div><span data-nombre="fin">Ahorro y metas</span></div>
+        <div class="puntos-wrap" style="justify-content:center"><div class="puntos" data-puntos="fin"></div><span data-nombre="fin">Cuentas en acción</span></div>
       </div>
     </article>
   </div>
@@ -567,13 +570,14 @@ const obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersectin
 document.querySelectorAll('.rev, #linea').forEach(el => obs.observe(el));
 
 // Carruseles de pantallas
-const NOMBRES = { neg: ['Hoy', 'Vender', 'Inventario', 'Reportes'], fin: ['Ahorro y metas', 'Inicio', 'Historial'] };
+const NOMBRES = { neg: ['Hoy', 'Vender', 'Inventario', 'Reportes'], fin: ['Cuentas en acción', 'Ahorro y metas', 'Inicio', 'Historial'] };
 document.querySelectorAll('[data-carrusel]').forEach(c => {
-  const id = c.dataset.carrusel, imgs = [...c.querySelectorAll('img')], puntos = document.querySelector(`[data-puntos="${id}"]`), nombre = document.querySelector(`[data-nombre="${id}"]`);
+  const id = c.dataset.carrusel, imgs = [...c.querySelectorAll('img, video')], puntos = document.querySelector(`[data-puntos="${id}"]`), nombre = document.querySelector(`[data-nombre="${id}"]`);
   let i = 0, t;
-  const ir = n => { i = (n + imgs.length) % imgs.length; imgs.forEach((im, k) => im.classList.toggle('vis', k === i)); [...puntos.children].forEach((b, k) => b.classList.toggle('vis', k === i)); nombre.textContent = NOMBRES[id][i]; };
+  const ir = n => { i = (n + imgs.length) % imgs.length; imgs.forEach((im, k) => { im.classList.toggle('vis', k === i); if (im.tagName === 'VIDEO') { if (k === i && !quieto) { im.currentTime = 0; im.play().catch(() => {}); } else im.pause(); } }); [...puntos.children].forEach((b, k) => b.classList.toggle('vis', k === i)); nombre.textContent = NOMBRES[id][i]; };
   imgs.forEach((_, k) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Ver ' + NOMBRES[id][k]); b.onclick = () => { ir(k); reinicia(); }; puntos.append(b); });
-  const reinicia = () => { clearInterval(t); if (!quieto) t = setInterval(() => ir(i + 1), 3200); };
+  // Cada pantalla dura 3,2 s; el video, lo que dura
+  const reinicia = () => { clearTimeout(t); if (!quieto) t = setTimeout(() => { ir(i + 1); reinicia(); }, +imgs[i].dataset.dur || 3200); };
   ir(0); reinicia();
 });
 
