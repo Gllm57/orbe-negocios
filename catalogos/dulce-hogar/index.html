@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="../base/catalogo.css">
+<script src="negocio.js"></script>
+</head>
+<body>
+<header class="cabecera" id="cabecera"></header>
+<div class="barra"><div class="envoltura">
+  <label class="buscar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="buscar" type="search" placeholder="Buscar" aria-label="Buscar productos"></label>
+  <div class="cats" id="cats"></div>
+</div></div>
+<main class="envoltura">
+  <div class="aviso" id="aviso" hidden></div>
+  <div id="productos"></div>
+</main>
+<footer class="pie envoltura" id="pie"></footer>
+<div class="flotante" id="flotante" hidden><button id="ver-pedido" type="button"></button></div>
+<dialog class="hoja" id="hoja" aria-label="Tu pedido"></dialog>
+<script src="../base/catalogo.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+/* Orbe Apps · catálogo con pedidos por WhatsApp. El color de marca llega desde negocio.js como --marca */
+:root {
+  --marca: #c2335a; --marca-ink: #ffffff;
+  --bg: #fbf8f7; --surface: #ffffff; --surface2: #f6f0f1; --ink: #241a1e; --muted: #6f5f66; --line: #eee3e5;
+  --wa: #128c5e; --wa-ink: #ffffff; --ok: #0d7f5f; --off: #8a7c82;
+  --sombra: 0 1px 2px rgba(36,26,30,.05), 0 10px 30px -12px rgba(36,26,30,.18);
+  --letra: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141013; --surface: #1d171b; --surface2: #261f24; --ink: #f4eef0; --muted: #b1a3a9; --line: #33292f;
+    --ok: #6fe0b6; --off: #8f8288; --sombra: none; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--letra); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--marca); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.envoltura { max-width: 1040px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+
+/* Cabecera */
+.cabecera { background: var(--marca); color: var(--marca-ink); padding-block: 26px 22px; }
+.cabecera .envoltura { display: flex; gap: 16px; align-items: center; }
+.logo { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.2); display: grid; place-items: center; font-weight: 800; font-size: 22px; flex-shrink: 0; overflow: hidden; }
+.logo img { width: 100%; height: 100%; object-fit: cover; }
+.cabecera h1 { margin: 0; font-size: 24px; line-height: 1.15; letter-spacing: -.02em; }
+.cabecera p { margin: 2px 0 0; opacity: .9; font-size: 14px; }
+.estado { display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 700; background: rgba(255,255,255,.2); padding: 4px 10px; border-radius: 999px; }
+
+/* Buscar y categorías */
+.barra { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 12px 10px; border-bottom: 1px solid var(--line); }
+.buscar { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 14px; padding: 10px 14px; }
+.buscar input { border: 0; background: transparent; outline: none; width: 100%; font-size: 15px; }
+.buscar svg { flex-shrink: 0; color: var(--muted); }
+.cats { display: flex; gap: 8px; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
+.cats::-webkit-scrollbar { display: none; }
+.cat { border: 0; border-radius: 999px; padding: 8px 15px; font-weight: 700; font-size: 13.5px; background: var(--surface2); white-space: nowrap; }
+.cat[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.aviso { margin-top: 14px; background: #fff4e2; color: #7a4e08; border-radius: 14px; padding: 11px 14px; font-size: 14px; font-weight: 600; }
+@media (prefers-color-scheme: dark) { .aviso { background: #3a2a10; color: #f5d39a; } }
+
+/* Productos */
+.seccion { margin-top: 22px; }
+.seccion h2 { font-size: 18px; margin: 0 0 10px; letter-spacing: -.01em; }
+.lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.prod { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 12px; display: flex; gap: 12px; align-items: center; min-width: 0; }
+.prod.agotado { opacity: .55; }
+.foto { width: 84px; height: 84px; border-radius: 14px; flex-shrink: 0; overflow: hidden; display: grid; place-items: center; font-weight: 800; font-size: 28px; color: rgba(0,0,0,.35); }
+.foto img { width: 100%; height: 100%; object-fit: cover; }
+.info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.info b { font-size: 15.5px; line-height: 1.25; }
+.info span { font-size: 13px; color: var(--muted); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.precio { font-weight: 800; color: var(--marca); font-size: 15.5px; margin-top: 2px; }
+.agregar { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; font-size: 13.5px; background: var(--surface2); flex-shrink: 0; }
+.contador { display: flex; align-items: center; gap: 6px; background: var(--ink); color: var(--bg); border-radius: 999px; padding: 4px; flex-shrink: 0; }
+.contador button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: inherit; font-weight: 800; font-size: 18px; line-height: 1; }
+.contador b { min-width: 18px; text-align: center; font-size: 15px; }
+.sin { font-size: 12.5px; font-weight: 700; color: var(--off); padding: 0 6px; flex-shrink: 0; }
+.vacio { text-align: center; color: var(--muted); padding: 40px 10px; }
+
+.pie { padding-block: 40px 140px; text-align: center; font-size: 13px; color: var(--muted); }
+.pie a { color: inherit; }
+
+/* Botón flotante del pedido */
+.flotante { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; padding: 12px max(16px, env(safe-area-inset-left)) calc(16px + env(safe-area-inset-bottom)); pointer-events: none; }
+.flotante button { pointer-events: auto; width: 100%; max-width: 560px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; border-radius: 18px; padding: 17px 20px; background: var(--wa); color: var(--wa-ink); font-weight: 800; font-size: 15.5px; box-shadow: 0 16px 30px -14px rgba(18,140,94,.9); }
+
+/* Hoja del pedido */
+dialog.hoja { border: 0; padding: 0; margin: auto auto 0; width: 100%; max-width: 560px; max-height: 92vh; border-radius: 26px 26px 0 0; background: var(--bg); color: var(--ink); box-shadow: var(--sombra); }
+dialog.hoja::backdrop { background: rgba(20,12,16,.45); }
+@media (min-width: 700px) { dialog.hoja { margin: auto; border-radius: 26px; } }
+.hoja-in { display: flex; flex-direction: column; max-height: 92vh; }
+.hoja-cab { display: flex; align-items: center; gap: 10px; padding: 18px 18px 12px; border-bottom: 1px solid var(--line); }
+.hoja-cab h2 { margin: 0; font-size: 19px; flex: 1; }
+.redondo { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface2); display: grid; place-items: center; }
+.hoja-cuerpo { overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.hoja-pie { padding: 12px 18px calc(18px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.linea { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; }
+.linea .info b { font-size: 14.5px; }
+.cuentas { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-variant-numeric: tabular-nums; }
+.cuentas div { display: flex; justify-content: space-between; color: var(--muted); }
+.cuentas .total { color: var(--ink); font-weight: 800; font-size: 18px; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
+.campo { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; font-weight: 700; }
+.campo input, .campo textarea, .campo select { font-weight: 500; font-size: 15px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); width: 100%; }
+.campo textarea { min-height: 70px; resize: vertical; }
+.fila2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.opcion { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 15px; font-weight: 700; font-size: 13.5px; }
+.opcion[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.error { color: #c0392b; font-size: 13.5px; font-weight: 700; }
+.principal { border: 0; border-radius: 18px; padding: 16px 20px; font-weight: 800; font-size: 15.5px; background: var(--ink); color: var(--bg); }
+.principal.wa { background: var(--wa); color: var(--wa-ink); display: flex; justify-content: center; gap: 10px; align-items: center; }
+.mensaje { white-space: pre-wrap; background: #dcf8c6; color: #10221a; border-radius: 14px; padding: 14px; font-size: 14px; }
+.nota-prueba { font-size: 13.5px; color: var(--muted); }
