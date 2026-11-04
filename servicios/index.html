@@ -425,9 +425,7 @@ footer a { color: var(--luz); }
           <div class="chip-flota" style="left:0;top:6%;animation-delay:-1s"><svg class="anillo" viewBox="0 0 40 40" style="--p:40"><circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/><circle cx="20" cy="20" r="16" fill="none" stroke="#0e9aa7" stroke-width="5" stroke-linecap="round" pathLength="100" transform="rotate(-90 20 20)"/></svg><span><small>Viaje a la playa</small><b>60%</b></span></div>
           <div class="chip-flota" style="right:0;bottom:10%;animation-delay:-3.5s"><span class="punto"></span><span><small>Te queda este mes</small><b>$684,00</b></span></div>
           <div class="movil" data-carrusel="fin"><div class="pantallas">
-            <video class="vis" data-dur="11200" muted loop playsinline preload="metadata" poster="img/finanzas-cuentas.webp" aria-label="Orbe finanzas en uso: cuentas con su gráfico y en qué se va el dinero"><source src="img/finanzas-cuentas.webm" type="video/webm"><source src="img/finanzas-cuentas.mp4" type="video/mp4"></video>
-            <img src="img/finanzas-ahorro.webp" alt="Ahorro y metas con anillos de progreso" loading="lazy">
-            <img src="img/finanzas-inicio.webp" alt="Inicio con saldo total, gráfico del mes y cuentas" loading="lazy">
+            <video class="vis" data-dur="11200" preload="auto" muted loop playsinline poster="img/finanzas-cuentas.webp" aria-label="Orbe finanzas en uso: cuentas con su gráfico y en qué se va el dinero"><source src="img/finanzas-cuentas.webm" type="video/webm"><source src="img/finanzas-cuentas.mp4" type="video/mp4"></video>
             <img src="img/finanzas-historial.webp" alt="Historial de ingresos y gastos" loading="lazy">
           </div></div>
           <div class="movil"><div class="pantallas"><img class="vis" src="img/finanzas-ahorro.webp" alt="" loading="lazy"></div></div>
@@ -570,7 +568,7 @@ const obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersectin
 document.querySelectorAll('.rev, #linea').forEach(el => obs.observe(el));
 
 // Carruseles de pantallas
-const NOMBRES = { neg: ['Hoy', 'Vender', 'Inventario', 'Reportes'], fin: ['Cuentas en acción', 'Ahorro y metas', 'Inicio', 'Historial'] };
+const NOMBRES = { neg: ['Hoy', 'Vender', 'Inventario', 'Reportes'], fin: ['Cuentas en acción', 'Historial'] };
 document.querySelectorAll('[data-carrusel]').forEach(c => {
   const id = c.dataset.carrusel, imgs = [...c.querySelectorAll('img, video')], puntos = document.querySelector(`[data-puntos="${id}"]`), nombre = document.querySelector(`[data-nombre="${id}"]`);
   let i = 0, t;
