@@ -1,6 +1,9 @@
 // Orbe Apps · catálogo con pedidos por WhatsApp.
 // Lee los datos del negocio de window.NEGOCIO (negocio.js) y los productos de su hoja de Google publicada como CSV,
 // o del archivo productos.csv de su carpeta si todavía no tiene hoja.
+// Sin zoom con dos dedos ni doble toque (iPhone ignora user-scalable=no)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 (() => {
   const N = window.NEGOCIO;
   const $ = s => document.querySelector(s);
@@ -11,6 +14,8 @@
   pedido.items ||= {}; pedido.entrega ||= N.entrega?.domicilio ? 'domicilio' : 'retiro';
 
   document.documentElement.style.setProperty('--marca', N.color || '#c2335a');
+  // Barra de estado del teléfono con el color de la marca
+  document.head.append(Object.assign(document.createElement('meta'), { name: 'theme-color', content: N.color || '#c2335a' }));
   document.title = N.nombre + ' · Catálogo';
 
   const el = (tag, attrs = {}, ...hijos) => {

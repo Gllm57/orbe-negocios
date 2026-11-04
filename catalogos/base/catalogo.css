@@ -14,8 +14,10 @@
   }
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--letra); -webkit-font-smoothing: antialiased; }
+/* Al estirar la página con el dedo: arriba el color de la marca, abajo el fondo (sin franjas blancas) */
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; background: linear-gradient(var(--marca) 50%, var(--bg) 50%) fixed; min-height: 100%; overflow-x: hidden; overflow-x: clip; }
+button, a, input, select, textarea, label { touch-action: manipulation; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--letra); -webkit-font-smoothing: antialiased; overflow-x: hidden; overflow-x: clip; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--marca); outline-offset: 2px; }
@@ -34,7 +36,7 @@ button { cursor: pointer; }
 /* Buscar y categorías */
 .barra { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 12px 10px; border-bottom: 1px solid var(--line); }
 .buscar { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 14px; padding: 10px 14px; }
-.buscar input { border: 0; background: transparent; outline: none; width: 100%; font-size: 15px; }
+.buscar input { border: 0; background: transparent; outline: none; width: 100%; font-size: 16px; }
 .buscar svg { flex-shrink: 0; color: var(--muted); }
 .cats { display: flex; gap: 8px; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
 .cats::-webkit-scrollbar { display: none; }
@@ -87,7 +89,7 @@ dialog.hoja::backdrop { background: rgba(20,12,16,.45); }
 .cuentas div { display: flex; justify-content: space-between; color: var(--muted); }
 .cuentas .total { color: var(--ink); font-weight: 800; font-size: 18px; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
 .campo { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; font-weight: 700; }
-.campo input, .campo textarea, .campo select { font-weight: 500; font-size: 15px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); width: 100%; }
+.campo input, .campo textarea, .campo select { font-weight: 500; font-size: 16px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); width: 100%; }
 .campo textarea { min-height: 70px; resize: vertical; }
 .fila2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .opciones { display: flex; gap: 8px; flex-wrap: wrap; }
