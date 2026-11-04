@@ -2,7 +2,7 @@
 
 Tú vendes. Orbe hace lo repetitivo. App web instalable para negocios pequeños y empresas, en el teléfono y en la computadora.
 
-**Demo:** https://gllm57.github.io/orbe-negocios/ (abre sola la versión de teléfono o de computadora).
+**Demo:** https://orbe7apps.github.io/orbe-negocios/ (abre sola la versión de teléfono o de computadora).
 
 ## Qué hace (muestra funcional)
 - Primer uso: país, tipo de negocio, tamaño (negocio o empresa) y datos. Puede llenarse con un mes de ventas de ejemplo.

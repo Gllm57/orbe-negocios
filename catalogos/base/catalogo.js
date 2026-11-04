@@ -99,7 +99,7 @@
         el('p', { text: [N.rubro, N.ciudad].filter(Boolean).join(' · ') }),
         N.horario ? el('span', { class: 'estado', text: N.horario }) : null)));
     $('#aviso').hidden = !N.aviso; $('#aviso').textContent = N.aviso || '';
-    $('#pie').replaceChildren('Catálogo hecho por ', el('a', { href: 'https://gllm57.github.io/orbe-negocios/servicios/', target: '_blank', rel: 'noopener', text: 'Orbe Apps' }));
+    $('#pie').replaceChildren('Catálogo hecho por ', el('a', { href: 'https://orbe7apps.github.io/orbe-negocios/servicios/', target: '_blank', rel: 'noopener', text: 'Orbe Apps' }));
   }
   function categorias() {
     const cats = ['Todos', ...new Set(productos.map(p => p.categoria))];
