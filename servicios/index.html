@@ -134,7 +134,7 @@ section { padding-block: 110px; }
 .inclina { transition: transform .5s var(--suave); transform-style: preserve-3d; }
 .vitrina.solo { display: flex; justify-content: center; align-items: center; gap: 22px; }
 .vitrina.solo .movil { position: relative; right: auto; bottom: auto; width: 250px; }
-.vitrina.solo .movil:nth-child(2) { width: 210px; opacity: .85; transform: translateY(40px) rotate(4deg); animation-delay: -4s; }
+.vitrina.solo .movil:last-child { width: 210px; opacity: .85; transform: translateY(40px) rotate(4deg); animation-delay: -4s; }
 .puntos { display: flex; gap: 8px; margin-top: 22px; }
 .puntos button { width: 9px; height: 9px; padding: 0; border-radius: 99px; border: 0; background: rgba(255,255,255,.25); transition: width .4s var(--suave), background .3s; cursor: pointer; }
 .puntos button.vis { width: 28px; background: var(--verde); }
@@ -166,6 +166,11 @@ section { padding-block: 110px; }
 .plan .btn-claro { background: #ebe8ff; color: #3d32b8; box-shadow: inset 0 0 0 1.5px #cfc9ff; }
 .plan .btn-claro:hover { background: #ded9ff; }
 .nota { margin-top: 22px; color: var(--muted); }
+.desliza { display: none; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; font-weight: 700; margin-top: 4px; }
+.solo-movil { display: none !important; }
+.fijo { display: none; position: fixed; z-index: 20; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); justify-content: center; transform: translateY(140%); transition: transform .45s var(--suave); }
+.fijo.ver { transform: none; }
+.fijo .btn { width: 100%; max-width: 420px; justify-content: center; }
 
 /* Proceso */
 .linea-tiempo { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
@@ -214,23 +219,86 @@ footer a { color: var(--luz); }
   .escena { margin-top: 20px; }
 }
 @media (max-width: 640px) {
-  section { padding-block: 80px; }
-  .dolores, .planes, .linea-tiempo, .funciones { grid-template-columns: 1fr; }
+  body { font-size: 16px; }
+  section { padding-block: 64px; }
+  .cab { margin-bottom: 32px; gap: 12px; }
+  .cab p { font-size: 1rem; }
+  h2 { font-size: 2rem; }
+  .btn { padding: .9em 1.25em; }
+  /* Portada: texto primero, teléfono derecho y más pequeño */
+  .nav { padding-block: 14px; }
+  .nav-links .btn { padding: .6em 1em; font-size: .85rem; }
+  .hero { padding-block: 12px 56px; gap: 8px; }
+  .hero h1 { font-size: 2.9rem; }
+  .hero .lead { font-size: 1.05rem; margin-top: 16px; }
+  .hero .acc { margin-top: 24px; }
+  .hero .acc .btn { flex: 1; justify-content: center; }
+  .sellos { margin-top: 22px; font-size: .85rem; gap: 8px 16px; }
+  .escena { width: 100%; aspect-ratio: auto; height: 520px; margin-top: 28px; }
+  .escena .orbita { inset: 0 -30%; }
+  .tel-vivo { width: 262px; height: 490px; padding: 9px; border-radius: 40px; transform: translate(-50%, -50%); }
+  .tel-vivo .ventana { width: 244px; height: 472px; border-radius: 32px; }
+  .tel-vivo iframe { transform: scale(.6256); }
+  .etiqueta-viva { left: 50%; bottom: 0; transform: translateX(-50%); max-width: none; white-space: nowrap; font-size: .8rem; padding: 10px 14px; animation: none; }
+  .cinta { padding-block: 14px; }
+  .cinta .pista { font-size: .92rem; gap: 30px; }
+  .cinta .pista span { gap: 30px; }
+  /* Problemas: filas compactas */
+  .dolores { grid-template-columns: 1fr; gap: 12px; }
+  .dolor { display: grid; grid-template-columns: 72px 1fr; gap: 4px 14px; padding: 18px; border-radius: 20px; align-items: start; }
+  .dolor .num { grid-row: span 2; font-size: 2.1rem; }
+  .dolor h3 { margin: 0; font-size: 1.08rem; }
+  .dolor p { margin: 0; font-size: .92rem; }
+  /* Trabajos */
+  .proyecto { gap: 28px; margin-top: 0; }
+  .proyecto + .proyecto { margin-top: 80px; }
+  .texto h3 { font-size: 2.1rem; }
+  .texto > p { font-size: 1rem; }
+  .funciones { grid-template-columns: 1fr 1fr; gap: 10px 14px; margin: 20px 0 24px; }
+  .funciones li { font-size: .86rem; gap: 8px; }
+  .funciones li::before { width: 14px; height: 14px; margin-top: 3px; }
+  .texto .acc .btn { width: 100%; justify-content: center; }
+  .vitrina { height: 470px; display: flex; justify-content: center; align-items: center; perspective: none; }
+  .vitrina .pc { display: none; }
+  .vitrina .movil, .vitrina.solo .movil { position: relative; right: auto; bottom: auto; width: 210px; }
+  .vitrina.solo .movil:last-child { display: none; }
+  .vitrina.solo { height: 470px; }
+  .chip-flota { padding: 8px 12px; font-size: .78rem; gap: 9px; border-radius: 14px; }
+  .chip-flota b { font-size: .95rem; }
+  .chip-flota .anillo { width: 28px; height: 28px; }
+  .vitrina .chip-flota:first-child { left: 0 !important; top: 8% !important; }
+  .vitrina .chip-flota:nth-child(2) { right: 0 !important; bottom: 10% !important; left: auto !important; top: auto !important; }
+  .puntos-wrap { justify-content: center; }
+  /* Catálogo en vivo: sin segundo teléfono (ya está en la portada) */
+  .vivo { gap: 0; }
+  .vivo > .rev:first-child { display: none; }
+  .vivo-pasos { margin-top: 22px; gap: 14px; }
+  .vivo-pasos li { grid-template-columns: 38px 1fr; }
+  .vivo-pasos li::before { width: 38px; height: 38px; border-radius: 12px; font-size: 1rem; }
+  .solo-movil { display: inline-flex !important; }
+  /* Precios: carrusel que se desliza */
+  .planes { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: -20px; padding: 6px 20px 18px; scrollbar-width: none; }
+  .planes::-webkit-scrollbar { display: none; }
+  .plan { flex: 0 0 82%; scroll-snap-align: center; padding: 22px; }
+  .plan:hover { transform: none; }
+  .desliza { display: flex !important; }
+  /* Proceso */
+  .linea-tiempo { grid-template-columns: 1fr; gap: 26px; }
   .linea-tiempo::before, .linea-tiempo .progreso { left: 10px; right: auto; top: 0; bottom: 0; width: 3px; height: auto; }
   .linea-tiempo .progreso { height: 0; transition: height 1.8s var(--suave); }
   .linea-tiempo.ok .progreso, .no-js .linea-tiempo .progreso { width: 3px; height: 100%; }
   .hito { padding-top: 0; padding-left: 46px; }
   .hito::before { top: 2px; }
-  .vitrina { height: 460px; }
-  .pc { width: 100%; top: 0; }
-  .vitrina .movil { width: 170px; }
-  .vitrina.solo .movil { width: 200px; }
-  .vitrina.solo .movil:nth-child(2) { display: none; }
-  .vitrina.solo { height: 470px; }
-  .chip-flota { padding: 9px 12px; font-size: .8rem; }
-  .chip-flota b { font-size: .95rem; }
-  .chip-flota .anillo { width: 30px; height: 30px; }
-  .etiqueta-viva { left: 0; }
+  .faq summary { font-size: 1.02rem; }
+  .faq details { padding-block: 18px; }
+  .cierre h2 { font-size: 2.4rem; }
+  .cierre-in { gap: 28px; }
+  form { padding: 20px; border-radius: 22px; }
+  input, select, textarea { font-size: 16px; }
+  .planeta-grande { width: 380px; right: -160px; top: -80px; }
+  footer { padding-bottom: 110px; }
+  /* Botón fijo para cotizar */
+  .fijo { display: flex !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -368,12 +436,13 @@ footer a { color: var(--luz); }
     <div>
       <div class="eti rev">El más pedido</div>
       <h2 class="rev" style="--d:.08s;margin-top:16px">Un catálogo que trabaja mientras tú atiendes.</h2>
-      <p class="rev" style="--d:.14s;color:var(--muted);font-size:1.12rem;margin-top:18px">Prueba el de la izquierda: es el mismo que recibe tu negocio, con tus productos y tu número.</p>
+      <p class="rev" style="--d:.14s;color:var(--muted);font-size:1.12rem;margin-top:18px">Es el mismo que recibe tu negocio, con tus productos y tu número. Pruébalo, funciona de verdad.</p>
       <ol class="vivo-pasos">
         <li class="rev" style="--d:.18s"><div><b>Tu cliente elige</b><span>Ve fotos, precios y categorías, y arma su pedido sin preguntar.</span></div></li>
         <li class="rev" style="--d:.24s"><div><b>Pone sus datos</b><span>Domicilio o retiro, día, hora y forma de pago.</span></div></li>
         <li class="rev" style="--d:.3s"><div><b>Te llega a WhatsApp</b><span>Un solo mensaje con todo y el total. Tú cambias precios desde tu teléfono.</span></div></li>
       </ol>
+      <a class="btn btn-luz solo-movil rev" href="../catalogos/dulce-hogar/" target="_blank" rel="noopener" style="margin-top:24px;width:100%;justify-content:center">Abrir el catálogo de ejemplo</a>
     </div>
   </div>
 </section>
@@ -416,6 +485,7 @@ footer a { color: var(--luz); }
         <a class="btn btn-claro" href="#cotizar" data-plan="App completa">Cotizar</a>
       </div>
     </div>
+    <p class="desliza" aria-hidden="true">Desliza para ver más planes →</p>
     <p class="nota rev">Mantenimiento opcional: $25 al mes con cambios, fotos nuevas y copias de seguridad.</p>
   </div>
 </section>
@@ -475,6 +545,7 @@ footer a { color: var(--luz); }
     <a href="https://www.instagram.com/orbe.apps/" target="_blank" rel="noopener">@orbe.apps</a>
   </div>
 </footer>
+<div class="fijo" id="fijo"><a class="btn btn-luz" href="#cotizar">Cotizar gratis</a></div>
 
 <script>
 const WHATSAPP = "";          // tu número con código de país, solo dígitos, ej. "584121234567"
@@ -497,6 +568,15 @@ document.querySelectorAll('[data-carrusel]').forEach(c => {
   ir(0); reinicia();
 });
 
+// Botón fijo en el teléfono: aparece al pasar la portada y se esconde en el formulario
+(() => {
+  const fijo = document.getElementById('fijo'), portada = document.querySelector('.portada'), cot = document.getElementById('cotizar');
+  let pasado = false, enForm = false;
+  const pinta = () => fijo.classList.toggle('ver', pasado && !enForm);
+  new IntersectionObserver(([e]) => { pasado = !e.isIntersecting; pinta(); }).observe(portada);
+  new IntersectionObserver(([e]) => { enForm = e.isIntersecting; pinta(); }, { threshold: .1 }).observe(cot);
+})();
+
 // Las vitrinas se inclinan siguiendo el puntero
 if (!quieto && matchMedia('(hover: hover)').matches) document.querySelectorAll('.vitrina').forEach(v => {
   v.classList.add('inclina');
@@ -511,7 +591,7 @@ if (!quieto && matchMedia('(hover: hover)').matches) document.querySelectorAll('
   const medir = () => {
     dpr = Math.min(devicePixelRatio || 1, 2); w = cv.offsetWidth; h = cv.offsetHeight;
     cv.width = w * dpr; cv.height = h * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    estrellas = Array.from({ length: Math.round(w * h / 5200) }, () => ({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.3 + .2, f: Math.random() * Math.PI * 2, v: .4 + Math.random() * 1.2 }));
+    estrellas = Array.from({ length: Math.round(w * h / (w < 640 ? 7000 : 5200)) }, () => ({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.3 + .2, f: Math.random() * Math.PI * 2, v: .4 + Math.random() * 1.2 }));
   };
   let mx = 0, my = 0;
   addEventListener('pointermove', e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
