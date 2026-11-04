@@ -14,6 +14,8 @@ export function BloqueGastos({ compacto }) {
   const { D, abrir, tel } = useApp();
   const pp = porPagar(), gm = gastosEntre(inicioMes(), Date.now() + 1);
   const totMes = gm.reduce((a, g) => a + g.v, 0);
+  // Recientes: los últimos 60 días (a principios de mes también se ven los de la semana pasada).
+  const recientes = gastosEntre(Date.now() - 60 * 86400000, Date.now() + 1).slice().sort((a, b) => b.t - a.t);
   const cats = {}; gm.forEach(g => { cats[g.cat] = (cats[g.cat] || 0) + g.v; });
   const segs = Object.keys(cats).sort((a, b) => cats[b] - cats[a]).map(k => ({ n: k, v: cats[k], c: COLOR_CAT[k] || 'var(--c4)' }));
   const pagar = g => { pagarGasto(g.id); avisar('Pagado: ' + g.n); };
@@ -34,9 +36,9 @@ export function BloqueGastos({ compacto }) {
 
   const Recientes = html`<section class="tarjeta entra" style="--i:2;padding-bottom:6px">
     <div class="tarjeta-tit">Gastos recientes<button type="button" class="btn2 chico rojo toca" onClick=${() => abrir('gasto')}>+ Gasto</button></div>
-    <div class="lista">${gm.slice().sort((a, b) => b.t - a.t).slice(0, compacto ? 4 : 12).map((g, i) => html`<button type="button" class="item toca entra" key=${g.id} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('gasto', { gid: g.id })}>
+    <div class="lista">${!recientes.length ? html`<p class="vacio" style="padding:12px 0">Todavía no anotas gastos.</p>` : null}${recientes.slice(0, compacto ? 4 : 12).map((g, i) => html`<button type="button" class="item toca entra" key=${g.id} style=${{ '--i': i, color: 'var(--ink)' }} onClick=${() => abrir('gasto', { gid: g.id })}>
       <span class="simb-c" style=${{ '--c': COLOR_CAT[g.cat] || 'var(--c4)', width: '32px', height: '32px' }}><${Icono} n=${simbolo(g.cat)} t=${16} /></span>
-      <span class="crece" style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">${g.n}</span><span class="sub faint">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
+      <span class="crece" style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="corta" style="font-size:14px">${g.n}</span><span class="sub faint corta">${fechaCorta(g.t)} · ${g.cat} · ${g.m}</span></span>
       <b class="num out" style="font-size:14px">−${D.m(g.v)}</b>
     </button>`)}</div>
   </section>`;
@@ -45,12 +47,15 @@ export function BloqueGastos({ compacto }) {
 }
 
 export function Gastos() {
-  const { D } = useApp();
+  const { D, tel, abrir } = useApp();
   const b = BloqueGastos({});
   const gm = gastosEntre(inicioMes(), Date.now() + 1), pp = porPagar();
   const tot = gm.reduce((a, g) => a + g.v, 0), dias = new Date().getDate();
   const cifras = [['Gastado este mes', tot, gm.length + ' gastos', 'var(--out)', 'dinero'], ['Por pagar', pp.reduce((a, g) => a + g.v, 0), pp.length + (pp.length === 1 ? ' cuenta' : ' cuentas'), 'var(--amber)', 'calendario'],
     ['Próximo vencimiento', pp.length ? pp[0].v : 0, pp.length ? pp[0].n + ' · ' + venceTxt(pp[0].vence).toLowerCase() : 'Nada pendiente', 'var(--ink)', 'reloj'], ['Promedio por día', tot / Math.max(1, dias), 'en ' + dias + ' días del mes', 'var(--ink)', 'grafico']];
+  if (tel) return html`<div class="fila entra"><h1 class="titulo crece">Gastos</h1></div>
+    <div class="rejilla-2">${cifras.slice(0, 2).map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="sub">${k[0]}</span><${Monto} v=${k[1]} f=${D.m} clase=${'v num ' + (i ? 'amber' : 'out')} /><span class="sub faint">${k[2]}</span></div>`)}</div>
+    ${b.PorPagar}${b.Recientes}${b.Mes}`;
   return html`<div class="cifras">${cifras.map((k, i) => html`<div class="tarjeta cifra entra" style=${{ '--i': i }}><span class="fila" style="gap:8px"><span class="simb-c" style=${{ '--c': k[3] === 'var(--ink)' ? 'var(--c1)' : k[3] }}><${Icono} n=${k[4]} t=${14} g=${2.2} /></span><span class="sub">${k[0]}</span></span><${Monto} v=${k[1]} f=${D.m} clase="v" /><span class="sub faint corta">${k[2]}</span></div>`)}</div>
     <div class="tres estira">${b.PorPagar}${b.Recientes}${b.Mes}</div>`;
 }

@@ -38,7 +38,7 @@ const Llena = ({ activo, refCaja, minimo, children }) => activo
   : children;
 
 // Barras verticales, simples o apiladas. datos: [{ l, v, segs?: [{ v, c }], tip }]
-export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resaltar = -1, hueco = 6, llenar = false }) {
+export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', colorRes = 'var(--c1)', resaltar = -1, hueco = 6, llenar = false }) {
   const [refLibre, libre] = useAltoLibre(llenar, alto0);
   const alto = llenar ? libre - 4 : alto0;
   const [sel, setSel] = useState(-1);
@@ -56,7 +56,7 @@ export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resa
     <div class=${'gr-barras' + (sel >= 0 ? ' atenua' : '')} style=${{ height: alto + 'px', '--hueco': hueco + 'px' }} role="img" aria-label=${datos.map(d => d.l + ': ' + (d.tip || d.v)).join(', ')}>
       ${datos.map((d, i) => {
         const h = d.v > 0 ? Math.max(3, d.v / max * (alto - 20)) : 2;
-        const segs = d.segs && d.segs.length ? d.segs : [{ v: d.v, c: i === resaltar ? 'var(--c1)' : colorBase }];
+        const segs = d.segs && d.segs.length ? d.segs : [{ v: d.v, c: i === resaltar ? colorRes : colorBase }];
         const suma = segs.reduce((a, s) => a + s.v, 0) || 1;
         return html`<button type="button" key=${d.l + i} class=${'col' + (sel === i ? ' on' : '')} onMouseEnter=${e => mostrar(i, e)} onClick=${e => sel === i ? quitar() : mostrar(i, e)} aria-label=${d.l + ': ' + (d.tip || d.v)}>
           <span class="barra" style=${{ height: h + 'px', '--i': i, opacity: d.v > 0 ? 1 : 0.35 }}>
@@ -71,12 +71,14 @@ export function Barras({ datos, alto: alto0 = 160, colorBase = 'var(--c1)', resa
 }
 
 // Línea con área. datos: [{ l, v, tip }]
-export function Linea({ datos, alto: alto0 = 200, c = 'var(--c1)', etiquetas = 6, id = 'ln', llenar = false }) {
+// ajustar: la escala empieza cerca del mínimo (para valores que cambian poco, como una tasa).
+export function Linea({ datos, alto: alto0 = 200, c = 'var(--c1)', etiquetas = 6, id = 'ln', llenar = false, ajustar = false }) {
   const [refLibre, libre] = useAltoLibre(llenar, alto0);
   const alto = llenar ? libre - 18 : alto0;
   const ancho = 600, pad = 8;
-  const max = Math.max(1e-9, ...datos.map(d => d.v)) * 1.1;
-  const pts = datos.map((d, i) => [pad + i * (ancho - 2 * pad) / Math.max(1, datos.length - 1), alto - 24 - d.v / max * (alto - 40)]);
+  const vmax = Math.max(1e-9, ...datos.map(d => d.v)), vmin = ajustar ? Math.min(...datos.map(d => d.v)) : 0;
+  const piso = ajustar ? vmin - (vmax - vmin) * 0.15 : 0, max = ajustar ? vmax + (vmax - vmin) * 0.1 - piso || 1 : vmax * 1.1;
+  const pts = datos.map((d, i) => [pad + i * (ancho - 2 * pad) / Math.max(1, datos.length - 1), alto - 24 - (d.v - piso) / max * (alto - 40)]);
   const linea = useMemo(() => pts.map((p, i) => {
     if (!i) return 'M' + p[0] + ',' + p[1];
     const a = pts[i - 1], cx = (a[0] + p[0]) / 2;
@@ -137,7 +139,8 @@ export function Anillo({ p, tam = 64, grosor = 7, c = 'var(--in)', children }) {
 // segs: [{ n, v, c, i? (símbolo), d? (cambio en %), bueno? }]
 export function Reparto({ segs, f, total, titulo = 'Total', tam = 124, grosor = 11, hueco = 4, max = 4 }) {
   const tot = total ?? segs.reduce((a, s) => a + s.v, 0);
-  const orden = segs.slice().sort((a, b) => b.v - a.v);
+  // «Otros» siempre al final, aunque sume más.
+  const orden = segs.slice().sort((a, b) => (a.n === 'Otros') - (b.n === 'Otros') || b.v - a.v);
   const pct = v => { const q = tot ? v / tot * 100 : 0; return (q > 0 && q < 1 ? '<1' : Math.round(q)) + ' %'; };
   return html`<div class="reparto">
     <div class="fila" style="gap:16px">

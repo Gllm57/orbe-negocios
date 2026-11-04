@@ -1,23 +1,45 @@
 // Datos de Orbe Negocios. Todo se guarda primero en el aparato (funciona sin internet).
 // Regla de Orbe: si algo se daña al cargar, se aparta y nunca se borra.
 import { useState, useEffect } from './lib/preact-htm.js';
-import { pais, tipo, dinero } from './paises.js';
+import { pais, tipo, dinero, TASA_VE_RESPALDO, esDivisa, EUR_USD } from './paises.js';
 import { ROLES_BASE } from './permisos.js';
+import { encadenar, revisar, firmaVenta, firmaRegistro, firmaCierre } from './hash.js';
 
 const CLAVE = 'orbe-negocios';
 const subs = new Set();
 let S = vacio();
 
-function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' } }; }
+function vacio() { return { v: 2, negocio: null, productos: [], clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], ordenes: [], movCaja: [], turnos: [], promos: [], perfiles: [], roles: ROLES_BASE(), registro: [], ajustes: { tema: 'auto', perfil: '' }, tasa: { modo: 'auto', valor: 0, fuente: 'oficial', fecha: '' }, tasas: {}, historialTasas: [], grupos: [] }; }
 // Datos guardados con versiones anteriores: se completan sin perder nada.
 function migrar(d) {
   if (!Array.isArray(d.roles) || !d.roles.length) d.roles = ROLES_BASE();
   // El permiso de anular llegó después: administrador y encargado lo tienen de entrada.
   d.roles = d.roles.map(r => r.p && r.p.anular === undefined && (r.id === 'admin' || r.id === 'encargado') ? Object.assign({}, r, { p: Object.assign({}, r.p, { anular: true }) }) : r);
+  // Cambiar las tasas llegó después: de entrada solo el administrador (y el dueño, que siempre puede todo).
+  d.roles = d.roles.map(r => r.p && r.p.tasas === undefined ? Object.assign({}, r, { p: Object.assign({}, r.p, { tasas: r.id === 'admin' }) }) : r);
   if (d.negocio && (!Array.isArray(d.perfiles) || !d.perfiles.length)) { d.perfiles = [{ id: 'u0', n: 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }]; d.ajustes = Object.assign({}, d.ajustes, { perfil: 'u0' }); }
   if (!Array.isArray(d.registro)) d.registro = [];
   if (!d.tasa || typeof d.tasa !== 'object' || (d.tasaVE && !d.tasa.valor)) d.tasa = { modo: 'auto', valor: d.tasaVE || 0, fuente: 'oficial', fecha: d.tasaFecha || '' };
   delete d.tasaVE; delete d.tasaFecha;
+  if (!d.tasas || typeof d.tasas !== 'object') d.tasas = {};
+  if (!Array.isArray(d.historialTasas)) d.historialTasas = [];
+  if (!Array.isArray(d.grupos)) d.grupos = [];
+  if (!Array.isArray(d.ordenes)) d.ordenes = [];
+  if (!Array.isArray(d.movCaja)) d.movCaja = [];
+  if (!Array.isArray(d.promos)) d.promos = [];
+  if (Array.isArray(d.perfiles) && d.perfiles.some(p => !p.id)) d.perfiles = d.perfiles.map(p => p.id ? p : Object.assign({}, p, { id: 'u' + Math.random().toString(36).slice(2, 10) }));
+  // Productos guardados sin id por un error anterior: se les da uno (sus ventas los nombran por nombre).
+  if (Array.isArray(d.productos) && d.productos.some(p => !p.id)) d.productos = d.productos.map(p => p.id ? p : Object.assign({}, p, { id: 'p' + Math.random().toString(36).slice(2, 10) }));
+  // Dar descuentos al vender llegó después: administrador y encargado lo tienen de entrada.
+  d.roles = d.roles.map(r => r.p && r.p.descuentos === undefined ? Object.assign({}, r, { p: Object.assign({}, r.p, { descuentos: r.id === 'admin' || r.id === 'encargado' }) }) : r);
+  if (!Array.isArray(d.turnos)) d.turnos = [];
+  // Costos anotados antes de guardar su tasa: desde hoy se toma la tasa actual como punto de partida.
+  if (Array.isArray(d.productos) && d.productos.some(p => p.cT === undefined)) d.productos = d.productos.map(p => p.cT === undefined ? Object.assign({}, p, { cT: (d.tasa && d.tasa.valor) || 0 }) : p);
+  // Órdenes de trabajo y pedidos (siempre activas): el permiso, de entrada, para administrador y encargado.
+  d.roles = d.roles.map(r => r.p && r.p.ordenes === undefined ? Object.assign({}, r, { p: Object.assign({}, r.p, { ordenes: r.id === 'admin' || r.id === 'encargado' }) }) : r);
+  if (d.negocio && d.negocio.pedirRef === undefined) d.negocio = Object.assign({}, d.negocio, { pedirRef: d.negocio.pais === 'VE', tasaPago: d.negocio.tasaPago || {} });
+  // Datos de antes de la cadena de integridad: se firman al cargarlos (la cadena empieza ahí).
+  ['ventas', 'registro', 'cierres'].forEach((k, i) => { if (Array.isArray(d[k]) && d[k].some(x => !x.h)) encadenar(d[k], [firmaVenta, firmaRegistro, firmaCierre][i]); });
   d.v = 2;
   return d;
 }
@@ -150,7 +172,14 @@ export async function restaurar(d) {
 }
 
 export const leer = () => S;
-export function cambiar(fn) { S = Object.assign({}, S, fn(S)); memo.clear(); guardar(); subs.forEach(f => f()); }
+export function cambiar(fn) { const antes = S; S = Object.assign({}, S, fn(S)); firmarNuevos(antes); memo.clear(); guardar(); subs.forEach(f => f()); }
+// Cadena de integridad: cada venta, cierre y cambio nuevo se firma con el hash del anterior.
+function firmarNuevos(antes) {
+  if (S.ventas !== (antes && antes.ventas) && S.ventas.some(v => !v.h)) encadenar(S.ventas, firmaVenta);
+  if (S.registro !== (antes && antes.registro) && S.registro.some(v => !v.h)) encadenar(S.registro, firmaRegistro);
+  if (S.cierres !== (antes && antes.cierres) && S.cierres.some(v => !v.h)) encadenar(S.cierres, firmaCierre);
+}
+export function revisarIntegridad() { return { ventas: revisar(S.ventas, firmaVenta), cierres: revisar(S.cierres, firmaCierre), registro: revisar(S.registro, firmaRegistro), n: S.ventas.length + S.cierres.length + S.registro.length }; }
 export function useDatos() {
   const [, forzar] = useState(0);
   useEffect(() => { const f = () => forzar(x => x + 1); subs.add(f); return () => subs.delete(f); }, []);
@@ -172,6 +201,14 @@ const CATALOGO = {
   online: [['CA', 'Camiseta estampada', 15, 6, 40, 10, 0, 8], ['GO', 'Gorra', 12, 5, 16, 6, 0, 4], ['TZ', 'Taza', 9, 3.5, 5, 6, 0, 5], ['TB', 'Bolsa de tela', 10, 4, 22, 5, 0, 3], ['ST', 'Stickers x 5', 4, 1, 90, 20, 0, 6], ['SU', 'Sudadera', 28, 12, 9, 4, 0, 2], ['EN', 'Envío', 3, 3, -1, 0, 0, 7]],
   indep: [['LG', 'Diseño de logo', 120, 0, 0, 0, 600, 1], ['FT', 'Sesión de fotos', 80, 10, 0, 0, 120, 2], ['CL', 'Clase 1 hora', 15, 0, 0, 0, 60, 6], ['AS', 'Asesoría 1 hora', 30, 0, 0, 0, 60, 3], ['VT', 'Visita técnica', 25, 3, 0, 0, 90, 3], ['RS', 'Paquete redes', 60, 0, 0, 0, 240, 1]]
 };
+// Grupos de ejemplo de cada tipo de negocio (por la abreviatura del producto).
+const GRUPOS_EJ = {
+  tienda: [['Víveres', ['HM', 'AR', 'CF', 'AC']], ['Bebidas', ['RF']], ['Lácteos y huevos', ['HV', 'QS']], ['Panadería', ['PN']], ['Limpieza', ['JB']]],
+  comida: [['Platos', ['HB', 'PC', 'PZ', 'CB']], ['Acompañantes', ['EM', 'PF']], ['Bebidas', ['JN', 'RF', 'CF']]],
+  citas: [['Cabello', ['CO', 'CB', 'TI', 'PI']], ['Uñas', ['MA', 'PE']]],
+  online: [['Ropa', ['CA', 'GO', 'SU']], ['Accesorios', ['TZ', 'TB', 'ST']], ['Envíos', ['EN']]],
+  indep: [['Diseño', ['LG', 'RS']], ['Servicios', ['FT', 'VT']], ['Clases y asesorías', ['CL', 'AS']]]
+};
 const VENTAS_DIA = { tienda: 26, comida: 38, citas: 8, online: 7, indep: 2 };
 const NOMBRES = { tienda: 'Bodega La Esquina', comida: 'Sabor Express', citas: 'Estudio Bella', online: 'Estampa Store', indep: 'Ana Ruiz Estudio' };
 const NOMBRES_EMP = { tienda: 'Comercial La Esquina', comida: 'Grupo Sabor Express', citas: 'Estudios Bella', online: 'Estampa Store', indep: 'Ruiz y Asociados' };
@@ -187,13 +224,18 @@ export function crearNegocio(cfg, conEjemplo) {
   const nSuc = Math.max(1, Math.min(5, cfg.sucN || 1)), NOM = ['Centro', 'Norte', 'Este', 'Oeste', 'Sur'];
   const sucursales = nSuc === 1 ? ['Principal'] : Array.from({ length: nSuc }, (_, i) => ((cfg.sucNombres || [])[i] || '').trim() || NOM[i]);
   const productos = CATALOGO[T.id].map((x, i) => ({ id: 'p' + i, ab: x[0], n: x[1], p: D.precio(x[2]), c: D.precio(x[3]), q: x[4] < 0 ? null : Math.round(x[4] * (E ? 3 : 1)), min: Math.round(x[5] * (E ? 3 : 1)), dur: x[6] || 0, pop: x[7], cod: '759' + String(1234000 + i * 37) }));
-  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now() };
+  const negocio = { nombre: cfg.nombre || nombreSugerido(T.id, cfg.escala), razon: cfg.razon || '', fiscal: cfg.fiscal || '', pais: P.id, tipo: T.id, escala: E ? 'empresa' : 'negocio', pays: cfg.pays && cfg.pays.length ? cfg.pays : P.pays.slice(), taxOn: cfg.taxOn ?? P.tax[1] > 0, taxIncl: cfg.taxIncl ?? true, sucursales, creado: Date.now(), pedirRef: P.id === 'VE', igtf: false, fiadoUsd: false, tasaPago: {} };
   const perfiles = [{ id: 'u0', n: (cfg.dueno || '').trim() || 'Dueño', rol: 'dueno', pin: '', sucs: [], creado: Date.now() }];
   if (conEjemplo) perfiles.push(
     { id: 'u1', n: 'Carla Méndez', rol: 'encargado', pin: '1111', sucs: [], creado: Date.now() },
     { id: 'u2', n: 'Luis Pino', rol: 'cajero', pin: '2222', sucs: sucursales.length > 1 ? [sucursales[0]] : [], creado: Date.now() });
-  const base = { negocio, productos: productos.map(({ pop, ...p }) => p), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
+  const grupos = (GRUPOS_EJ[T.id] || []).map((g, i) => ({ id: 'g' + i, n: g[0], c: i }));
+  productos.forEach(p => { const i = (GRUPOS_EJ[T.id] || []).findIndex(g => g[1].includes(p.ab)); if (i >= 0) p.g = 'g' + i; });
+  const cT = S.tasa.valor || (P.id === 'VE' ? TASA_VE_RESPALDO : P.r), base = { grupos, negocio, productos: productos.map(({ pop, ...p }) => Object.assign(p, { cT })), clientes: [], ventas: [], abonos: [], gastos: [], cierres: [], perfiles, roles: ROLES_BASE(), registro: [], ajustes: Object.assign({}, S.ajustes, { perfil: 'u0' }) };
+  // Países con moneda inestable sin fuente automática: la tasa arranca con la de referencia y se escribe a mano.
+  if (P.usd2 && P.id !== 'AR') base.tasa = { modo: 'manual', valor: P.r, fuente: 'oficial', fecha: diaClave(Date.now()) };
   if (conEjemplo) Object.assign(base, ejemplo(negocio, productos, D, perfiles));
+  else base.historialTasas = [];
   cambiar(() => base);
 }
 
@@ -250,24 +292,82 @@ function ejemplo(neg, productos, D, perfiles) {
     ['Distribuidora Central', 'Mercancía', 84, ahora, false, ahora + DIA],
     ['Alquiler del local', 'Alquiler', 250, ahora, false, ahora + 5 * DIA]
   ].map(g => ({ id: id(), n: g[0], cat: g[1], v: D.precio(g[2] * kb), t: g[3], pagado: g[4], vence: g[5] || 0, m: neg.pays[0], suc: neg.sucursales[0] }));
+  // En Venezuela y Argentina la tasa sube un poco cada día: cada venta y gasto guarda la de su día.
+  const ve = neg.pais === 'VE', ar = !!pais(neg.pais).usd2, historialTasas = [];
+  if (ve || ar) {
+    const base = S.tasa.valor || (ve ? TASA_VE_RESPALDO : pais(neg.pais).r), ritmo = ve ? 0.006 : 0.003;
+    const tasaDia = t => Math.round(base / (1 + ritmo * Math.max(0, (hoy0 - inicioDia(t)) / DIA)) * 100) / 100;
+    ventas.forEach(v => { v.tasa = tasaDia(v.t); });
+    gastos.forEach(g => { g.tasa = tasaDia(g.t); });
+    for (let d = 63; d >= 1; d--) historialTasas.push({ dia: diaClave(hoy0 - d * DIA), f: 'oficial', v: tasaDia(hoy0 - d * DIA) });
+  }
+  // Órdenes de ejemplo (se ven si el negocio usa órdenes): una atrasada, una lista y dos recién recibidas.
+  const taller = neg.tipo === 'citas' || neg.tipo === 'indep', hora17 = d => { const x = new Date(hoy0 + d * DIA); x.setHours(17, 0, 0, 0); return x.getTime(); };
+  const ej = taller
+    ? [['Laptop HP 15 — no enciende', 'Con cargador. Rayón en la tapa.', [['Diagnóstico', 15], ['Puerto de carga', 35], ['Mano de obra', 35]], 'proceso', -1, 40],
+      ['iPhone 12 — cambio de pantalla', 'Pantalla rota, táctil funciona.', [['Pantalla original', 90], ['Mano de obra', 30]], 'lista', 0, 60],
+      ['Impresora Epson L3150 — atasco de papel', '', [['Revisión', 10]], 'recibida', 2, 0],
+      ['Moto Bera — servicio de 5.000 km', 'Cambio de aceite y frenos.', [['Aceite y filtro', 25], ['Pastillas de freno', 18], ['Mano de obra', 22]], 'recibida', 3, 20]]
+    : [['Pedido: 3 tortas de cumpleaños', 'Una de chocolate, dos de vainilla. Escribir «Feliz día Ana».', [['Torta mediana', 30, 3]], 'proceso', -1, 45],
+      ['Encargo: 2 cajas de refrescos surtidos', 'Retira en el local.', [['Caja de refrescos', 18, 2]], 'lista', 0, 0],
+      ['Pedido para empresa: café y azúcar', 'Facturar a nombre de la empresa.', [['Café 500 g', 6, 10], ['Azúcar 1 kg', 1.6, 10]], 'recibida', 2, 30],
+      ['Bandeja de 50 tequeños', 'Para el sábado a las 10 am.', [['Bandeja de tequeños', 25]], 'recibida', 4, 0]];
+  const ordenes = ej.map((o, i) => {
+    const t0 = ahora - (3 - Math.min(i, 2)) * DIA + i * 3600000, oid = 'o' + id();
+    const est = ['recibida', 'proceso', 'lista'], hasta = est.indexOf(o[3]);
+    const hist = est.slice(0, hasta + 1).map((e, k) => ({ t: t0 + k * 5 * 3600000, por: perfiles[k % perfiles.length].id, txt: k === 1 && taller ? 'Se pidió el repuesto.' : '', e }));
+    if (o[5]) { hist.splice(1, 0, { t: t0 + 60000, por: perfiles[0].id, txt: '', ant: D.precio(o[5]), m: neg.pays[0], tipo: 'Anticipo' }); abonos.push({ id: id(), t: t0 + 60000, cli: clientes[i].id, v: D.precio(o[5]), m: neg.pays[0], pagos: [{ m: neg.pays[0], v: D.precio(o[5]) }], nota: 'Anticipo', ord: oid }); }
+    return { id: oid, n: i + 1, tipo: taller ? 'trabajo' : 'pedido', cli: clientes[i].id, que: o[0], det: o[1], items: o[2].map((x, k) => ({ pid: 'libre:ej' + i + k, n: x[0], q: x[2] || 1, p: D.precio(x[1]), c: 0, libre: true })),
+      entrega: hora17(o[4]), resp: perfiles[(i + 1) % perfiles.length].id, suc: neg.sucursales[0], t: t0, por: perfiles[0].id, estado: o[3], hist, avisado: o[3] === 'lista' ? ahora - 3600000 : 0 };
+  });
+  ordenes.forEach((o, i) => { const a = abonos.find(x => x.ord === o.id); if (a) a.nota = 'Anticipo ' + (o.tipo === 'pedido' ? 'PED-' : 'OT-') + String(i + 1).padStart(4, '0'); });
   // Lo vendido sale del inventario, pero el ejemplo arranca con lo que hay ahora.
-  return { clientes, ventas, abonos, gastos, cierres: [] };
+  return { clientes, ventas, abonos, gastos, cierres: [], historialTasas, ordenes };
 }
 
 // ---------- acciones ----------
 // Parte fiada de una venta: con pagos combinados puede ser solo una parte (p. ej. la mitad por Pago Móvil y el resto fiado).
-export const fiadoDe = v => v.pagos.reduce((a, p) => a + (p.m === 'Fiado' ? p.v : 0), 0);
+export const fiadoDe = v => v.pagos.reduce((a, p) => a + (p.m === 'Fiado' || p.m === 'Saldo a favor' ? p.v : 0), 0);
+// ---------- tasas ----------
+// La tasa principal (la de mostrar) y las extra (paralela, USDT, propia). Cada forma de pago puede cobrarse con una.
+export function tasaDe(k) {
+  const prin = S.tasa.valor || (S.negocio && S.negocio.pais === 'VE' ? TASA_VE_RESPALDO : S.negocio ? pais(S.negocio.pais).r : 1);
+  if (!k || k === 'oficial') return prin;
+  return (S.tasas[k] && S.tasas[k].valor) || prin;
+}
+export const tasaMetodo = m => tasaDe(((S.negocio && S.negocio.tasaPago) || {})[m]);
+// Tasa del euro (bolívares o moneda local por euro). Si no se ha leído, se estima con el dólar.
+export const tasaEuro = () => (S.tasas.euro && S.tasas.euro.valor) || tasaDe() * EUR_USD;
+const dolarDe = (v, t) => S.negocio.pais === 'VE' ? v : v / (t || tasaDe());
+const anotarHistorial = (s, f, v) => { const dia = diaClave(Date.now()), h = (s.historialTasas || []).filter(x => !(x.dia === dia && x.f === f)); return h.concat([{ dia, f, v }]).slice(-600); };
 const juntar = pagos => pagos.map(p => p.m).join(' + ');
 export const sigNumero = () => (S.ventas.length ? S.ventas[S.ventas.length - 1].n : 1000) + 1;
-const stockMas = (productos, lineas, signo) => productos.map(p => { const q = lineas[p.id]; return q && p.q != null ? Object.assign({}, p, { q: Math.max(0, p.q + signo * q) }) : p; });
-const porLinea = items => items.reduce((o, it) => (o[it.pid] = (o[it.pid] || 0) + it.q, o), {});
+// Cada línea de una venta se identifica por producto y, si tiene, por variante (talla, color…): «p12~v3».
+export const claveItem = it => it.vid ? it.pid + '~' + it.vid : it.pid;
+const redQ = x => Math.round(x * 1000) / 1000;
+// Suma o resta existencia; las cantidades pueden tener decimales (productos por peso) y bajar por variante.
+const stockMas = (productos, lineas, signo) => {
+  const porP = {}, porV = {};
+  Object.keys(lineas).forEach(k => { const [pid, vid] = k.split('~'); porP[pid] = (porP[pid] || 0) + lineas[k]; if (vid) (porV[pid] || (porV[pid] = {}))[vid] = ((porV[pid] || {})[vid] || 0) + lineas[k]; });
+  return productos.map(p => {
+    const q = porP[p.id]; if (!q || p.q == null) return p;
+    const n = Object.assign({}, p, { q: redQ(Math.max(0, p.q + signo * q)) });
+    if (porV[p.id] && Array.isArray(p.vars)) n.vars = p.vars.map(v => porV[p.id][v.id] ? Object.assign({}, v, { q: redQ(Math.max(0, (v.q || 0) + signo * porV[p.id][v.id])) }) : v);
+    return n;
+  });
+};
+const porLinea = items => items.reduce((o, it) => { const k = claveItem(it); o[k] = (o[k] || 0) + it.q; return o; }, {});
 // Registro de cambios: quién hizo qué y cuándo (anulaciones, devoluciones, borrados, cambios del negocio).
 const nota = (s, que) => ({ registro: (s.registro || []).concat([{ t: Date.now(), por: s.ajustes.perfil || '', que }]).slice(-500) });
 
-export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto }) {
+export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto, igtf }) {
   // Si el impuesto va aparte, el total cobrado es mayor que la suma de los productos.
   const total = conImpuesto || items.reduce((a, it) => a + it.q * it.p, 0);
   const venta = { id: id(), n: sigNumero(), t: Date.now(), items, total, pagos, cli: cli || '', suc: suc || S.negocio.sucursales[0], fiado: !!fiado, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 };
+  if (igtf) venta.igtf = igtf;
+  if (S.negocio.euro) venta.tasaEur = tasaEuro();
+  // Fiado en dólares (Argentina): la deuda se guarda también en dólares para que no pierda valor.
+  if (S.negocio.fiadoUsd) venta.pagos = pagos.map(p => p.m === 'Fiado' || p.m === 'Saldo a favor' ? Object.assign({}, p, { fu: dolarDe(p.v) }) : p);
   cambiar(s => ({ ventas: s.ventas.concat([venta]), productos: stockMas(s.productos, porLinea(items), -1) }));
   return venta;
 }
@@ -275,11 +375,11 @@ export function vender({ items, pagos, cli, suc, fiado, total: conImpuesto }) {
 export function anularVenta(vid, motivo) {
   const v = S.ventas.find(x => x.id === vid);
   if (!v || v.anulada || v.dev) return false;
-  const quedan = {}; v.items.forEach(it => { const q = it.q - ((v.devuelto || {})[it.pid] || 0); if (q > 0) quedan[it.pid] = (quedan[it.pid] || 0) + q; });
+  const quedan = {}; v.items.forEach(it => { const k = claveItem(it), q = it.q - ((v.devuelto || {})[k] || 0); if (q > 0) quedan[k] = (quedan[k] || 0) + q; });
   cambiar(s => Object.assign({
     ventas: s.ventas.map(x => x.id === vid ? Object.assign({}, x, { anulada: { t: Date.now(), por: s.ajustes.perfil || '', motivo } }) : x),
     productos: stockMas(s.productos, quedan, 1)
-  }, nota(s, 'Anuló la venta #' + v.n + ' (' + motivo + ')')));
+  }, v.orden ? { ordenes: s.ordenes.map(o => o.id === v.orden ? Object.assign({}, o, { estado: 'lista', venta: '', hist: o.hist.concat([{ t: Date.now(), por: s.ajustes.perfil || '', txt: 'Se anuló la venta #' + v.n + ': la orden vuelve a «Lista»', e: 'lista' }]) }) : o) } : {}, nota(s, 'Anuló la venta #' + v.n + ' (' + motivo + ')')));
   return true;
 }
 // Devolución: un movimiento nuevo en negativo (cuenta el día que se devuelve) y lo devuelto vuelve al inventario.
@@ -288,7 +388,7 @@ export function anularVenta(vid, motivo) {
 export function devolver(vid, lineas, pagos, motivo, monto) {
   const v = S.ventas.find(x => x.id === vid);
   if (!v || v.anulada || v.dev) return null;
-  const items = v.items.filter(it => lineas[it.pid] > 0).map(it => ({ pid: it.pid, n: it.n, q: -lineas[it.pid], p: it.p, c: it.c }));
+  const items = v.items.filter(it => lineas[claveItem(it)] > 0).map(it => Object.assign({ pid: it.pid, n: it.n, q: -lineas[claveItem(it)], p: it.p, c: it.c }, it.vid ? { vid: it.vid } : {}, it.u ? { u: it.u } : {}));
   if (!items.length) return null;
   const total = monto ? -monto : items.reduce((a, it) => a + it.q * it.p, 0);
   const aDeuda = Math.min(-total, fiadoDe(v));
@@ -301,26 +401,144 @@ export function devolver(vid, lineas, pagos, motivo, monto) {
   }, nota(s, 'Devolución de la venta #' + v.n + ' (' + motivo + ')')));
   return dev;
 }
-export function abonar(cli, pagos) {
+export function abonar(cli, pagos, nota, extra) {
   const v = pagos.reduce((a, p) => a + p.v, 0);
-  cambiar(s => ({ abonos: s.abonos.concat([{ id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: s.ajustes.perfil || '' }]) }));
+  const ab = Object.assign({ id: id(), t: Date.now(), cli, v, m: juntar(pagos), pagos, por: S.ajustes.perfil || '', tasa: S.tasa.valor || 0 }, extra || {});
+  if (S.negocio.fiadoUsd) ab.fu = dolarDe(v);
+  if (nota) ab.nota = nota;
+  cambiar(s => ({ abonos: s.abonos.concat([ab]) }));
 }
 export const pagosDeAbono = a => a.pagos || [{ m: a.m, v: a.v }];
+
+// ---------- órdenes de trabajo y pedidos ----------
+// Cada orden guarda su historial (estados y notas). Los anticipos son abonos marcados con la orden:
+// entran a la caja el día que se pagan y no se mezclan con lo que el cliente debe por fiado.
+// Al entregar se hace la venta completa; lo adelantado se paga con «Anticipo» (no vuelve a entrar a la caja).
+export const ESTADOS_ORDEN = [
+  { k: 'recibida', n: 'Recibida', tono: 't-amb', c: 'var(--amber)' },
+  { k: 'proceso', n: 'En proceso', tono: 't-azu', c: 'var(--blue)' },
+  { k: 'lista', n: 'Lista', tono: 't-ver', c: 'var(--in)' },
+  { k: 'entregada', n: 'Entregada', tono: 't-vio', c: 'var(--accent)' }
+];
+export const PREFIJO_ORDEN = { trabajo: 'OT', pedido: 'PED' };
+export const numeroOrden = o => PREFIJO_ORDEN[o.tipo] + '-' + String(o.n).padStart(4, '0');
+export const anticipoDe = oid => S.abonos.filter(a => a.ord === oid).reduce((a, x) => a + x.v, 0);
+export const totalOrden = o => o.items.reduce((a, it) => a + it.q * it.p, 0);
+export const ordenAbierta = o => o.estado !== 'entregada' && o.estado !== 'cancelada';
+export const ordenAtrasada = (o, ahora = Date.now()) => ordenAbierta(o) && o.estado !== 'lista' && o.entrega > 0 && o.entrega < ahora;
+const sigOrden = tipo => S.ordenes.filter(o => o.tipo === tipo).reduce((a, o) => Math.max(a, o.n), 0) + 1;
+const histOrden = (txt, e, extra) => Object.assign({ t: Date.now(), por: S.ajustes.perfil || '', txt: txt || '' }, e ? { e } : {}, extra || {});
+const cambiarOrden = (oid, fn, que) => cambiar(s => Object.assign({ ordenes: s.ordenes.map(o => o.id === oid ? fn(o) : o) }, que ? nota(s, que) : {}));
+
+export function nuevaOrden(o, pagos) {
+  const orden = Object.assign({ id: 'o' + id(), tipo: 'trabajo', items: [], det: '', entrega: 0, resp: '', suc: S.negocio.sucursales[0] }, o, {
+    n: sigOrden(o.tipo || 'trabajo'), t: Date.now(), por: S.ajustes.perfil || '', estado: 'recibida', hist: [histOrden('', 'recibida')]
+  });
+  cambiar(s => Object.assign({ ordenes: s.ordenes.concat([orden]) }, nota(s, 'Creó la orden ' + numeroOrden(orden))));
+  if (pagos && pagos.length) anticipoOrden(orden.id, pagos, true);
+  return orden;
+}
+export function editarOrden(oid, cambios) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0) return;
+  cambiarOrden(oid, o => Object.assign({}, o, cambios, { hist: o.hist.concat([histOrden('Editó la orden')]) }));
+}
+export function estadoOrden(oid, estado, txt) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0 || o0.estado === estado) return;
+  cambiarOrden(oid, o => Object.assign({}, o, { estado }, estado === 'lista' ? { lista: Date.now() } : {}, { hist: o.hist.concat([histOrden(txt, estado)]) }));
+}
+export function notaOrden(oid, txt) { cambiarOrden(oid, o => Object.assign({}, o, { hist: o.hist.concat([histOrden(txt)]) })); }
+export function avisadoOrden(oid) { cambiarOrden(oid, o => Object.assign({}, o, { avisado: Date.now(), hist: o.hist.concat([histOrden('Se avisó al cliente por WhatsApp')]) })); }
+// Anticipo o abono a una orden (puede ser con pagos combinados).
+export function anticipoOrden(oid, pagos, alCrear) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0) return;
+  const v = pagos.reduce((a, p) => a + p.v, 0); if (!(v > 0)) return;
+  abonar(o0.cli, pagos, (alCrear ? 'Anticipo ' : 'Abono ') + numeroOrden(o0), { ord: oid });
+  cambiarOrden(oid, o => Object.assign({}, o, { hist: o.hist.concat([histOrden('', '', { ant: v, m: juntar(pagos), tipo: alCrear ? 'Anticipo' : 'Abono' })]) }));
+}
+// Entregar: la venta ya se hizo (con lo que faltaba y el anticipo); la orden queda cerrada y unida a esa venta.
+export function entregarOrden(oid, vid) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0) return;
+  cambiarOrden(oid, o => Object.assign({}, o, { estado: 'entregada', entregada: Date.now(), venta: vid || '', hist: o.hist.concat([histOrden('', 'entregada')]) }), 'Entregó la orden ' + numeroOrden(o0));
+}
+// Cancelar: lo adelantado se devuelve (sale de la caja hoy) o queda como saldo a favor del cliente.
+export function cancelarOrden(oid, motivo, anticipoComo) {
+  const o0 = S.ordenes.find(o => o.id === oid); if (!o0 || !ordenAbierta(o0)) return;
+  const ant = anticipoDe(oid);
+  // Se devuelve por las mismas formas en que se pagó.
+  if (ant > 0 && anticipoComo === 'devolver') {
+    const por = {}; S.abonos.filter(a => a.ord === oid).forEach(a => pagosDeAbono(a).forEach(p => { por[p.m] = (por[p.m] || 0) + p.v; }));
+    const pagos = Object.keys(por).filter(m => Math.abs(por[m]) > 0.0001).map(m => ({ m, v: -por[m] }));
+    if (pagos.length) abonar(o0.cli, pagos, 'Devolución del anticipo ' + numeroOrden(o0), { ord: oid });
+  }
+  cambiar(s => Object.assign({
+    abonos: ant > 0 && anticipoComo === 'saldo' ? s.abonos.map(a => a.ord === oid ? Object.assign({}, a, { ord: '', deOrden: oid }) : a) : s.abonos,
+    ordenes: s.ordenes.map(o => o.id === oid ? Object.assign({}, o, { estado: 'cancelada', cancelada: Date.now(), hist: o.hist.concat([histOrden(motivo, 'cancelada')]) }) : o)
+  }, nota(s, 'Canceló la orden ' + numeroOrden(o0) + (motivo ? ' (' + motivo + ')' : '') + (ant > 0 ? anticipoComo === 'devolver' ? ' · devolvió el anticipo' : ' · el anticipo quedó como saldo a favor' : ''))));
+}
 const conPagos = g => g.pagos && g.pagos.length ? Object.assign({}, g, { m: juntar(g.pagos) }) : g;
-export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '' }, conPagos(g))]) })); }
+export function anotarGasto(g) { cambiar(s => ({ gastos: s.gastos.concat([Object.assign({ id: id(), t: Date.now(), suc: s.negocio.sucursales[0], por: s.ajustes.perfil || '', tasa: s.tasa.valor || 0 }, conPagos(g))]) })); }
 export function editarGasto(gid, g) { cambiar(s => ({ gastos: s.gastos.map(x => x.id === gid ? Object.assign({}, x, conPagos(g)) : x) })); }
 export function borrarGasto(gid) {
   const g = S.gastos.find(x => x.id === gid); if (!g) return;
   cambiar(s => Object.assign({ gastos: s.gastos.filter(x => x.id !== gid) }, nota(s, 'Borró el gasto «' + g.n + '»')));
 }
 export function pagarGasto(gid) { cambiar(s => ({ gastos: s.gastos.map(g => g.id === gid ? Object.assign({}, g, { pagado: true, t: Date.now() }) : g) })); }
-export function guardarProducto(p) { cambiar(s => ({ productos: p.id && s.productos.some(x => x.id === p.id) ? s.productos.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.productos.concat([Object.assign({ id: 'p' + id(), cod: '' }, p)]) })); }
+export function guardarProducto(p) {
+  // Se guarda la tasa del día en que se anotó el costo: así se sabe cuánto cuesta reponerlo hoy si el costo sigue al dólar.
+  const p0 = p.id && S.productos.find(x => x.id === p.id);
+  if (p.c != null && (!p0 || Math.abs((p0.c || 0) - p.c) > 0.004 || !p0.cT)) p = Object.assign({}, p, { cT: tasaDe() });
+  // Con variantes, la existencia del producto es la suma de las variantes.
+  if (Array.isArray(p.vars) && p.vars.length && p.q != null) p = Object.assign({}, p, { q: redQ(p.vars.reduce((a, v) => a + (v.q || 0), 0)) });
+  // Producto nuevo: el id se genera aquí (un «id: undefined» no debe pisarlo).
+  if (!p.id) { p = Object.assign({}, p, { id: 'p' + id() }); p.nuevo = true; }
+  const esNuevo = p.nuevo; delete p.nuevo;
+  cambiar(s => ({ productos: !esNuevo && s.productos.some(x => x.id === p.id) ? s.productos.map(x => { if (x.id !== p.id) return x; const n = Object.assign({}, x, p); if (p.imp === undefined) delete n.imp; return n; }) : s.productos.concat([Object.assign({ cod: '' }, p)]) }));
+  return p.id;
+}
 // Borrar producto o cliente: se ocultan, pero su historial de ventas se queda.
 export function borrarProducto(pid) {
   const p = S.productos.find(x => x.id === pid); if (!p) return;
   cambiar(s => Object.assign({ productos: s.productos.map(x => x.id === pid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró el producto «' + p.n + '»')));
 }
-export function reponer(pid, cuanto) { cambiar(s => ({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }) : p) })); }
+// Reponer: si cambió lo que cuesta, se guarda como costo de reposición (el de hoy) y se anota.
+// ---------- grupos de productos ----------
+export function guardarGrupo(g) {
+  const nuevo = Object.assign({ id: 'g' + id(), c: S.grupos.length % 8 }, g);
+  cambiar(s => ({ grupos: g.id && s.grupos.some(x => x.id === g.id) ? s.grupos.map(x => x.id === g.id ? Object.assign({}, x, g) : x) : s.grupos.concat([nuevo]) }));
+  return g.id || nuevo.id;
+}
+// Borrar un grupo: sus productos quedan sin grupo (no se borra ninguno).
+export function borrarGrupo(gid) {
+  const g = S.grupos.find(x => x.id === gid); if (!g) return;
+  cambiar(s => Object.assign({ grupos: s.grupos.filter(x => x.id !== gid), productos: s.productos.map(p => p.g === gid ? Object.assign({}, p, { g: '' }) : p) }, nota(s, 'Borró el grupo «' + g.n + '»')));
+}
+// Poner varios productos en un grupo de una vez (y sacar del grupo los que se desmarcaron).
+export function asignarGrupo(gid, ids) {
+  cambiar(s => ({ productos: s.productos.map(p => ids.includes(p.id) ? (p.g === gid ? p : Object.assign({}, p, { g: gid })) : p.g === gid ? Object.assign({}, p, { g: '' }) : p) }));
+}
+export function reponer(pid, cuanto, costo) {
+  const p0 = S.productos.find(p => p.id === pid);
+  const cambio = p0 && costo > 0 && Math.abs(costo - p0.c) > 0.004;
+  cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid && p.q != null ? Object.assign({}, p, { q: p.q + cuanto }, cambio ? { c: costo, cAntes: p.c, cT: tasaDe() } : {}) : p) }, cambio ? nota(s, 'Costo de «' + p0.n + '» pasó de ' + p0.c + ' a ' + costo) : {}));
+}
+// Ponerle (o cambiarle) el código de barras a un producto desde el escáner.
+export function asignarCodigo(pid, cod) {
+  const p0 = S.productos.find(p => p.id === pid); if (!p0) return;
+  cambiar(s => Object.assign({ productos: s.productos.map(p => p.id === pid ? Object.assign({}, p, { cod }) : p) }, nota(s, 'Puso el código ' + cod + ' a «' + p0.n + '»' + (p0.cod ? ' (antes ' + p0.cod + ')' : ''))));
+}
+// Ajuste rápido de existencia (escáner): suma o resta unidades sin tocar el costo, y queda anotado.
+export function ajustarStock(pid, cuanto, vid) {
+  const p0 = S.productos.find(p => p.id === pid); if (!p0 || !cuanto) return 0;
+  const v0 = vid && (p0.vars || []).find(v => v.id === vid), antes = v0 ? v0.q || 0 : p0.q || 0;
+  const nuevo = redQ(Math.max(0, antes + cuanto)), real = redQ(nuevo - antes), nombre = p0.n + (v0 ? ' · ' + v0.n : '');
+  const k = v0 ? pid + '~' + vid : pid;
+  cambiar(s => Object.assign({ productos: real >= 0 ? stockMas(s.productos, { [k]: real }, 1) : stockMas(s.productos, { [k]: -real }, -1) }, nota(s, (real >= 0 ? 'Sumó ' + real + ' a' : 'Restó ' + -real + ' de') + ' «' + nombre + '» con el escáner (' + antes + ' → ' + nuevo + ')')));
+  return nuevo;
+}
+// Remarcar: sube (o baja) los precios en bloque un porcentaje, con redondeo «bonito».
+export function remarcar(ids, pct, redondo) {
+  cambiar(s => Object.assign({ productos: s.productos.map(p => ids.includes(p.id) ? Object.assign({}, p, { p: redondo(p.p * (1 + pct / 100)), pAntes: p.p }) : p) }, nota(s, 'Remarcó ' + ids.length + ' precios ' + (pct > 0 ? '+' : '') + pct + ' %')));
+}
 export function nuevoCliente(c) { const nuevo = Object.assign({ id: 'c' + id(), tipo: 'persona', limite: 0, tel: '' }, c); cambiar(s => ({ clientes: s.clientes.concat([nuevo]) })); return nuevo; }
 export function editarCliente(cid, c) { cambiar(s => ({ clientes: s.clientes.map(x => x.id === cid ? Object.assign({}, x, c) : x) })); }
 export function borrarCliente(cid) {
@@ -328,13 +546,88 @@ export function borrarCliente(cid) {
   cambiar(s => Object.assign({ clientes: s.clientes.map(x => x.id === cid ? Object.assign({}, x, { borrado: Date.now() }) : x) }, nota(s, 'Borró al cliente «' + c.n + '»')));
   return true;
 }
-export function cerrarDia(contado, resumen) { cambiar(s => ({ cierres: s.cierres.concat([{ id: id(), t: Date.now(), dia: diaClave(Date.now()), contado, resumen }]) })); }
+// Cierre Z: numerado y correlativo, con lo vendido por forma de pago y los impuestos del día.
+// Borrar los datos personales de un cliente: queda anónimo; sus compras siguen contando sin su nombre.
+export function anonimizarCliente(cid) {
+  const c = S.clientes.find(x => x.id === cid); if (!c || deudaDe(cid) > 0.004) return false;
+  cambiar(s => Object.assign({ clientes: s.clientes.map(x => x.id === cid ? { id: x.id, n: 'Cliente borrado', tipo: x.tipo, tel: '', limite: 0, borrado: Date.now(), anonimo: true } : x) }, nota(s, 'Borró los datos personales de un cliente')));
+  return true;
+}
+// ---------- caja: fondo, retiros, ingresos y turnos ----------
+// Movimientos de efectivo que no son ventas: fondo inicial, retiros (depósito, pago, para el dueño), ingresos (sencillo)
+// y ajustes (lo que faltó o sobró al cerrar un turno, para que el cierre del día no lo cuente otra vez).
+const SIGNO_MOV = { fondo: 1, ingreso: 1, ajuste: 1, retiro: -1 };
+const NO_CAJA = ['Fiado', 'Saldo a favor', 'Anticipo'];
+export function movCaja(tipo, pagos, motivo) {
+  const v = pagos.reduce((a, p) => a + p.v, 0); if (!(v > 0) && tipo !== 'ajuste') return;
+  const mv = { id: id(), t: Date.now(), por: S.ajustes.perfil || '', tipo, pagos, motivo: motivo || '' };
+  const nombre = { fondo: 'Abrió la caja con ', retiro: 'Retiró ', ingreso: 'Agregó ' }[tipo];
+  cambiar(s => Object.assign({ movCaja: s.movCaja.concat([mv]) }, nombre ? nota(s, nombre + pagos.map(p => p.m + ' ' + Math.round(p.v * 100) / 100).join(' + ') + (motivo ? ' (' + motivo + ')' : '')) : {}));
+}
+export const movsEntre = (desde, hasta) => S.movCaja.filter(x => x.t >= desde && x.t < hasta);
+// Lo que debería haber en la caja por forma de pago, entre dos momentos, partiendo de «base».
+export function cajaEntre(desde, hasta, base) {
+  const partes = {}, parte = m => partes[m] || (partes[m] = { base: 0, ventas: 0, fondo: 0, ingresos: 0, retiros: 0, gastos: 0, ajustes: 0 });
+  Object.keys(base || {}).forEach(m => { parte(m).base += base[m]; });
+  S.ventas.filter(v => v.t >= desde && v.t < hasta && !v.anulada).forEach(v => v.pagos.forEach(p => { if (!NO_CAJA.includes(p.m)) parte(p.m).ventas += p.v; }));
+  S.abonos.filter(a => a.t >= desde && a.t < hasta).forEach(a => pagosDeAbono(a).forEach(p => { if (!NO_CAJA.includes(p.m)) parte(p.m).ventas += p.v; }));
+  S.gastos.filter(g => g.pagado && g.t >= desde && g.t < hasta).forEach(g => (g.pagos && g.pagos.length ? g.pagos : [{ m: g.m, v: g.v }]).forEach(p => { if (p.m) parte(p.m).gastos += p.v; }));
+  movsEntre(desde, hasta).forEach(x => x.pagos.forEach(p => { const k = x.tipo === 'fondo' ? 'fondo' : x.tipo === 'ingreso' ? 'ingresos' : x.tipo === 'retiro' ? 'retiros' : 'ajustes'; parte(p.m)[k] += p.v; }));
+  const esperado = {}; Object.keys(partes).forEach(m => { const x = partes[m]; esperado[m] = x.base + x.ventas + x.fondo + x.ingresos + x.ajustes - x.retiros - x.gastos; });
+  return { esperado, partes };
+}
+// Turno en curso: empieza al cerrar el turno anterior de hoy (con lo que se dejó en la caja) o al empezar el día.
+export function turnoActual() {
+  const hoy0 = inicioDia(Date.now()), t = S.turnos.filter(x => x.hasta >= hoy0).slice(-1)[0];
+  return t ? { desde: t.hasta, base: t.deja, anterior: t } : { desde: hoy0, base: {}, anterior: null };
+}
+// Hora en que de verdad empezó un turno: el primer fondo, venta o movimiento desde «desde».
+export function inicioVisible(desde) {
+  const ts = [].concat(S.movCaja.filter(x => x.t >= desde).map(x => x.t), S.ventas.filter(v => v.t >= desde).map(v => v.t), S.abonos.filter(a => a.t >= desde).map(a => a.t));
+  return ts.length ? Math.min(...ts) : desde;
+}
+export const cajaAbierta = () => S.movCaja.some(x => x.tipo === 'fondo' && x.t >= inicioDia(Date.now()));
+// Cerrar turno: queda el arqueo; lo que faltó o sobró se anota como ajuste y lo que se entrega sale como retiro.
+export function cerrarTurno(contado, deja, esperado) {
+  const ahora = Date.now(), n = S.turnos.filter(x => x.hasta >= inicioDia(ahora)).length + 1;
+  const ms = Object.keys(Object.assign({}, contado, esperado));
+  const dif = {}; ms.forEach(m => { dif[m] = Math.round(((contado[m] || 0) - (esperado[m] || 0)) * 100) / 100; });
+  const ajuste = ms.filter(m => Math.abs(dif[m]) > 0.004).map(m => ({ m, v: dif[m] }));
+  const entrega = ms.map(m => ({ m, v: Math.round(((contado[m] || 0) - (deja[m] || 0)) * 100) / 100 })).filter(p => p.v > 0.004);
+  const tu = { id: id(), n, desde: inicioVisible(turnoActual().desde), hasta: ahora, por: S.ajustes.perfil || '', esperado, contado, deja, dif, entrega };
+  const movs = [];
+  if (ajuste.length) movs.push({ id: id(), t: ahora - 1, por: tu.por, tipo: 'ajuste', pagos: ajuste, motivo: 'Diferencia del turno ' + n });
+  if (entrega.length) movs.push({ id: id(), t: ahora - 1, por: tu.por, tipo: 'retiro', pagos: entrega, motivo: 'Entregado al cerrar el turno ' + n });
+  const totalDif = ajuste.reduce((a, p) => a + p.v, 0);
+  cambiar(s => Object.assign({ turnos: s.turnos.concat([tu]), movCaja: s.movCaja.concat(movs) }, nota(s, 'Cerró el turno ' + n + (Math.abs(totalDif) > 0.004 ? (totalDif < 0 ? ' con faltante de ' : ' con sobrante de ') + Math.round(Math.abs(totalDif) * 100) / 100 : ' cuadrado'))));
+  return tu;
+}
+export function cerrarDia(contado, resumen) {
+  const n = (S.cierres.length ? S.cierres[S.cierres.length - 1].n || S.cierres.length : 0) + 1;
+  const hoy = S.ventas.filter(v => v.t >= inicioDia(Date.now()));
+  const z = { id: id(), n, t: Date.now(), dia: diaClave(Date.now()), contado, resumen, por: S.ajustes.perfil || '',
+    desde: hoy.length ? hoy[0].n : 0, hasta: hoy.length ? hoy[hoy.length - 1].n : 0, anuladas: hoy.filter(v => v.anulada).length,
+    impuestos: hoy.filter(v => !v.anulada).reduce((a, v) => a + (v.imp || 0), 0), igtf: hoy.filter(v => !v.anulada).reduce((a, v) => a + (v.igtf || 0), 0) };
+  cambiar(s => ({ cierres: s.cierres.concat([z]) }));
+  return z;
+}
 // ---------- perfiles y permisos ----------
 export const perfilActual = () => (S.perfiles || []).find(p => p.id === S.ajustes.perfil && !p.inactivo) || null;
 export function entrar(pid) { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, { perfil: pid }) })); }
 export function salir() { cambiar(s => ({ ajustes: Object.assign({}, s.ajustes, { perfil: '' }) })); }
 export function guardarPerfil(p) {
+  if (!p.id) { p = Object.assign({}, p); delete p.id; }
   cambiar(s => ({ perfiles: p.id && s.perfiles.some(x => x.id === p.id) ? s.perfiles.map(x => x.id === p.id ? Object.assign({}, x, p) : x) : s.perfiles.concat([Object.assign({ id: 'u' + id(), pin: '', sucs: [], creado: Date.now() }, p)]) }));
+}
+// Cambiar o quitar el PIN de un perfil (en el registro se anota quién lo cambió, nunca el PIN).
+export function cambiarPin(pid, pin) {
+  const p0 = S.perfiles.find(p => p.id === pid); if (!p0) return;
+  cambiar(s => Object.assign({ perfiles: s.perfiles.map(p => p.id === pid ? Object.assign({}, p, { pin }) : p) }, nota(s, (pin ? (p0.pin ? 'Cambió' : 'Puso') : 'Quitó') + ' el PIN de ' + p0.n)));
+}
+// Eliminar un perfil: ya no aparece ni puede entrar, pero sus ventas y su nombre se quedan en el historial.
+export function borrarPerfil(pid) {
+  const p0 = S.perfiles.find(p => p.id === pid); if (!p0 || p0.rol === 'dueno') return;
+  cambiar(s => Object.assign({ perfiles: s.perfiles.map(p => p.id === pid ? Object.assign({}, p, { borrado: Date.now(), inactivo: true, pin: '' }) : p) }, nota(s, 'Eliminó el perfil de ' + p0.n)));
 }
 export function cambiarPermiso(rolId, k, v) { cambiar(s => ({ roles: s.roles.map(r => r.id === rolId && !r.fijo ? Object.assign({}, r, { p: Object.assign({}, r.p, { [k]: v }) }) : r) })); }
 export function nuevoRol(n) { const r = { id: 'r' + id(), n, p: { vender: true } }; cambiar(s => ({ roles: s.roles.concat([r]) })); return r; }
@@ -350,7 +643,50 @@ export function guardarSucursales(nombres, renombres) {
   }));
 }
 // Tasa: automática (se lee de internet una vez al día) o escrita a mano. En Argentina se elige oficial, blue o MEP.
-export function guardarTasa(t) { cambiar(s => ({ tasa: Object.assign({}, s.tasa, t, t.valor ? { fecha: diaClave(Date.now()) } : {}) })); }
+export function guardarTasa(t, redondo) {
+  cambiar(s => {
+    const out = { tasa: Object.assign({}, s.tasa, t, t.valor ? { fecha: diaClave(Date.now()) } : {}) };
+    if (t.valor) {
+      out.historialTasas = anotarHistorial(s, out.tasa.fuente || 'oficial', t.valor);
+      // Precios atados al dólar: se recalculan con la tasa nueva.
+      if (redondo && s.negocio && s.negocio.pais !== 'VE' && s.productos.some(p => p.usd > 0)) out.productos = s.productos.map(p => p.usd > 0 ? Object.assign({}, p, { p: redondo(p.usd * t.valor) }) : p);
+    }
+    return out;
+  });
+}
+export function guardarTasaExtra(k, t) {
+  cambiar(s => {
+    const x = Object.assign({}, s.tasas[k], t, t.valor ? { fecha: diaClave(Date.now()) } : {});
+    return Object.assign({ tasas: Object.assign({}, s.tasas, { [k]: x }) }, t.valor ? { historialTasas: anotarHistorial(s, k, t.valor) } : {});
+  });
+}
+// Quitar ceros (redenominación): divide todos los montos guardados. Antes se aparta una copia.
+export async function quitarCeros(n) {
+  await apartar('antes-de-quitar-ceros');
+  const f = Math.pow(10, n), q = v => typeof v === 'number' ? Math.round(v / f * 100) / 100 : v;
+  const ve = S.negocio.pais === 'VE';
+  const pagosQ = ps => (ps || []).map(p => Object.assign({}, p, { v: q(p.v) }));
+  cambiar(s => {
+    const tasaQ = x => x ? Object.assign({}, x, { valor: q(x.valor) }) : x;
+    // Si la tasa nunca se leyó, se parte de la de referencia para no perderla.
+    const out = { tasa: Object.assign({}, s.tasa, { valor: q(s.tasa.valor || tasaDe()) }), tasas: Object.keys(s.tasas).reduce((o, k) => (o[k] = tasaQ(s.tasas[k]), o), {}), historialTasas: s.historialTasas.map(h => Object.assign({}, h, { v: q(h.v) })),
+      ventas: s.ventas.map(v => ve ? Object.assign({}, v, { tasa: q(v.tasa) }) : v), gastos: s.gastos.map(g => ve ? Object.assign({}, g, { tasa: q(g.tasa) }) : g) };
+    // En Venezuela los precios están en dólares: solo cambia la tasa. En los demás países se dividen todos los montos.
+    if (!ve) Object.assign(out, {
+      productos: s.productos.map(p => Object.assign({}, p, { p: q(p.p), c: q(p.c) })),
+      ventas: s.ventas.map(v => Object.assign({}, v, { h: undefined, total: q(v.total), imp: q(v.imp), igtf: q(v.igtf), recibido: q(v.recibido), items: v.items.map(it => Object.assign({}, it, { p: q(it.p), c: q(it.c) })), pagos: pagosQ(v.pagos) })),
+      abonos: s.abonos.map(a => Object.assign({}, a, { v: q(a.v), pagos: a.pagos ? pagosQ(a.pagos) : a.pagos })),
+      gastos: s.gastos.map(g => Object.assign({}, g, { v: q(g.v), pagos: g.pagos ? pagosQ(g.pagos) : g.pagos })),
+      clientes: s.clientes.map(c => Object.assign({}, c, { limite: q(c.limite) }))
+    });
+    return Object.assign(out, nota(s, 'Le quitó ' + n + ' ceros a la moneda'));
+  });
+}
+// Conciliación: marca como verificados los pagos cuya referencia aparece en el estado de cuenta del banco.
+export function verificarPagos(claves) {
+  if (!claves.length) return;
+  cambiar(s => Object.assign({ ventas: s.ventas.map(v => v.pagos.some((p, k) => claves.includes(v.id + ':' + k)) ? Object.assign({}, v, { pagos: v.pagos.map((p, k) => claves.includes(v.id + ':' + k) ? Object.assign({}, p, { ok: Date.now() }) : p) }) : v) }, nota(s, 'Verificó ' + claves.length + ' pagos con el banco')));
+}
 export async function empezarDeNuevo() {
   await apartar('antes-de-borrar');
   cambiar(() => Object.assign(vacio(), { ajustes: Object.assign({}, S.ajustes, { perfil: '' }) }));
@@ -373,18 +709,25 @@ export function resumen(desde, hasta, suc) {
   return m('re' + desde + hasta + suc, () => {
     const vs = ventasEntre(desde, hasta, suc);
     const porPago = {}, porHora = new Array(24).fill(0), porSuc = {}, porProd = {}, porPersona = {};
-    let total = 0, cost = 0, fiado = 0;
+    let total = 0, cost = 0, fiado = 0, totalAlt = 0, ganAlt = 0, repo = 0, totalEur = 0, ganEur = 0;
+    // En Venezuela y Argentina: lo mismo en la otra moneda (Bs o US$) con la tasa del día de cada venta.
+    const ve = S.negocio.pais === 'VE', alt = (x, t) => ve ? x * (t || tasaDe()) : x / (t || tasaDe());
+    // En euros, con la tasa del euro de su día (o, si no se guardó, la del dólar de ese día por la relación de hoy).
+    const rel = tasaEuro() / tasaDe(), eur = (x, v) => { const te = v.tasaEur || (v.tasa || tasaDe()) * rel; return ve ? x * (v.tasa || tasaDe()) / te : x / te; };
+    const costoHoy = {}; S.productos.forEach(p => { costoHoy[p.id] = costoReposicion(p); });
     vs.forEach(v => {
       total += v.total; cost += costo(v);
+      totalAlt += alt(v.total, v.tasa); ganAlt += alt(v.total - costo(v), v.tasa); totalEur += eur(v.total, v); ganEur += eur(v.total - costo(v), v);
+      v.items.forEach(it => { repo += it.q * (it.p - (costoHoy[it.pid] != null ? costoHoy[it.pid] : it.c)); });
       fiado += fiadoDe(v);
       v.pagos.forEach(p => { porPago[p.m] = (porPago[p.m] || 0) + p.v; });
       porHora[new Date(v.t).getHours()] += v.total;
       porSuc[v.suc] = (porSuc[v.suc] || 0) + v.total;
       porPersona[v.por || ''] = (porPersona[v.por || ''] || 0) + v.total;
-      v.items.forEach(it => { const x = porProd[it.pid] || (porProd[it.pid] = { n: it.n, q: 0, v: 0, g: 0 }); x.q += it.q; x.v += it.q * it.p; x.g += it.q * (it.p - it.c); });
+      v.items.forEach(it => { const x = porProd[it.pid] || (porProd[it.pid] = { n: it.nb || it.n, q: 0, v: 0, g: 0 }); x.q += it.q; x.v += it.q * it.p; x.g += it.q * (it.p - it.c); });
     });
     const n = vs.filter(v => !v.dev).length;
-    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0 };
+    return { n, total, ganancia: total - cost, costo: cost, fiado, porPago, porHora, porSuc, porProd, porPersona, ticket: n ? total / n : 0, totalAlt, ganAlt, totalEur, ganEur, ganReposicion: repo };
   });
 }
 
@@ -393,14 +736,24 @@ export function serieDias(dias, suc) {
     const hoy0 = inicioDia(Date.now()), out = [];
     for (let d = dias - 1; d >= 0; d--) {
       const a = hoy0 - d * DIA, r = resumen(a, a + DIA, suc);
-      out.push({ t: a, total: r.total, ganancia: r.ganancia, porSuc: r.porSuc, n: r.n });
+      out.push({ t: a, total: r.total, ganancia: r.ganancia, porSuc: r.porSuc, n: r.n, totalAlt: r.totalAlt, totalEur: r.totalEur });
     }
     return out;
   });
 }
 
 export function deudaDe(cid) {
-  return m('de' + cid, () => vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid).reduce((a, x) => a + x.v, 0));
+  return m('de' + cid, () => {
+    // Fiado en dólares: se suma en dólares y se pasa a la moneda local con la tasa de hoy.
+    // Lo fiado antes de activarlo sigue en pesos.
+    if (S.negocio.pais !== 'VE') {
+      let pesos = 0, usd = 0;
+      vigentes().filter(v => v.cli === cid).forEach(v => v.pagos.forEach(p => { if (p.m === 'Fiado' || p.m === 'Saldo a favor') { if (p.fu != null) usd += p.fu; else pesos += p.v; } }));
+      S.abonos.filter(a => a.cli === cid && !a.ord).forEach(x => { if (x.fu != null) usd -= x.fu; else pesos -= x.v; });
+      return pesos + usd * tasaDe();
+    }
+    return vigentes().filter(v => v.cli === cid).reduce((a, v) => a + fiadoDe(v), 0) - S.abonos.filter(a => a.cli === cid && !a.ord).reduce((a, x) => a + x.v, 0);
+  });
 }
 export function deudores() {
   return m('deudores', () => listaClientes().map(c => {
@@ -409,10 +762,66 @@ export function deudores() {
     const desde = fiados.length ? fiados[0].t : 0;
     const suyas = vigentes().filter(v => v.cli === c.id && !v.dev);
     const ultima = suyas.reduce((a, v) => Math.max(a, v.t), 0);
-    return Object.assign({}, c, { deuda: Math.max(0, deuda), desde, ultima, compras: suyas.length });
+    return Object.assign({}, c, { deuda: Math.max(0, deuda), saldo: Math.max(0, -deuda), desde, ultima, compras: suyas.length });
   }).sort((a, b) => b.deuda - a.deuda));
 }
 export function porPagar() { return m('pp', () => S.gastos.filter(g => !g.pagado).sort((a, b) => a.vence - b.vence)); }
+// Un gasto en la otra moneda, con la tasa de su día.
+export const gastoAlt = g => S.negocio.pais === 'VE' ? g.v * (g.tasa || tasaDe()) : g.v / (g.tasa || tasaDe());
+export const gastoEur = g => { const t = g.tasa || tasaDe(), te = t * tasaEuro() / tasaDe(); return S.negocio.pais === 'VE' ? g.v * t / te : g.v / te; };
 export function gastosEntre(desde, hasta) { return m('ge' + desde + hasta, () => S.gastos.filter(g => g.pagado && g.t >= desde && g.t < hasta)); }
+// Productos que se venden por debajo de lo que cuesta reponerlos (o casi sin ganancia).
+// ---------- códigos de barras ----------
+// Mismo código aunque uno venga como UPC (12 dígitos) y otro como EAN (13, con un 0 delante).
+const limpioCod = c => { const x = String(c || '').replace(/\s+/g, ''); return /^\d+$/.test(x) ? x.replace(/^0+/, '') : x.toUpperCase(); };
+export const mismoCodigo = (a, b) => !!limpioCod(a) && limpioCod(a) === limpioCod(b);
+// Busca por código: el del producto, el de una variante o una etiqueta de balanza
+// (EAN-13 que empieza con 2: código del producto y el peso en gramos).
+export function porCodigo(cod) {
+  const c = String(cod || '').replace(/\s+/g, ''); if (!c) return null;
+  const prods = listaProductos();
+  for (const p of prods) {
+    if (mismoCodigo(p.cod, c)) return { p };
+    const v = (p.vars || []).find(x => mismoCodigo(x.cod, c)); if (v) return { p, vid: v.id };
+  }
+  if (/^2\d{12}$/.test(c)) {
+    const gramos = parseInt(c.slice(7, 12), 10), plus = [c.slice(1, 6), c.slice(1, 7), c.slice(0, 7), c.slice(2, 7)];
+    const p = prods.find(x => x.u && plus.some(k => mismoCodigo(x.cod, k)));
+    if (p && gramos > 0) return { p, q: p.u === 'g' ? gramos : gramos / 1000 };
+  }
+  return null;
+}
+// ---------- promociones ----------
+// tipo 'nxm': lleva N y paga M · 'pct': % de descuento · 'desde': precio especial desde N unidades (mayoreo).
+// Se aplican a productos elegidos o a un grupo entero, con fecha de fin opcional.
+export function guardarPromo(pr) {
+  const nueva = !pr.id;
+  if (nueva) { pr = Object.assign({}, pr); delete pr.id; }
+  const x = Object.assign({ id: 'pr' + id(), activa: true, pids: [], g: '', hasta: 0 }, pr);
+  cambiar(s => Object.assign({ promos: nueva ? (s.promos || []).concat([x]) : (s.promos || []).map(y => y.id === x.id ? x : y) }, nota(s, (nueva ? 'Creó' : 'Cambió') + ' la promoción «' + x.n + '»')));
+  return x.id;
+}
+export function borrarPromo(prid) { const x = (S.promos || []).find(y => y.id === prid); if (!x) return; cambiar(s => Object.assign({ promos: s.promos.filter(y => y.id !== prid) }, nota(s, 'Borró la promoción «' + x.n + '»'))); }
+export const promosVigentes = (ahora = Date.now()) => (S.promos || []).filter(x => x.activa && (!x.hasta || x.hasta >= ahora));
+export const promoAplica = (x, p) => (x.pids || []).includes(p.id) || (!!x.g && p.g === x.g);
+// ---------- precios e inflación ----------
+// Costo de reponer hoy: si el negocio dice que sus costos siguen al dólar (países con dos monedas y moneda local principal),
+// el costo anotado se lleva a la tasa de hoy.
+export function costoReposicion(p) {
+  const n = S.negocio; if (!n || !p.c) return p.c || 0;
+  const local = n.pais !== 'VE' && !!pais(n.pais).usd2;
+  return local && n.costoDolar && p.cT > 0 ? p.c * tasaDe() / p.cT : p.c;
+}
+export const margenMeta = () => (S.negocio && S.negocio.margenMeta != null ? S.negocio.margenMeta : 30) / 100;
+export const margenDe = p => p.p > 0 ? (p.p - costoReposicion(p)) / p.p : 0;
+// Precio para ganar la meta sobre el costo de reponer (los atados al dólar se cuidan solos).
+export const precioMeta = (p, meta = margenMeta()) => costoReposicion(p) / (1 - Math.min(0.95, meta));
+export function bajoMeta() { return m('bmeta', () => listaProductos().filter(p => costoReposicion(p) > 0 && !(p.usd > 0) && margenDe(p) < margenMeta() - 0.005)); }
+export function ajustarPrecios(cambios, que) {
+  if (!cambios.length) return;
+  const por = {}; cambios.forEach(x => { por[x.id] = x.p; });
+  cambiar(s => Object.assign({ productos: s.productos.map(p => por[p.id] != null ? Object.assign({}, p, { p: por[p.id], pAntes: p.p }) : p) }, nota(s, que || 'Ajustó ' + cambios.length + ' precios a la meta de ganancia')));
+}
+export function bajoCosto() { return m('bc', () => listaProductos().filter(p => p.c > 0 && p.p < p.c * 1.05)); }
 export function bajoMinimo() { return m('bm', () => listaProductos().filter(p => p.q != null && p.min > 0 && p.q < p.min)); }
 export function cierreDeHoy() { const k = diaClave(Date.now()); return S.cierres.find(c => c.dia === k) || null; }

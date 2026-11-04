@@ -18,7 +18,7 @@ export function Clientes() {
   const Resumen = html`<section class="tarjeta entra" data-tour="deben" style="background:var(--amber-soft);box-shadow:none">
     <div class="fila" style="align-items:flex-start">
       <span class="crece" style="display:flex;flex-direction:column;gap:2px"><span class="sub">Te deben</span><${Monto} v=${tot} f=${D.m} clase="titulo amber" />${D.dual && html`<span class="sub num">${D.s(tot)}</span>`}</span>
-      <span class="sub" style="max-width:170px;text-align:right;line-height:1.4">${deben.length} ${deben.length === 1 ? 'cliente' : 'clientes'}. Orbe te dice a quién recordarle; tú tocas enviar.</span>
+      <span class="pildora t-amb" style="flex-shrink:0">${deben.length} ${deben.length === 1 ? 'cliente' : 'clientes'}</span>
     </div>
     ${deben.length > 0 && html`<div style="margin-top:14px"><${BarrasH} datos=${deben.slice(0, 5).map((c, i) => ({ n: c.n, v: c.deuda, txt: D.m(c.deuda), c: viejo(c) ? 'var(--out)' : 'var(--amber)', sub: viejo(c) ? 'Desde ' + hace(c.desde) + ' · vencido' : 'Desde ' + hace(c.desde) }))} /></div>`}
   </section>`;
@@ -30,7 +30,7 @@ export function Clientes() {
       <b class=${'num' + (c.deuda > 0 ? (viejo(c) ? ' out' : '') : ' faint')} style="font-size:17px">${D.m(c.deuda)}</b>
     </button>
     ${c.deuda > 0 && html`<div class="rejilla-2">
-      <button type="button" class="btn2 verde toca" onClick=${() => abrir('recordar', { cid: c.id })}>Recordar por WhatsApp</button>
+      <button type="button" class="btn2 verde toca" onClick=${() => abrir('recordar', { cid: c.id })}><${Icono} n="movil" t=${16} />Recordar</button>
       ${pc && html`<button type="button" class="btn2 toca" onClick=${() => abrir('abono', { cid: c.id })}>Anotar abono</button>`}
     </div>`}
   </div>`;

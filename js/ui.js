@@ -7,6 +7,10 @@ export const ICONOS = {
   personas: 'M16 20v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 10a4 4 0 100-8 4 4 0 000 8zM22 20v-2a4 4 0 00-3-3.9M16 2.1a4 4 0 010 7.8',
   deshacer: 'M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11',
   lapiz: 'M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z',
+  orden: 'M9 3h6v3H9zM8 4.5H6a1 1 0 00-1 1V20a1 1 0 001 1h12a1 1 0 001-1V5.5a1 1 0 00-1-1h-2M9 11h6M9 15h6M9 19h3',
+  camara: 'M3 8a2 2 0 012-2h2.2l1.4-2h6.8l1.4 2H19a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2zM12 17a4 4 0 100-8 4 4 0 000 8z',
+  linterna: 'M8 2h8v4l-2 4v11a1 1 0 01-1 1h-2a1 1 0 01-1-1V10L8 6zM12 13v2',
+  texto: 'M4 7V5h16v2M9 19h6M12 5v14',
   subir: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12',
   caja: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
   lista: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
@@ -60,6 +64,9 @@ export function Icono({ n, t = 20, g = 2, c = 'currentColor', estilo }) {
 
 // Logo de Orbe Negocios: los círculos se dibujan al aparecer; al tocarlo (o pasar el ratón) da una vuelta.
 // «orbita» lo hace girar despacio todo el tiempo (para los logos grandes).
+// Bandera del país, circular (SVG guardado en la app, funciona sin internet y en Windows también).
+export const Bandera = ({ id, t = 20 }) => html`<img class="bandera" src=${'icons/banderas/' + String(id || 'VE').toLowerCase() + '.svg'} width=${t} height=${t} alt="" aria-hidden="true" decoding="async" />`;
+
 export function LogoOrbe({ t = 42, orbita = false }) {
   const [vuelta, setVuelta] = useState(0);
   const girar = () => setVuelta(v => v + 1);
@@ -67,9 +74,9 @@ export function LogoOrbe({ t = 42, orbita = false }) {
     <rect width="92" height="92" rx="26" fill="#16142a"></rect>
     <g key=${vuelta} class=${'lo-g' + (vuelta ? ' gira' : '')}>
       <g class="lo-orbita">
-        <circle class="lo-c lo-c1" cx="35" cy="37" r="23" pathLength="100"></circle>
-        <circle class="lo-c lo-c2" cx="57" cy="37" r="23" pathLength="100"></circle>
-        <circle class="lo-c lo-c3" cx="46" cy="56" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c1" cx="35" cy="39.7" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c2" cx="57" cy="39.7" r="23" pathLength="100"></circle>
+        <circle class="lo-c lo-c3" cx="46" cy="58.7" r="23" pathLength="100"></circle>
       </g>
     </g>
   </svg>`;
@@ -106,17 +113,30 @@ export function Chips({ opciones, valor, onCambio, desliza, calido, chico }) {
 
 // ---------- hoja (teléfono) o ventana (computadora) ----------
 // contenido(cerrar) devuelve { cuerpo, pie }. Nunca enfoca un campo al abrir.
+// Botón «atrás» del teléfono (Android) o gesto de volver: con una capa abierta (hoja, menú) la cierra en vez de
+// cambiar de pantalla o salir de la app. Mientras la capa está abierta se deja una entrada en el historial.
+export function useAtras(abierto, cerrar) {
+  const ref = useRef(cerrar); ref.current = cerrar;
+  useEffect(() => {
+    if (!abierto) return;
+    try { history.pushState({ capa: true }, ''); } catch (e) { return; }
+    let porAtras = false;
+    const pop = () => { porAtras = true; ref.current(); };
+    window.addEventListener('popstate', pop);
+    return () => { window.removeEventListener('popstate', pop); if (!porAtras && history.state && history.state.capa) history.back(); };
+  }, [abierto]);
+}
 export function Hoja({ titulo, onCerrar, contenido }) {
   const [sale, setSale] = useState(false);
   const hoja = useRef(null), arrastre = useRef(null);
   const cerrar = despues => { if (sale) return; setSale(true); setTimeout(() => { onCerrar(); if (typeof despues === 'function') despues(); }, 280); };
   useEffect(() => {
-    const tecla = e => { if (e.key === 'Escape') cerrar(); };
-    window.addEventListener('keydown', tecla);
-    return () => window.removeEventListener('keydown', tecla);
+    const tecla = e => { if (e.key === 'Escape') cerrar(); }, atras = () => cerrar();
+    window.addEventListener('keydown', tecla); window.addEventListener('orbe-atras', atras);
+    return () => { window.removeEventListener('keydown', tecla); window.removeEventListener('orbe-atras', atras); };
   }, [sale]);
   // Arrastrar hacia abajo para cerrar: hace falta un gesto claro (14 px para empezar).
-  const baja = e => { if (document.documentElement.classList.contains('pc')) return; arrastre.current = { y: e.clientY, dy: 0, activo: false }; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); };
+  const baja = e => { if (document.documentElement.classList.contains('pc') || (e.target.closest && e.target.closest('button, a, input, select, textarea'))) return; arrastre.current = { y: e.clientY, dy: 0, activo: false }; e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); };
   const mueve = e => {
     const a = arrastre.current; if (!a) return;
     a.dy = e.clientY - a.y;
@@ -150,7 +170,29 @@ const SIMBOLOS = [
 export const simbolo = n => { const s = SIMBOLOS.find(x => x[0].test(n || '')); return s ? s[1] : 'etiqueta'; };
 
 export const iniciales = n => (n || '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'ON';
+// Logo del negocio: la imagen que subió el dueño o, si no hay, sus iniciales.
+export const MarcaNegocio = ({ n, t = 42, lapiz }) => html`<span class=${'logo marca' + (n.logo ? ' con-imagen' : '')} style=${{ width: t + 'px', height: t + 'px', fontSize: Math.round(t * 0.36) + 'px', borderRadius: Math.round(t * 0.31) + 'px' }}>${n.logo ? html`<img src=${n.logo} alt="" draggable="false" />` : iniciales(n.nombre)}${lapiz && html`<i class="logo-lapiz"><${Icono} n="lapiz" t=${9} g=${2.6} /></i>`}</span>`;
+// Achica una imagen elegida (logo, foto de producto) a lo sumo «lado» píxeles y la devuelve como texto (data URL) para guardarla.
+// cuadrada: recorta el centro (las fotos de producto se ven en cuadritos).
+export function achicarImagen(archivo, lado = 256, cuadrada = false, calidad = 0.9) {
+  return new Promise((ok, mal) => {
+    const url = URL.createObjectURL(archivo), img = new Image();
+    img.onload = () => {
+      const m = Math.min(img.width, img.height), sw = cuadrada ? m : img.width, sh = cuadrada ? m : img.height;
+      const k = Math.min(1, lado / Math.max(sw, sh)), w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const webp = cv.toDataURL('image/webp', calidad);
+      ok(webp.startsWith('data:image/webp') ? webp : cuadrada ? cv.toDataURL('image/jpeg', calidad) : cv.toDataURL('image/png'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('imagen')); };
+    img.src = url;
+  });
+}
 export const TONOS = ['t-vio', 't-ver', 't-amb', 't-azu', 't-ros'];
+// Cuadrito del producto: su foto si tiene; si no, lo de siempre (sus iniciales en color).
+export const FotoProd = (p, t, sinFoto) => p && p.foto ? html`<span class="ic foto-prod" style=${t ? { width: t + 'px', height: t + 'px' } : null}><img src=${p.foto} alt="" draggable="false" loading="lazy" /></span>` : sinFoto;
 export function hace(t) {
   const d = Math.floor((Date.now() - t) / 86400000);
   if (d <= 0) return 'hoy'; if (d === 1) return 'ayer'; return 'hace ' + d + ' días';
