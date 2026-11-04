@@ -1,11 +1,11 @@
 Producto,Precio,Categoría,Descripción,Foto,Hay
-Torta de chocolate,28,Tortas,"20 porciones, relleno de arequipe",,sí
-Torta de vainilla,26,Tortas,20 porciones con fresas,,sí
-Torta tres leches,24,Tortas,16 porciones,,no
-Torta red velvet,30,Tortas,20 porciones con queso crema,,sí
-Cupcakes x12,15,Cupcakes,Decorados con el tema que quieras,,sí
-Cupcakes x6,8,Cupcakes,Sabores surtidos,,sí
-Galletas surtidas,9,Galletas,Caja de 24,,sí
-Galletas decoradas x10,14,Galletas,Con nombre o diseño,,sí
-Brownies x6,12,Postres,Con nueces,,sí
-Cheesecake de frutos rojos,22,Postres,10 porciones,,sí
+Torta de chocolate,28,Tortas,"20 porciones, relleno de arequipe",fotos/torta-chocolate.svg,sí
+Torta de vainilla,26,Tortas,20 porciones con fresas,fotos/torta-vainilla.svg,sí
+Torta tres leches,24,Tortas,16 porciones,fotos/torta-tres-leches.svg,no
+Torta red velvet,30,Tortas,20 porciones con queso crema,fotos/torta-red-velvet.svg,sí
+Cupcakes x12,15,Cupcakes,Decorados con el tema que quieras,fotos/cupcakes-12.svg,sí
+Cupcakes x6,8,Cupcakes,Sabores surtidos,fotos/cupcakes-6.svg,sí
+Galletas surtidas,9,Galletas,Caja de 24,fotos/galletas-surtidas.svg,sí
+Galletas decoradas x10,14,Galletas,Con nombre o diseño,fotos/galletas-decoradas.svg,sí
+Brownies x6,12,Postres,Con nueces,fotos/brownies.svg,sí
+Cheesecake de frutos rojos,22,Postres,10 porciones,fotos/cheesecake.svg,sí
