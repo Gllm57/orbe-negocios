@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Orbe Apps · Páginas, catálogos y apps para tu negocio</title>
 <meta name="description" content="Páginas web, catálogos con pedidos por WhatsApp, microapps y apps para negocios de Latinoamérica. Entrega rápida, precio cerrado y todo a distancia.">
 <meta property="og:title" content="Orbe Apps · Páginas, catálogos y apps para tu negocio">
@@ -27,7 +27,7 @@
   --suave: cubic-bezier(.22,.8,.2,1);
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
@@ -557,6 +557,10 @@ const WHATSAPP = "";          // tu número con código de país, solo dígitos,
 const INSTAGRAM = "orbe.apps"; // usuario de Instagram sin @
 const CORREO = "";             // opcional, tu correo de trabajo
 const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Sin zoom con dos dedos ni doble toque (iPhone ignora user-scalable=no)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
 
 // Aparecer al bajar
 const obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('ok'); obs.unobserve(e.target); } }), { threshold: .15, rootMargin: '0px 0px -40px 0px' });

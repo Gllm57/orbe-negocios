@@ -1,6 +1,9 @@
 // Orbe Apps · catálogo con pedidos por WhatsApp.
 // Lee los datos del negocio de window.NEGOCIO (negocio.js) y los productos de su hoja de Google publicada como CSV,
 // o del archivo productos.csv de su carpeta si todavía no tiene hoja.
+// Sin zoom con dos dedos ni doble toque (iPhone ignora user-scalable=no)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 (() => {
   const N = window.NEGOCIO;
   const $ = s => document.querySelector(s);
