@@ -12,7 +12,7 @@ Catálogo con pedidos por WhatsApp para negocios. Cada negocio tiene su carpeta;
 1. Copia la carpeta `dulce-hogar/` con el nombre del negocio, en minúsculas y con guiones (por ejemplo `nails-delivery-bog/`).
 2. Edita `negocio.js`: nombre, rubro, ciudad, iniciales o logo, color, número de WhatsApp para pedidos, horario, aviso, moneda, domicilio y retiro, y formas de pago.
 3. Pon sus productos en `productos.csv` o, mejor, en su hoja de Google (abajo).
-4. Publica. El catálogo queda en `https://gllm57.github.io/orbe-negocios/catalogos/<carpeta>/`.
+4. Publica. El catálogo queda en `https://orbe7apps.github.io/orbe-negocios/catalogos/<carpeta>/`.
 5. Haz un pedido de prueba y confirma que llega a su WhatsApp.
 
 Con `whatsapp` vacío el catálogo funciona como muestra: al enviar, muestra el mensaje que le llegaría al negocio en vez de abrir WhatsApp. Sirve para las muestras gratis.
