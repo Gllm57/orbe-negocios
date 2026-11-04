@@ -17,6 +17,8 @@
 /* Al estirar la página con el dedo: arriba el color de la marca, abajo el fondo (sin franjas blancas) */
 html { -webkit-text-size-adjust: 100%; touch-action: manipulation; background: linear-gradient(var(--marca) 50%, var(--bg) 50%) fixed; min-height: 100%; overflow-x: hidden; overflow-x: clip; }
 button, a, input, select, textarea, label { touch-action: manipulation; }
+.incrustado, .incrustado body { scrollbar-width: none; }
+.incrustado ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--letra); -webkit-font-smoothing: antialiased; overflow-x: hidden; overflow-x: clip; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }

@@ -4,6 +4,8 @@
 // Sin zoom con dos dedos ni doble toque (iPhone ignora user-scalable=no)
 ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
 document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+// Dentro de otra página (la vista previa en el teléfono de Orbe Apps): sin barra de desplazamiento visible
+if (window.top !== window.self) document.documentElement.classList.add('incrustado');
 (() => {
   const N = window.NEGOCIO;
   const $ = s => document.querySelector(s);
