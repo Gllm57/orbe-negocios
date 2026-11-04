@@ -63,7 +63,8 @@ p { margin: 0; }
 .nav-links .btn { padding: .7em 1.2em; font-size: .92rem; }
 .hero { position: relative; z-index: 2; display: grid; grid-template-columns: 1.08fr .92fr; gap: 40px; align-items: center; padding-block: 40px 110px; }
 .hero h1 { font-size: clamp(2.7rem, 6.6vw, 5.4rem); font-weight: 800; }
-.hero h1 .gira { display: inline-block; background: linear-gradient(100deg, var(--lila2), var(--verde) 55%, var(--ambar)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero h1 .gira { display: inline-block; background: linear-gradient(90deg, var(--lila2), var(--verde), var(--ambar), #ff8fb3, var(--lila2)) 0 0 / 200% 100% repeat-x; -webkit-background-clip: text; background-clip: text; color: transparent; animation: brillo 6s linear infinite; }
+@keyframes brillo { to { background-position: 200% 0; } }
 .hero .lead { font-size: 1.2rem; color: var(--luz2); max-width: 36ch; margin-top: 22px; }
 .hero .acc { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 .sellos { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 34px; color: var(--luz2); font-size: .92rem; font-weight: 600; }
